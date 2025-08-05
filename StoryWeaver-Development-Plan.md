@@ -8,34 +8,460 @@ StoryWeaver is a comprehensive AI-powered desktop application for novelists that
 
 ### Core Framework
 - **Tauri 2.0** - Cross-platform desktop app framework with Rust backend
-- **Rust** - Backend logic, database operations, AI integrations
-- **TypeScript/React** - Frontend user interface
-- **Vite** - Frontend build tool and development server
+  - Required plugins: `tauri-plugin-fs`, `tauri-plugin-dialog`, `tauri-plugin-notification`, `tauri-plugin-window-state`
+  - Security features: CSP configuration, allowlist restrictions, secure IPC communication
+  - Build targets: Windows MSI installer, portable executable
+- **Rust 1.70+** - Backend logic, database operations, AI integrations
+  - Required for async/await support, advanced type system, memory safety
+  - Cargo workspace configuration for modular development
+- **TypeScript 5.0+** - Frontend user interface with strict type checking
+  - Required for advanced type inference, template literal types, const assertions
+- **Vite 4.5+** - Frontend build tool and development server
+  - Hot module replacement, optimized bundling, TypeScript support
+  - Required plugins: `@vitejs/plugin-react`, `vite-plugin-tauri`
 
 ### Database & Storage
-- **SQLite** - Primary database for structured data (projects, documents, characters, etc.)
-- **LanceDB** - Vector database for AI embeddings and semantic search
+- **SQLite 3.40+** - Primary database for structured data
+  - Required features: JSON support, FTS5 for full-text search, WAL mode for performance
+  - Connection pooling, prepared statements, transaction management
+  - Database migrations and schema versioning
+- **LanceDB 0.4+** - Vector database for AI embeddings and semantic search
+  - Arrow-based columnar storage, SIMD-optimized vector operations
+  - Integration with embedding models, similarity search algorithms
+  - Automatic indexing and query optimization
 - **Local File System** - Document storage and exports
+  - Structured directory hierarchy, atomic file operations
+  - File watching for external changes, backup management
+  - Support for multiple file formats (.docx, .txt, .rtf, .odt, .csv)
 
 ### AI Integration
-- **OpenAI API** - GPT models for text generation and editing
-- **Anthropic Claude API** - Alternative AI provider
-- **Local AI Models** (Optional) - Ollama integration for offline capabilities
-- **Embedding Models** - For semantic search and content analysis
+- **OpenAI API Integration**
+  - Models: GPT-4o, GPT-4o-mini, GPT-4.1, GPT-3.5-turbo
+  - Features: Chat completions, embeddings (text-embedding-3-small/large)
+  - Rate limiting, retry logic, error handling, token counting
+  - Streaming responses for real-time generation
+- **OpenAI-Compatible API Integration**
+  - Support for custom base URLs and API endpoints
+  - Compatible with providers like Together AI, Groq, Perplexity, OpenRouter, etc.
+  - Custom model names and parameter configurations
+  - Flexible authentication with custom API keys
+  - Rate limiting and error handling per provider
+  - Model-specific context window and token limits
+- **Google Gemini API Integration**
+  - Models: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 2.0 Flash
+  - Google AI Studio API with safety settings
+  - Multi-modal capabilities (text and image input)
+  - Function calling and tool use support
+  - Content filtering and safety controls
+  - Streaming responses and batch processing
+- **Anthropic Claude API Integration**
+  - Models: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
+  - Message API with system prompts, tool use capabilities
+  - Content filtering, safety measures, context window management
+- **Local AI Models (Optional)**
+  - Ollama integration for offline capabilities
+  - Model management: download, update, delete local models
+  - GGML/GGUF format support, quantization options
+  - Hardware acceleration (CUDA, Metal, OpenCL)
+- **Embedding Models**
+  - Text-to-vector conversion for semantic search
+  - OpenAI embeddings (text-embedding-3-small/large)
+  - Google Gemini embeddings (text-embedding-004)
+  - Local embedding models via Ollama
+  - Batch processing for large document collections
+  - Caching and persistence of embeddings
+  - Similarity metrics and ranking algorithms
+- **Image Generation**
+  - DALL-E 3 integration for Visualize feature
+  - Google Imagen integration (via Gemini API)
+  - Image processing and optimization
+  - Content policy compliance, safety filtering
 
-### Additional Dependencies
-- **Serde** - Rust serialization/deserialization
-- **Tokio** - Async runtime for Rust
-- **SQLx** - Rust SQL toolkit
-- **Reqwest** - HTTP client for API calls
-- **Tauri Plugin Ecosystem** - File system, dialog, notification plugins
-- **React Query/TanStack Query** - State management and caching
-- **Zustand** - Lightweight state management
-- **Tailwind CSS** - Styling framework
-- **Radix UI** - Accessible component library
-- **Monaco Editor** - Rich text editor component
-- **React DnD** - Drag and drop functionality
-- **Framer Motion** - Animations and transitions
+### Core Rust Dependencies
+```toml
+[dependencies]
+# Core Framework
+tauri = { version = "2.0", features = ["api-all", "macos-private-api"] }
+tauri-plugin-fs = "2.0"
+tauri-plugin-dialog = "2.0"
+tauri-plugin-notification = "2.0"
+tauri-plugin-window-state = "2.0"
+tauri-plugin-clipboard-manager = "2.0"  # For copy/paste operations
+tauri-plugin-shell = "2.0"  # For external command execution
+
+# Async Runtime & Utilities
+tokio = { version = "1.35", features = ["full", "tracing"] }
+futures = "0.3"
+async-trait = "0.1"
+tokio-util = "0.7"  # Additional async utilities
+
+# Serialization & Data Handling
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+bincode = "1.3"
+toml = "0.8"  # For configuration files
+
+# Database Operations
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "json", "chrono", "uuid", "migrate"] }
+lancedb = "0.4"
+rusqlite = { version = "0.30", features = ["bundled", "json", "backup"] }
+sea-query = "0.30"  # SQL query builder for complex queries
+
+# HTTP Client & API Integration
+reqwest = { version = "0.11", features = ["json", "stream", "multipart", "cookies"] }
+url = "2.4"
+base64 = "0.21"
+mime = "0.3"  # MIME type handling
+
+# AI & Vector Operations
+candle-core = { version = "0.3", features = ["cuda", "metal"] }
+candle-nn = "0.3"
+candle-transformers = "0.3"
+tokenizers = "0.15"
+hf-hub = "0.3"
+tiktoken-rs = "0.5"  # Token counting for OpenAI models
+
+# File Operations & Processing
+csv = "1.3"
+zip = { version = "0.6", features = ["deflate", "time"] }
+walkdir = "2.4"
+notify = "6.1"
+tempfile = "3.8"
+fs_extra = "1.3"  # Extended file system operations
+
+# Document Processing
+mammoth-rs = "0.2"  # .docx reading
+docx-rs = "0.4"     # .docx writing
+rtf-parser = "0.3"  # .rtf support
+odt-rs = "0.1"      # .odt support
+pdf-writer = "0.9"  # PDF generation
+
+# Text Processing & Analysis
+regex = "1.10"
+unicode-segmentation = "1.10"
+similar = "2.3"     # Text diffing
+pulldown-cmark = "0.9"  # Markdown processing
+syntect = "5.1"     # Syntax highlighting
+tree-sitter = "0.20"  # Text parsing
+
+# Image Processing (for Visualize feature)
+image = { version = "0.24", features = ["png", "jpeg", "webp"] }
+imageproc = "0.23"  # Image processing operations
+photon-rs = "0.3"   # Additional image effects
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+config = "0.13"
+dirs = "5.0"
+once_cell = "1.19"  # Lazy static initialization
+dashmap = "5.5"     # Concurrent HashMap
+
+# Caching & Performance
+lru = "0.12"        # LRU cache implementation
+moka = { version = "0.12", features = ["future"] }  # High-performance cache
+rayon = "1.8"       # Data parallelism
+
+# Security & Encryption
+ring = "0.17"       # Cryptographic operations
+argon2 = "0.5"      # Password hashing
+aes-gcm = "0.10"    # Encryption for sensitive data
+keyring = "2.0"     # OS keychain integration
+
+# Plugin System
+wasmtime = "15.0"   # WASM runtime for plugin sandboxing
+wit-bindgen = "0.16"
+wasmtime-wasi = "15.0"  # WASI support for plugins
+
+# Rate Limiting & Throttling
+governor = "0.6"    # Rate limiting
+leaky-bucket = "1.0"  # Token bucket rate limiting
+
+# Backup & Recovery
+tar = "0.4"         # Archive creation
+flate2 = "1.0"      # Compression
+```
+
+### Frontend Dependencies
+```json
+{
+  "dependencies": {
+    // Core React Ecosystem
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    
+    // Tauri Integration
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-notification": "^2.0.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    
+    // State Management & Data Fetching
+    "@tanstack/react-query": "^5.17.0",
+    "@tanstack/react-query-devtools": "^5.17.0",
+    "zustand": "^4.4.7",
+    "immer": "^10.0.3",
+    "jotai": "^2.6.0",  // Additional state management for complex UI state
+    
+    // UI Framework & Components
+    "@radix-ui/react-dialog": "^1.0.5",
+    "@radix-ui/react-dropdown-menu": "^2.0.6",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@radix-ui/react-tooltip": "^1.0.7",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-slider": "^1.1.2",
+    "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-progress": "^1.0.3",
+    "@radix-ui/react-separator": "^1.0.3",
+    "@radix-ui/react-scroll-area": "^1.0.5",
+    "@radix-ui/react-context-menu": "^2.1.5",
+    "@radix-ui/react-hover-card": "^1.0.7",
+    "@radix-ui/react-accordion": "^1.1.2",
+    "@radix-ui/react-collapsible": "^1.0.3",
+    "@radix-ui/react-toggle": "^1.0.3",
+    "@radix-ui/react-toggle-group": "^1.0.4",
+    
+    // Text Editor & Rich Text
+    "@monaco-editor/react": "^4.6.0",
+    "monaco-editor": "^0.45.0",
+    "@uiw/react-textarea-code-editor": "^2.1.9",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "rehype-highlight": "^7.0.0",
+    "rehype-raw": "^7.0.0",
+    "@lexical/react": "^0.12.5",  // Alternative rich text editor
+    "lexical": "^0.12.5",
+    "prosemirror-state": "^1.4.3",  // For advanced text editing
+    "prosemirror-view": "^1.32.7",
+    "prosemirror-model": "^1.19.4",
+    
+    // Drag & Drop, Canvas, Visualization
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-beautiful-dnd": "^13.1.1",  // For folder/project organization
+    "reactflow": "^11.10.4",
+    "@xyflow/react": "^12.0.0",
+    "d3": "^7.8.5",
+    "@types/d3": "^7.4.3",
+    "konva": "^9.2.0",  // 2D canvas library for visual planning
+    "react-konva": "^18.2.10",
+    "fabric": "^5.3.0",  // Alternative canvas library
+    
+    // Animation & Transitions
+    "framer-motion": "^10.16.16",
+    "react-spring": "^9.7.3",
+    "lottie-react": "^2.4.0",
+    "react-transition-group": "^4.4.5",
+    "auto-animate": "^0.8.0",  // Simple animations
+    
+    // Styling & Design System
+    "tailwindcss": "^3.4.0",
+    "@tailwindcss/typography": "^0.5.10",
+    "@tailwindcss/forms": "^0.5.7",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.2.0",
+    "styled-components": "^6.1.8",  // For complex styling needs
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    
+    // Icons & Assets
+    "lucide-react": "^0.300.0",
+    "@heroicons/react": "^2.0.18",
+    "react-icons": "^4.12.0",
+    "@tabler/icons-react": "^2.47.0",
+    "phosphor-react": "^1.4.1",
+    
+    // Form Handling & Validation
+    "react-hook-form": "^7.48.2",
+    "@hookform/resolvers": "^3.3.2",
+    "zod": "^3.22.4",
+    "yup": "^1.4.0",  // Alternative validation
+    "formik": "^2.4.5",  // Alternative form library
+    
+    // Utilities & Helpers
+    "date-fns": "^3.0.6",
+    "lodash-es": "^4.17.21",
+    "@types/lodash-es": "^4.17.12",
+    "nanoid": "^5.0.4",
+    "fuse.js": "^7.0.0",
+    "react-hotkeys-hook": "^4.4.1",
+    "react-use": "^17.4.2",
+    "use-debounce": "^10.0.0",
+    "react-intersection-observer": "^9.5.3",
+    "react-window": "^1.8.8",  // Virtualization for large lists
+    "react-window-infinite-loader": "^1.0.9",
+    "@types/react-window": "^1.8.8",
+    
+    // File Processing & Export
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1",
+    "file-saver": "^2.0.5",
+    "@types/file-saver": "^2.0.7",
+    "papaparse": "^5.4.1",
+    "@types/papaparse": "^5.3.14",
+    "docx": "^8.5.0",  // Document generation
+    "mammoth": "^1.6.0",  // .docx to HTML conversion
+    "jszip": "^3.10.1",  // ZIP file handling
+    "pdfjs-dist": "^4.0.379",  // PDF processing
+    
+    // Image Processing (for Visualize feature)
+    "canvas": "^2.11.2",
+    "sharp": "^0.33.2",  // Image processing
+    "react-image-crop": "^11.0.5",  // Image cropping
+    "react-image-gallery": "^1.3.0",  // Image gallery
+    
+    // Search & Filtering
+    "match-sorter": "^6.3.1",  // Fuzzy search
+    "fast-fuzzy": "^1.12.0",  // Fast fuzzy search
+    "flexsearch": "^0.7.43",  // Full-text search
+    
+    // Keyboard & Shortcuts
+    "hotkeys-js": "^3.12.2",  // Keyboard shortcuts
+    "mousetrap": "^1.6.5",  # Alternative keyboard library
+    "@types/mousetrap": "^1.6.15",
+    
+    // Collaboration & Real-time
+    "socket.io-client": "^4.7.4",  // For future real-time features
+    "yjs": "^13.6.10",  // CRDT for collaboration
+    "y-websocket": "^1.5.0",
+    
+    // Development & Testing
+    "react-error-boundary": "^4.0.11",
+    "@sentry/react": "^7.91.0",
+    "react-helmet-async": "^2.0.4",  // Head management
+    "react-router-dom": "^6.20.1",  // For potential routing needs
+    
+    // Performance & Monitoring
+    "web-vitals": "^3.5.0",  // Performance monitoring
+    "react-tracked": "^1.7.12",  // Performance optimization
+    
+    // Accessibility
+    "@reach/skip-nav": "^0.18.0",  // Skip navigation
+    "@reach/visually-hidden": "^0.18.0",  // Screen reader support
+    "focus-trap-react": "^10.2.3",  // Focus management
+    
+    // Internationalization (for future)
+    "react-i18next": "^13.5.0",
+    "i18next": "^23.7.16"
+  },
+  "devDependencies": {
+    // Build Tools
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.10",
+    "vite-plugin-tauri": "^0.2.0",
+    "vite-plugin-pwa": "^0.17.4",  // PWA support
+    "rollup-plugin-visualizer": "^5.12.0",  // Bundle analysis
+    
+    // TypeScript
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.6",
+    "@types/canvas": "^2.11.6",
+    "@types/fabric": "^5.3.7",
+    
+    // Linting & Formatting
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-jsx-a11y": "^6.8.0",  // Accessibility linting
+    "eslint-plugin-import": "^2.29.1",
+    "prettier": "^3.1.1",
+    "prettier-plugin-tailwindcss": "^0.5.10",
+    
+    // Testing
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/jest-dom": "^6.2.0",
+    "@testing-library/user-event": "^14.5.1",
+    "vitest": "^1.1.0",
+    "jsdom": "^23.0.1",
+    "@vitest/ui": "^1.1.0",
+    "happy-dom": "^12.10.3",  // Alternative to jsdom
+    "playwright": "^1.40.1",  // E2E testing
+    "@playwright/test": "^1.40.1",
+    
+    // Development Tools
+    "@storybook/react": "^7.6.6",  // Component development
+    "@storybook/addon-essentials": "^7.6.6",
+    "@storybook/addon-interactions": "^7.6.6",
+    "chromatic": "^10.2.0",  // Visual testing
+    
+    // Tauri CLI
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
+```
+
+### Feature-Specific Technical Requirements
+
+#### AI Writing Tools
+- **Token Management**: Precise token counting for all AI models, context window optimization
+- **Streaming Support**: Real-time text generation with cancellation capabilities
+- **Context Assembly**: Intelligent context building from Story Bible, document history, and user selections
+- **Response Caching**: LRU cache for AI responses, deduplication of similar requests
+- **Error Recovery**: Graceful handling of API failures, automatic retries with exponential backoff
+
+#### Plugin System
+- **WASM Runtime**: Secure sandboxed execution environment using Wasmtime
+- **Variable Injection**: Dynamic template processing with Story Bible data
+- **Multi-Stage Execution**: Sequential prompt processing with intermediate result handling
+- **Resource Limits**: Memory and execution time constraints for plugin safety
+- **Marketplace Integration**: Plugin discovery, installation, and update mechanisms
+
+#### Document Management
+- **Real-time Collaboration**: Operational Transform (OT) for conflict resolution
+- **Version Control**: Git-like versioning with branching and merging capabilities
+- **Auto-save**: Debounced saving with conflict detection and resolution
+- **Import/Export**: Comprehensive file format support with metadata preservation
+- **Search & Indexing**: Full-text search with fuzzy matching and relevance scoring
+
+#### Canvas/Visual Planning
+- **Rendering Engine**: Hardware-accelerated 2D graphics using Canvas API
+- **Interaction System**: Multi-touch support, gesture recognition, keyboard shortcuts
+- **Layout Algorithms**: Automatic node positioning, force-directed graphs
+- **Export Capabilities**: High-resolution image export, vector format support
+- **Performance Optimization**: Viewport culling, level-of-detail rendering
+
+#### Story Bible System
+- **Relationship Mapping**: Graph-based character and world element relationships
+- **Visibility Engine**: Fine-grained access control with inheritance rules
+- **Template System**: Extensible card templates with custom field types
+- **Validation Rules**: Data consistency checks and constraint enforcement
+- **Series Synchronization**: Cross-project data sharing with conflict resolution
+
+### Security & Privacy
+- **Local-First Architecture**: All data stored locally, no cloud dependencies
+- **Encryption**: AES-256-GCM for sensitive data at rest
+- **API Key Security**: Secure storage using OS keychain/credential manager
+- **Plugin Sandboxing**: WASM-based isolation with capability-based security
+- **Input Sanitization**: XSS prevention, SQL injection protection
+- **Audit Logging**: Comprehensive activity logging for debugging and security
+
+### Performance Optimization
+- **Database Optimization**: Query optimization, connection pooling, prepared statements
+- **Memory Management**: Efficient data structures, lazy loading, garbage collection tuning
+- **Caching Strategy**: Multi-level caching (memory, disk, network)
+- **Background Processing**: Worker threads for CPU-intensive operations
+- **Resource Monitoring**: Memory usage tracking, performance metrics collection
+
+### Development Tools & Infrastructure
+- **Build System**: Cargo workspaces, conditional compilation, feature flags
+- **Testing Framework**: Unit tests (Rust), integration tests, E2E tests (Playwright)
+- **CI/CD Pipeline**: Automated testing, cross-platform builds, release automation
+- **Documentation**: API documentation, user guides, developer documentation
+- **Monitoring**: Error tracking (Sentry), performance monitoring, usage analytics
 
 ## Application Architecture
 
@@ -60,6 +486,8 @@ src-tauri/
 │   ├── ai/               # AI integration
 │   │   ├── mod.rs
 │   │   ├── openai.rs
+│   │   ├── openai_compatible.rs
+│   │   ├── gemini.rs
 │   │   ├── claude.rs
 │   │   ├── embeddings.rs
 │   │   └── local_models.rs
@@ -129,19 +557,20 @@ src/
 
 #### Write Features
 - **Auto Write**: Context-aware text continuation (uses up to 1000 words of context, outputs 150-200 words)
-- **Guided Write**: Directed writing with user prompts and AI-generated story ideas
-- **Tone Shift**: Style-specific writing variations and changes
+- **Guided Write**: Directed writing with user prompts and AI-generated story ideas with suggestions mode
+- **Tone Shift**: Style-specific writing variations with preset tones (Ominous, Fantastical, Fast-Paced, Upbeat, Authoritative, Conflicted, Romantic, Sensual)
 - **First Draft**: Complete scene generation from prompts (up to 3000 words, only available in empty documents)
+- **Write Settings**: Configurable creativity levels, card count (1-5), length settings (~50-500 words), and Key Details for project-level context
 
 #### Editing Tools
-- **Rewrite**: Multiple rewriting styles (Rephrase, Shorter, More descriptive, Show-Not-Tell, More Inner Conflict, More Intense) with custom options (max 6,000 words)
+- **Rewrite**: Multiple rewriting styles (Rephrase, Shorter, More descriptive, Show-Not-Tell, More Inner Conflict, More Intense) with custom options (max 6,000 words) and configurable card generation count
 - **Describe**: Sensory detail generation with toggleable senses (sight, sound, touch, taste, smell) and metaphors (considers paragraph + 200 preceding words)
-- **Expand**: Detailed expansion of brief passages (minimum 3 words, maximum 1,000 words)
-- **Brainstorm**: Rapid-fire idea generation with categories (Dialogue, Characters, World building, Plot points, Names, Places, Objects, Descriptions, Article ideas, Tweets, Something else) and "Keepers List" for saving favorites
-- **Quick Tools**: Quick Edit and Quick Chat for in-document AI assistance
-- **Selection Menu**: Context-sensitive tools (Describe, Quick Edit, Related Words, Expand, Visualize)
-- **Related Words**: Smart thesaurus for finding contextually appropriate alternatives
-- **Visualize**: Generate images from text descriptions (minimum 10 words, 2500 credits)
+- **Expand**: Detailed expansion of brief passages (minimum 3 words, maximum 1,000 words) that reads both preceding and following text
+- **Brainstorm**: Rapid-fire idea generation with categories (Dialogue, Characters, World building, Plot points, Names, Places, Objects, Descriptions, Article ideas, Tweets, Something else) and "Keepers List" for saving favorites with thumbs up/down voting
+- **Quick Tools**: Quick Edit and Quick Chat for in-document AI assistance with High Quality mode toggle and keyboard shortcut (Ctrl/Cmd+K)
+- **Selection Menu**: Context-sensitive tools that adapt based on selection length (Describe, Quick Edit, Related Words, Expand, Visualize)
+- **Related Words**: Smart thesaurus for finding contextually appropriate alternatives with expandable word cloud view
+- **Visualize**: Generate images from text descriptions (minimum 10 words, maximum 3000 words, 2500 credits, 1024x1024 resolution)
 
 #### AI Model Selection & Control
 - **Multiple Prose Modes**: Muse, Excellent, Basic and experimental models
@@ -154,16 +583,19 @@ src/
 - **Pacing Analysis**: Scene rhythm and flow
 
 ### 4. Plugin System
-- **Custom AI Functions**: User-created AI tools with access to Story Bible data
-- **Plugin Builder**: Visual interface for creating plugins with prompts and variables
-- **Available Variables**: Access to `highlighted_text`, `preceding_text`, and Story Bible elements
-- **Plugin Testing**: Built-in testing environment with sample data
-- **Plugin Marketplace**: Share and discover community-created plugins
+- **Custom AI Functions**: User-created AI tools with access to Story Bible data for writing, editing, and analysis tasks
+- **Plugin Builder**: Visual interface with Basic and Advanced editors for creating plugins with prompts and variables
+- **Available Variables**: Access to `highlighted_text`, `preceding_text`, `user_text_input`, `previous_document_text`, `braindump`, `genre`, `style`, `synopsis`, `characters`, `characters_raw`, `outline`, `scene_summary`, `is_story_bible_active`, `chapter_scenes`, `chapter_scenes_extra_instructions`, `worldbuilding`, `worldbuilding_raw`
+- **Multi-Stage Prompts**: Support for sequential prompts (up to 2 stages) with intermediate results
+- **AI Model Selection**: Choose from various AI engines (GPT-4o-mini, GPT-4.1, Gemini-2.5-pro) with configurable parameters (temperature, frequency penalty, presence penalty, stop sequences, max tokens)
+- **Plugin Testing**: Built-in testing environment with sample data and Story Bible context
+- **Plugin Marketplace**: Share and discover community-created plugins with visibility controls (published/unlisted)
 - **Template System**: Pre-built plugin templates for common writing tasks
-- **Plugin Guidelines**: Best practices and validation for plugin creation
-- **Credit System**: Plugins use standard credit system based on AI model usage
+- **Plugin Guidelines**: Best practices and validation for plugin creation with category organization
+- **Credit System**: Plugins use standard credit system based on AI model usage with variable costs
 - **Sandboxed Execution**: Secure plugin environment with controlled access
 - **API Integration**: Third-party service connections
+- **Profile Management**: Creator name display and plugin attribution system
 
 ### 5. Canvas/Visual Planning
 - **Digital Whiteboard**: Drag-and-drop story planning with cards, text, and outlines
@@ -436,6 +868,25 @@ CREATE TABLE credit_usage (
     FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
+-- AI Provider Configurations
+CREATE TABLE ai_providers (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    provider_type TEXT NOT NULL, -- 'openai', 'openai_compatible', 'gemini', 'claude', 'ollama'
+    base_url TEXT,
+    api_key_encrypted TEXT,
+    model_name TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    context_window INTEGER,
+    max_tokens INTEGER,
+    supports_streaming BOOLEAN DEFAULT TRUE,
+    supports_images BOOLEAN DEFAULT FALSE,
+    rate_limit_rpm INTEGER,
+    rate_limit_tpm INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Settings
 CREATE TABLE settings (
     id INTEGER PRIMARY KEY,
@@ -526,6 +977,11 @@ pub trait AIProvider {
     async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String>;
     async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> Result<String>;
     async fn analyze_text(&self, text: &str, analysis_type: &AnalysisType) -> Result<String>;
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>>;
+    async fn generate_image(&self, prompt: &str) -> Result<Vec<u8>>;
+    fn supports_streaming(&self) -> bool;
+    fn supports_images(&self) -> bool;
+    fn get_context_window(&self) -> usize;
 }
 
 // Context for AI operations
@@ -535,6 +991,280 @@ pub struct AIContext {
     pub worldbuilding: Vec<WorldElement>,
     pub previous_text: String,
     pub user_preferences: UserPreferences,
+    pub document_history: Vec<String>,
+    pub chapter_continuity: Option<ChapterContext>,
+}
+
+// AI Provider Configuration
+#[derive(Debug, Clone)]
+pub struct AIProviderConfig {
+    pub name: String,
+    pub provider_type: ProviderType,
+    pub base_url: Option<String>,
+    pub api_key: String,
+    pub model_name: String,
+    pub context_window: usize,
+    pub max_tokens: usize,
+    pub supports_streaming: bool,
+    pub supports_images: bool,
+    pub rate_limit_rpm: Option<u32>,
+    pub rate_limit_tpm: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ProviderType {
+    OpenAI,
+    OpenAICompatible,
+    Gemini,
+    Claude,
+    Ollama,
+}
+
+// OpenAI-Compatible Provider Implementation
+pub struct OpenAICompatibleProvider {
+    config: AIProviderConfig,
+    client: reqwest::Client,
+    rate_limiter: Arc<RateLimiter>,
+}
+
+impl OpenAICompatibleProvider {
+    pub fn new(config: AIProviderConfig) -> Self {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(120))
+            .build()
+            .expect("Failed to create HTTP client");
+        
+        let rate_limiter = Arc::new(RateLimiter::new(
+            config.rate_limit_rpm.unwrap_or(60),
+            config.rate_limit_tpm.unwrap_or(10000),
+        ));
+
+        Self {
+            config,
+            client,
+            rate_limiter,
+        }
+    }
+}
+
+#[async_trait]
+impl AIProvider for OpenAICompatibleProvider {
+    async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String> {
+        self.rate_limiter.wait_if_needed().await;
+        
+        let messages = self.build_messages(prompt, context)?;
+        let request_body = serde_json::json!({
+            "model": self.config.model_name,
+            "messages": messages,
+            "max_tokens": self.config.max_tokens,
+            "temperature": 0.7,
+            "stream": false
+        });
+
+        let base_url = self.config.base_url.as_ref()
+            .unwrap_or(&"https://api.openai.com".to_string());
+        
+        let response = self.client
+            .post(&format!("{}/v1/chat/completions", base_url))
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let response_json: serde_json::Value = response.json().await?;
+        let content = response_json["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+
+        Ok(content.to_string())
+    }
+
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+        // Implementation for embedding generation
+        todo!("Implement embedding generation for OpenAI-compatible providers")
+    }
+
+    async fn generate_image(&self, prompt: &str) -> Result<Vec<u8>> {
+        // Implementation for image generation if supported
+        todo!("Implement image generation for compatible providers")
+    }
+
+    fn supports_streaming(&self) -> bool {
+        self.config.supports_streaming
+    }
+
+    fn supports_images(&self) -> bool {
+        self.config.supports_images
+    }
+
+    fn get_context_window(&self) -> usize {
+        self.config.context_window
+    }
+}
+
+// Gemini Provider Implementation
+pub struct GeminiProvider {
+    config: AIProviderConfig,
+    client: reqwest::Client,
+    rate_limiter: Arc<RateLimiter>,
+}
+
+#[async_trait]
+impl AIProvider for GeminiProvider {
+    async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String> {
+        self.rate_limiter.wait_if_needed().await;
+        
+        let request_body = serde_json::json!({
+            "contents": [{
+                "parts": [{
+                    "text": self.build_gemini_prompt(prompt, context)?
+                }]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": self.config.max_tokens,
+                "topP": 0.8,
+                "topK": 40
+            },
+            "safetySettings": [
+                {
+                    "category": "HARM_CATEGORY_HARASSMENT",
+                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                },
+                {
+                    "category": "HARM_CATEGORY_HATE_SPEECH",
+                    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+                }
+            ]
+        });
+
+        let response = self.client
+            .post(&format!(
+                "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+                self.config.model_name, self.config.api_key
+            ))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let response_json: serde_json::Value = response.json().await?;
+        let content = response_json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid Gemini response format"))?;
+
+        Ok(content.to_string())
+    }
+
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+        let request_body = serde_json::json!({
+            "model": "models/text-embedding-004",
+            "content": {
+                "parts": [{
+                    "text": text
+                }]
+            }
+        });
+
+        let response = self.client
+            .post(&format!(
+                "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={}",
+                self.config.api_key
+            ))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await?;
+
+        let response_json: serde_json::Value = response.json().await?;
+        let embedding: Vec<f32> = response_json["embedding"]["values"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid embedding response"))?
+            .iter()
+            .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+            .collect();
+
+        Ok(embedding)
+    }
+
+    // Additional Gemini-specific methods...
+}
+
+// AI Provider Manager
+pub struct AIProviderManager {
+    providers: HashMap<String, Box<dyn AIProvider + Send + Sync>>,
+    default_provider: Option<String>,
+}
+
+impl AIProviderManager {
+    pub fn new() -> Self {
+        Self {
+            providers: HashMap::new(),
+            default_provider: None,
+        }
+    }
+
+    pub fn add_provider(&mut self, name: String, provider: Box<dyn AIProvider + Send + Sync>) {
+        self.providers.insert(name, provider);
+    }
+
+    pub fn set_default_provider(&mut self, name: String) {
+        self.default_provider = Some(name);
+    }
+
+    pub async fn generate_text(&self, provider_name: Option<&str>, prompt: &str, context: &AIContext) -> Result<String> {
+        let provider_name = provider_name
+            .or(self.default_provider.as_deref())
+            .ok_or_else(|| anyhow::anyhow!("No provider specified or default set"))?;
+
+        let provider = self.providers.get(provider_name)
+            .ok_or_else(|| anyhow::anyhow!("Provider not found: {}", provider_name))?;
+
+        provider.generate_text(prompt, context).await
+    }
+}
+
+// Rate Limiter for API calls
+pub struct RateLimiter {
+    requests_per_minute: u32,
+    tokens_per_minute: u32,
+    request_timestamps: Arc<Mutex<VecDeque<Instant>>>,
+    token_usage: Arc<Mutex<VecDeque<(Instant, u32)>>>,
+}
+
+impl RateLimiter {
+    pub fn new(requests_per_minute: u32, tokens_per_minute: u32) -> Self {
+        Self {
+            requests_per_minute,
+            tokens_per_minute,
+            request_timestamps: Arc::new(Mutex::new(VecDeque::new())),
+            token_usage: Arc::new(Mutex::new(VecDeque::new())),
+        }
+    }
+
+    pub async fn wait_if_needed(&self) {
+        // Implementation for rate limiting logic
+        let now = Instant::now();
+        let minute_ago = now - Duration::from_secs(60);
+
+        // Clean old entries and check limits
+        let mut requests = self.request_timestamps.lock().await;
+        while let Some(&front) = requests.front() {
+            if front < minute_ago {
+                requests.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        if requests.len() >= self.requests_per_minute as usize {
+            let sleep_duration = requests.front().unwrap().duration_since(minute_ago);
+            tokio::time::sleep(sleep_duration).await;
+        }
+
+        requests.push_back(now);
+    }
 }
 ```
 
@@ -630,24 +1360,51 @@ This comprehensive plan provides a roadmap for building a feature-rich AI toolki
 After reviewing all reference files, the following features have been added to ensure comprehensive coverage:
 
 ### New Core Features Added:
-- **Point of View (POV) & Tense Settings**: Added controls for narrative perspective and tense.
-- **Series Support**: Share Characters, Worldbuilding, and Outlines across multiple projects
-- **Chapter Continuity**: Link documents for seamless AI context across chapters
-- **Braindump**: Free-form text area in Story Bible for core story vision
-- **Visibility Settings**: Control AI access to specific Story Bible elements
-- **Saliency Engine**: Intelligent selection of relevant story information for AI
-- **Multiple AI Models**: Support for Muse, Claude, GPT with different prose modes
-- **Style Examples**: Train AI on user's writing style for personalized prose
-- **Document Sharing**: Clean Copy system with private commenting
-- **Smart Import**: Novel import with auto-populated Story Bible
-- **Selection Menu**: Context-sensitive tools when text is highlighted
-- **Quick Tools**: Quick Edit and Quick Chat for in-document assistance
-- **Related Words**: Smart thesaurus with contextual suggestions
-- **Visualize**: Generate images from text descriptions
-- **Advanced Brainstorming**: Keepers List for saving favorite ideas
-- **Plugin Testing**: Built-in environment for testing custom plugins
-- **Credit Tracking**: Transparent usage monitoring across all AI features
-- **Comment System**: In-document commenting for collaboration and notes
+- **Point of View (POV) & Tense Settings**: Global and per-chapter control with character-specific POV assignment
+- **Series Support**: Share Characters, Worldbuilding, and Outlines across multiple projects with series timeline management
+- **Chapter Continuity**: Link documents for seamless AI context across chapters (up to 25 documents, 20,000 words)
+- **Braindump**: Free-form text area in Story Bible for core story vision that influences synopsis generation
+- **Visibility Settings**: Granular control over AI access to specific Story Bible elements and individual traits
+- **Saliency Engine**: Intelligent selection of relevant story information for AI with raw data alternatives
+- **Multiple AI Models**: Support for Muse, Excellent, Basic prose modes plus experimental models (GPT-4.1, Claude 3.5, DeepSeek, Gemini, etc.)
+- **Style Examples**: Train AI on user's writing style for personalized prose generation (up to 1,000 words)
+- **Document Sharing**: Clean Copy system with private commenting, reader anonymity options, and unpublish functionality
+- **Smart Import**: Novel import with auto-populated Story Bible (120K words), character import (60K words, 30 chars), CSV support
+- **Selection Menu**: Context-sensitive tools that adapt based on selection length and content type
+- **Quick Tools**: Quick Edit and Quick Chat with High Quality mode toggle and story-aware context
+- **Related Words**: Smart thesaurus with contextual suggestions and expandable word cloud interface
+- **Visualize**: Generate images from text descriptions with content filtering and credit cost transparency
+- **Advanced Brainstorming**: Category-specific prompts with Keepers List, thumbs up/down voting, and refresh options
+- **Plugin Testing**: Built-in environment with sample Story Bible data and variable testing
+- **Credit Tracking**: Transparent usage monitoring with pre-generation cost estimates and balance display
+- **Comment System**: In-document commenting for collaboration with author-reader privacy controls
+- **Write Settings**: Comprehensive configuration including creativity levels, card count, length settings, and Key Details
+- **Trait Customization**: Individual and default trait management for characters and worldbuilding elements
+- **Story Bible Detection**: Visual highlighting of detected elements in text with underlined references
+- **Multi-Stage Plugin Prompts**: Sequential prompt execution with intermediate result access
+- **Canvas Keyboard Shortcuts**: Full shortcut support for visual planning with zoom, pan, and selection controls
+- **Automatic Document Linking**: Smart linking from outline chapters with bidirectional relationships
+- **Series Timeline**: Project sequencing for consistent story context across multiple books
+- **Match My Style**: AI analysis of user's writing to generate personalized style prompts
+- **Creativity Level 11**: Special ultra-creative mode that works differently from standard creativity settings
+- **Hover Menu**: Context-sensitive menu that appears when selecting text for quick tool access
+- **History Panel**: Comprehensive tracking of all AI generations with starring and organization features
+- **Project Folders**: Hierarchical organization with drag-and-drop, nested folders, and preview functionality
+- **Deleted Projects Recovery**: Trash system with restoration capabilities for projects and folders
+- **Card System**: Collapsible, stackable AI response cards with prompt context display
+- **Tone Shift**: Write continuation in specific tones (Ominous, Fantastical, Fast-Paced, Upbeat, Authoritative, Conflicted, Romantic, Sensual)
+- **Kitbashing Support**: Tools for combining and merging different AI generations and drafts
+- **Focus Mode**: Distraction-free writing environment
+- **Purple Text Highlighting**: Visual indication of AI-generated content until user edits
+- **Beats to Scenes Migration**: Automatic conversion system from deprecated Beats to new Scenes format
+- **Extra Instructions**: Per-scene guidance for tone, pacing, POV, and style in Draft tool
+- **Story Bible Boxes**: Organized text fields for different story elements with generation capabilities
+- **Guardrails System**: Boundary setting for AI generations to maintain story consistency
+- **Drivers Identification**: Recognition and tracking of story-moving elements
+- **Three-Column Interface**: Left navigation, center editor, right history/cards layout
+- **Toolbar Integration**: Centralized access to all AI tools and features
+- **Document Preview**: Quick preview of recent projects in folders without opening
+- **File Path Navigation**: Breadcrumb navigation for nested folder structures
 
 ### Enhanced Database Schema:
 - Added POV and Tense settings to `story_bible` and `outlines` tables.
