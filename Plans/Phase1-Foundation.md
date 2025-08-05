@@ -65,7 +65,7 @@ Establish the core infrastructure and basic functionality for StoryWeaver, inclu
 - [ ] Create file path navigation with breadcrumbs
 
 ### Week 5: Document Management & Editor
-- [ ] Integrate Monaco Editor for text editing
+- [ ] Integrate Monaco Editor, including foundational hooks for custom text decorations and context menus
 - [ ] Implement document creation, editing, and saving
 - [ ] Add auto-save functionality with debouncing
 - [ ] Create document linking system for chapter continuity
@@ -96,6 +96,11 @@ Establish the core infrastructure and basic functionality for StoryWeaver, inclu
 - [ ] Build card stacking and organization logic
 - [ ] Add card interaction handlers (expand/collapse)
 - [ ] Implement card history and persistence
+
+### Background Processing Foundation
+- [ ] Create managed task queue for long-running AI operations
+- [ ] Implement basic task prioritization (e.g., user-initiated vs. background)
+- [ ] Set up task status tracking (queued, running, completed, failed)
 
 ### Error Handling & Recovery
 - [ ] Set up comprehensive error logging system
@@ -162,6 +167,24 @@ CREATE TABLE documents (
     word_count INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Story Bible (Foundation)
+CREATE TABLE story_bible (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    braindump TEXT,
+    synopsis TEXT,
+    genre TEXT,
+    style TEXT,
+    style_examples TEXT,
+    pov_mode TEXT DEFAULT 'global',
+    global_pov TEXT DEFAULT '3rd Person Limited',
+    global_tense TEXT DEFAULT 'Past',
+    global_character_pov_ids JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
 );
 
 -- Document Continuity
