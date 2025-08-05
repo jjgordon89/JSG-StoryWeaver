@@ -175,6 +175,7 @@ src/
 - **Document Linking**: Connect documents for chapter continuity and AI context
 - **Comment System**: In-document commenting for collaboration and self-notes
 - **Version History**: Document revision tracking
+- **Point of View (POV) & Tense Settings**: Global and per-chapter control over narrative perspective (1st, 2nd, 3rd person) and tense (past, present, future), with the ability to assign a specific character's POV.
 
 ### 7. Advanced AI Features
 - **Chapter Continuity**: AI awareness of linked documents for seamless story flow
@@ -240,6 +241,10 @@ CREATE TABLE story_bible (
     genre TEXT,
     style TEXT,
     style_examples TEXT,
+    pov_mode TEXT DEFAULT 'global',
+    global_pov TEXT DEFAULT '3rd Person Limited',
+    global_tense TEXT DEFAULT 'Past',
+    global_character_pov_ids JSON,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id)
@@ -319,6 +324,9 @@ CREATE TABLE outlines (
     chapter_number INTEGER,
     title TEXT,
     summary TEXT,
+    pov TEXT,
+    tense TEXT,
+    character_pov_ids JSON,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -590,6 +598,7 @@ This comprehensive plan provides a roadmap for building a feature-rich AI toolki
 After reviewing all reference files, the following features have been added to ensure comprehensive coverage:
 
 ### New Core Features Added:
+- **Point of View (POV) & Tense Settings**: Added controls for narrative perspective and tense.
 - **Series Support**: Share Characters, Worldbuilding, and Outlines across multiple projects
 - **Chapter Continuity**: Link documents for seamless AI context across chapters
 - **Braindump**: Free-form text area in Story Bible for core story vision
@@ -609,6 +618,7 @@ After reviewing all reference files, the following features have been added to e
 - **Comment System**: In-document commenting for collaboration and notes
 
 ### Enhanced Database Schema:
+- Added POV and Tense settings to `story_bible` and `outlines` tables.
 - Added series support with shared Story Bible data
 - Document linking for chapter continuity
 - Visibility controls for characters and worldbuilding traits
@@ -620,6 +630,10 @@ After reviewing all reference files, the following features have been added to e
 - Increased from 20 to 24 weeks to accommodate additional features
 - Reorganized phases to better reflect feature complexity
 - Added dedicated phase for collaboration and plugin features
+
+### Dependency Updates:
+- Added `csv`, `zip`, `diffy`, `mammoth-rs`, and `html-to-docx-rs` to Rust dependencies for file operations and version control.
+- Added `reactflow`, `jspdf`, and `html2canvas` to frontend dependencies for visual planning and PDF export.
 
 The plan now comprehensively covers all features found in the reference documentation, ensuring StoryWeaver will be a complete AI writing toolkit for novelists.
 
@@ -644,6 +658,11 @@ thiserror = "1.0"
 anyhow = "1.0"
 log = "0.4"
 env_logger = "0.10"
+csv = "1.1"
+zip = "0.6"
+diffy = "0.3"
+mammoth-rs = "0.2"
+html-to-docx-rs = "0.1"
 ```
 
 ### Frontend Dependencies (package.json)
@@ -665,7 +684,10 @@ env_logger = "0.10"
     "tailwindcss": "^3.3.0",
     "lucide-react": "^0.290.0",
     "react-hook-form": "^7.47.0",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "reactflow": "^11.10.1",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
