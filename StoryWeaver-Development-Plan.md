@@ -185,6 +185,73 @@ leaky-bucket = "1.0"  # Token bucket rate limiting
 # Backup & Recovery
 tar = "0.4"         # Archive creation
 flate2 = "1.0"      # Compression
+
+# Additional Dependencies for Reference Features
+serde_derive = "1.0"  # Derive macros for serialization
+lazy_static = "1.4"   # Static initialization
+parking_lot = "0.12"  # High-performance synchronization primitives
+crossbeam = "0.8"     # Lock-free data structures
+crossbeam-channel = "0.5"  # Multi-producer multi-consumer channels
+bytes = "1.5"         # Byte buffer utilities
+futures-util = "0.3" # Additional futures utilities
+pin-project = "1.1"   # Safe pin projection
+async-stream = "0.3"  # Async stream utilities
+stream-cancel = "0.8" # Stream cancellation
+tokio-stream = "0.1"  # Tokio stream utilities
+tokio-tungstenite = "0.20"  # WebSocket support for future features
+tungstenite = "0.20"  # WebSocket protocol
+rustls = "0.21"       # TLS implementation
+rustls-pemfile = "1.0"  # PEM file parsing
+webpki-roots = "0.25" # Root certificates
+native-tls = "0.2"    # Native TLS support
+openssl = { version = "0.10", optional = true }  # OpenSSL bindings
+sha2 = "0.10"         # SHA-2 hash functions
+hmac = "0.12"         # HMAC implementation
+rand = "0.8"          # Random number generation
+rand_chacha = "0.3"   # ChaCha random number generator
+getrandom = "0.2"     # OS random number interface
+zeroize = "1.6"       # Secure memory clearing
+secrecy = "0.8"       # Secret management
+subtle = "2.5"        # Constant-time operations
+ed25519-dalek = "2.0" # Ed25519 signatures
+x25519-dalek = "2.0"  # X25519 key exchange
+curve25519-dalek = "4.1"  # Curve25519 operations
+blake3 = "1.5"        # BLAKE3 hash function
+argon2id = "0.2"      # Argon2id password hashing
+scrypt = "0.11"       # Scrypt password hashing
+pbkdf2 = "0.12"       # PBKDF2 key derivation
+hkdf = "0.12"         # HKDF key derivation
+chacha20poly1305 = "0.10"  # ChaCha20-Poly1305 AEAD
+aes = "0.8"           # AES block cipher
+ctr = "0.9"           # CTR mode
+ccm = "0.5"           # CCM mode
+eax = "0.5"           # EAX mode
+ocb3 = "0.1"          # OCB3 mode
+siv = "0.4"           # SIV mode
+
+# Additional Dependencies for New Features
+diffy = "0.3"         # Text diffing for version control and change tracking
+html-to-docx-rs = "0.1"  # HTML to DOCX conversion for document export
+serde_with = "3.4"    # Additional serde utilities for complex serialization
+indexmap = "2.1"      # Ordered hash maps for maintaining insertion order
+smallvec = "1.11"     # Stack-allocated vectors for performance
+ahash = "0.8"         # Fast hash algorithm for HashMap performance
+fnv = "1.0"           # FNV hash for small keys
+bitflags = "2.4"      # Bit flag types for feature toggles
+enum-iterator = "1.4" # Enum iteration for UI dropdowns
+strum = { version = "0.25", features = ["derive"] }  # String enum conversions
+derive_more = "0.99"  # Additional derive macros
+tap = "1.0"           # Method chaining utilities
+itertools = "0.12"    # Additional iterator methods
+either = "1.9"        # Either type for error handling
+thiserror-impl = "1.0"  # Implementation details for thiserror
+anyhow-std = "1.0"    # Standard library integration for anyhow
+log4rs = "1.2"        # Advanced logging configuration
+tracing-appender = "0.2"  # Log file rotation
+tracing-bunyan-formatter = "0.3"  # Structured logging format
+metrics = "0.21"      # Application metrics collection
+metrics-exporter-prometheus = "0.12"  # Prometheus metrics export
+sysinfo = "0.29"      # System information for performance monitoring
 ```
 
 ### Frontend Dependencies
@@ -887,6 +954,158 @@ CREATE TABLE ai_providers (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Quick Tools and Interface State
+CREATE TABLE quick_tools_sessions (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    session_type TEXT NOT NULL, -- 'quick_edit', 'quick_chat'
+    original_text TEXT,
+    modified_text TEXT,
+    user_input TEXT,
+    high_quality_mode BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Brainstorm Sessions and Keepers List
+CREATE TABLE brainstorm_sessions (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    seed_prompt TEXT,
+    session_data JSON,
+    keepers_list JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Card System for AI Responses
+CREATE TABLE ai_response_cards (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    document_id INTEGER,
+    feature_type TEXT NOT NULL,
+    prompt_context TEXT,
+    response_text TEXT,
+    is_stacked BOOLEAN DEFAULT FALSE,
+    stack_order INTEGER,
+    is_starred BOOLEAN DEFAULT FALSE,
+    is_collapsed BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Style Examples and Match My Style
+CREATE TABLE style_examples (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER,
+    user_id TEXT, -- For global style examples
+    example_text TEXT NOT NULL,
+    analysis_result TEXT,
+    generated_style_prompt TEXT,
+    word_count INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Deleted Items Recovery System
+CREATE TABLE deleted_items (
+    id INTEGER PRIMARY KEY,
+    item_type TEXT NOT NULL, -- 'project', 'folder', 'document'
+    item_id INTEGER NOT NULL,
+    item_data JSON NOT NULL,
+    parent_id INTEGER,
+    deletion_reason TEXT,
+    deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    can_restore BOOLEAN DEFAULT TRUE
+);
+
+-- Canvas Data Storage
+CREATE TABLE canvas_elements (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    element_type TEXT NOT NULL, -- 'card', 'text', 'outline', 'connection'
+    position_x REAL NOT NULL,
+    position_y REAL NOT NULL,
+    width REAL,
+    height REAL,
+    content TEXT,
+    style_data JSON,
+    connections JSON, -- For linked elements
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Hover Menu and Selection Context
+CREATE TABLE selection_contexts (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    selection_text TEXT NOT NULL,
+    selection_start INTEGER NOT NULL,
+    selection_end INTEGER NOT NULL,
+    context_type TEXT, -- 'single_word', 'paragraph', 'long_text'
+    available_tools JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Related Words Cache
+CREATE TABLE related_words_cache (
+    id INTEGER PRIMARY KEY,
+    word TEXT NOT NULL,
+    context_hash TEXT NOT NULL,
+    related_words JSON NOT NULL,
+    word_cloud_data JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME
+);
+
+-- Visualize Image Generation
+CREATE TABLE generated_images (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    document_id INTEGER,
+    source_text TEXT NOT NULL,
+    image_prompt TEXT NOT NULL,
+    image_data BLOB,
+    image_url TEXT,
+    credits_used INTEGER DEFAULT 2500,
+    resolution TEXT DEFAULT '1024x1024',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Streaming Generation State
+CREATE TABLE streaming_sessions (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    feature_type TEXT NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
+    current_text TEXT,
+    is_paused BOOLEAN DEFAULT FALSE,
+    can_resume BOOLEAN DEFAULT TRUE,
+    context_data JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Purple Text Highlighting Tracking
+CREATE TABLE ai_generated_ranges (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    start_position INTEGER NOT NULL,
+    end_position INTEGER NOT NULL,
+    feature_type TEXT NOT NULL,
+    is_edited BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
 -- Settings
 CREATE TABLE settings (
     id INTEGER PRIMARY KEY,
@@ -894,6 +1113,359 @@ CREATE TABLE settings (
     value TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Additional Database Tables for New Features
+
+-- Scenes and Draft System
+CREATE TABLE scenes (
+    id INTEGER PRIMARY KEY,
+    outline_id INTEGER NOT NULL,
+    scene_number INTEGER NOT NULL,
+    title TEXT,
+    summary TEXT,
+    extra_instructions TEXT,
+    pov TEXT,
+    tense TEXT,
+    character_pov_ids JSON,
+    word_count_estimate INTEGER,
+    credit_estimate INTEGER,
+    is_validated BOOLEAN DEFAULT FALSE,
+    validation_issues JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (outline_id) REFERENCES outlines(id)
+);
+
+-- Acts/Dividers in Outlines
+CREATE TABLE outline_acts (
+    id INTEGER PRIMARY KEY,
+    outline_id INTEGER NOT NULL,
+    act_type TEXT NOT NULL, -- 'Part', 'Book', 'Episode', 'Section'
+    act_number INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    position INTEGER NOT NULL, -- Position in outline
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (outline_id) REFERENCES outlines(id)
+);
+
+-- Document Versions and History
+CREATE TABLE document_versions (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    version_number INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    word_count INTEGER DEFAULT 0,
+    change_summary TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Backup System
+CREATE TABLE backups (
+    id INTEGER PRIMARY KEY,
+    backup_type TEXT NOT NULL, -- 'auto', 'manual', 'export'
+    project_id INTEGER,
+    backup_path TEXT NOT NULL,
+    backup_size INTEGER,
+    includes_story_bible BOOLEAN DEFAULT TRUE,
+    backup_metadata JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Import/Export Operations
+CREATE TABLE import_export_operations (
+    id INTEGER PRIMARY KEY,
+    operation_type TEXT NOT NULL, -- 'import', 'export'
+    project_id INTEGER,
+    file_type TEXT NOT NULL, -- 'docx', 'txt', 'rtf', 'odt', 'csv', 'zip'
+    file_path TEXT,
+    operation_status TEXT DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
+    progress_percentage INTEGER DEFAULT 0,
+    result_data JSON,
+    error_message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Smart Import Results
+CREATE TABLE smart_import_results (
+    id INTEGER PRIMARY KEY,
+    import_operation_id INTEGER NOT NULL,
+    extracted_characters JSON,
+    extracted_worldbuilding JSON,
+    extracted_outline JSON,
+    story_bible_data JSON,
+    word_count INTEGER,
+    character_count INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (import_operation_id) REFERENCES import_export_operations(id)
+);
+
+-- Plugin Marketplace and Sharing
+CREATE TABLE plugin_marketplace (
+    id INTEGER PRIMARY KEY,
+    plugin_id INTEGER NOT NULL,
+    creator_name TEXT NOT NULL,
+    visibility TEXT DEFAULT 'published', -- 'published', 'unlisted', 'private'
+    download_count INTEGER DEFAULT 0,
+    rating_average REAL DEFAULT 0.0,
+    rating_count INTEGER DEFAULT 0,
+    category TEXT,
+    tags JSON,
+    featured BOOLEAN DEFAULT FALSE,
+    published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (plugin_id) REFERENCES plugins(id)
+);
+
+CREATE TABLE plugin_ratings (
+    id INTEGER PRIMARY KEY,
+    plugin_id INTEGER NOT NULL,
+    user_identifier TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (plugin_id) REFERENCES plugins(id)
+);
+
+-- Plugin Usage Analytics
+CREATE TABLE plugin_usage (
+    id INTEGER PRIMARY KEY,
+    plugin_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
+    execution_time_ms INTEGER,
+    credits_used INTEGER,
+    success BOOLEAN DEFAULT TRUE,
+    error_message TEXT,
+    used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (plugin_id) REFERENCES plugins(id),
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Advanced AI Model Configurations
+CREATE TABLE ai_model_configurations (
+    id INTEGER PRIMARY KEY,
+    provider_id INTEGER NOT NULL,
+    model_name TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    context_window INTEGER NOT NULL,
+    max_output_tokens INTEGER NOT NULL,
+    supports_streaming BOOLEAN DEFAULT TRUE,
+    supports_images BOOLEAN DEFAULT FALSE,
+    supports_function_calling BOOLEAN DEFAULT FALSE,
+    cost_per_input_token REAL,
+    cost_per_output_token REAL,
+    cost_per_image REAL,
+    quality_tier TEXT DEFAULT 'standard', -- 'basic', 'standard', 'premium'
+    specializations JSON, -- ['creative_writing', 'technical_writing', 'dialogue', 'description']
+    content_filter_levels JSON,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (provider_id) REFERENCES ai_providers(id)
+);
+
+-- Prose Mode Definitions
+CREATE TABLE prose_modes (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    model_configuration_id INTEGER NOT NULL,
+    creativity_level INTEGER DEFAULT 5,
+    temperature REAL DEFAULT 0.7,
+    top_p REAL DEFAULT 0.9,
+    frequency_penalty REAL DEFAULT 0.0,
+    presence_penalty REAL DEFAULT 0.0,
+    special_instructions TEXT,
+    is_experimental BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (model_configuration_id) REFERENCES ai_model_configurations(id)
+);
+
+-- User Preferences and Settings
+CREATE TABLE user_preferences (
+    id INTEGER PRIMARY KEY,
+    preference_category TEXT NOT NULL,
+    preference_key TEXT NOT NULL,
+    preference_value TEXT,
+    data_type TEXT DEFAULT 'string', -- 'string', 'integer', 'boolean', 'json'
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(preference_category, preference_key)
+);
+
+-- Keyboard Shortcuts and Hotkeys
+CREATE TABLE keyboard_shortcuts (
+    id INTEGER PRIMARY KEY,
+    action_name TEXT NOT NULL,
+    shortcut_combination TEXT NOT NULL,
+    context TEXT DEFAULT 'global', -- 'global', 'editor', 'canvas', 'story_bible'
+    is_custom BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Feature Usage Analytics
+CREATE TABLE feature_usage_analytics (
+    id INTEGER PRIMARY KEY,
+    feature_name TEXT NOT NULL,
+    project_id INTEGER,
+    usage_count INTEGER DEFAULT 1,
+    total_credits_used INTEGER DEFAULT 0,
+    average_execution_time_ms INTEGER,
+    last_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    first_used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Error Logs and Diagnostics
+CREATE TABLE error_logs (
+    id INTEGER PRIMARY KEY,
+    error_type TEXT NOT NULL,
+    error_message TEXT NOT NULL,
+    stack_trace TEXT,
+    context_data JSON,
+    project_id INTEGER,
+    document_id INTEGER,
+    user_action TEXT,
+    severity TEXT DEFAULT 'error', -- 'info', 'warning', 'error', 'critical'
+    is_resolved BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Performance Metrics
+CREATE TABLE performance_metrics (
+    id INTEGER PRIMARY KEY,
+    metric_name TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    metric_unit TEXT, -- 'ms', 'mb', 'count', 'percentage'
+    context_data JSON,
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notification System
+CREATE TABLE notifications (
+    id INTEGER PRIMARY KEY,
+    notification_type TEXT NOT NULL, -- 'info', 'warning', 'error', 'success'
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    action_data JSON,
+    is_read BOOLEAN DEFAULT FALSE,
+    is_dismissed BOOLEAN DEFAULT FALSE,
+    expires_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Template System
+CREATE TABLE templates (
+    id INTEGER PRIMARY KEY,
+    template_type TEXT NOT NULL, -- 'character', 'worldbuilding', 'outline', 'document'
+    name TEXT NOT NULL,
+    description TEXT,
+    template_data JSON NOT NULL,
+    is_system_template BOOLEAN DEFAULT FALSE,
+    is_public BOOLEAN DEFAULT FALSE,
+    usage_count INTEGER DEFAULT 0,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Workflow Automation
+CREATE TABLE workflow_automations (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    trigger_type TEXT NOT NULL, -- 'document_save', 'word_count_milestone', 'time_based', 'manual'
+    trigger_conditions JSON,
+    actions JSON, -- Array of actions to perform
+    is_active BOOLEAN DEFAULT TRUE,
+    project_id INTEGER,
+    last_executed_at DATETIME,
+    execution_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Content Analysis Results
+CREATE TABLE content_analysis (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    analysis_type TEXT NOT NULL, -- 'character_consistency', 'plot_holes', 'pacing', 'style'
+    analysis_results JSON NOT NULL,
+    suggestions JSON,
+    confidence_score REAL,
+    analyzed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Collaboration Sessions
+CREATE TABLE collaboration_sessions (
+    id INTEGER PRIMARY KEY,
+    document_id INTEGER NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
+    session_name TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    allow_anonymous BOOLEAN DEFAULT TRUE,
+    max_participants INTEGER DEFAULT 10,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+CREATE TABLE collaboration_participants (
+    id INTEGER PRIMARY KEY,
+    session_id INTEGER NOT NULL,
+    participant_name TEXT,
+    participant_token TEXT UNIQUE NOT NULL,
+    is_anonymous BOOLEAN DEFAULT TRUE,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES collaboration_sessions(id)
+);
+
+-- Advanced Search Index
+CREATE TABLE search_index (
+    id INTEGER PRIMARY KEY,
+    content_type TEXT NOT NULL, -- 'document', 'character', 'worldbuilding', 'outline'
+    content_id INTEGER NOT NULL,
+    searchable_text TEXT NOT NULL,
+    keywords JSON,
+    last_indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Full-Text Search Virtual Table
+CREATE VIRTUAL TABLE search_fts USING fts5(
+    content_type,
+    content_id,
+    title,
+    content,
+    keywords,
+    content='search_index',
+    content_rowid='id'
+);
+
+-- Triggers for FTS updates
+CREATE TRIGGER search_index_ai AFTER INSERT ON search_index BEGIN
+    INSERT INTO search_fts(rowid, content_type, content_id, title, content, keywords)
+    VALUES (new.id, new.content_type, new.content_id, '', new.searchable_text, new.keywords);
+END;
+
+CREATE TRIGGER search_index_ad AFTER DELETE ON search_index BEGIN
+    INSERT INTO search_fts(search_fts, rowid, content_type, content_id, title, content, keywords)
+    VALUES ('delete', old.id, old.content_type, old.content_id, '', old.searchable_text, old.keywords);
+END;
+
+CREATE TRIGGER search_index_au AFTER UPDATE ON search_index BEGIN
+    INSERT INTO search_fts(search_fts, rowid, content_type, content_id, title, content, keywords)
+    VALUES ('delete', old.id, old.content_type, old.content_id, '', old.searchable_text, old.keywords);
+    INSERT INTO search_fts(rowid, content_type, content_id, title, content, keywords)
+    VALUES (new.id, new.content_type, new.content_id, '', new.searchable_text, new.keywords);
+END;
 ```
 
 ### LanceDB Schema
@@ -1405,6 +1977,124 @@ After reviewing all reference files, the following features have been added to e
 - **Toolbar Integration**: Centralized access to all AI tools and features
 - **Document Preview**: Quick preview of recent projects in folders without opening
 - **File Path Navigation**: Breadcrumb navigation for nested folder structures
+
+### Critical Missing Features Identified from Reference Review:
+
+#### Interface & User Experience
+- **Three-Column Layout**: Left project navigation, center editor, right history/cards with responsive design and toolbar spanning all columns
+- **Hover Menu System**: Context-aware tool access when selecting text with adaptive options based on selection length and content type
+- **Selection Menu**: Smart menu that appears when highlighting text, changing options based on what's selected (single word vs paragraph vs longer text)
+- **Card Stacking Interface**: Visual organization of AI responses with collapsible cards, prompt context display, and feature attribution
+- **Project Card System**: Visual project representation on homepage with preview capabilities, recent document access, and drag-and-drop organization
+- **File Path Navigation**: Breadcrumb system for nested folder navigation with drag-and-drop support and hover previews
+- **Purple Text Highlighting**: Visual indication of AI-generated content until user edits, with automatic removal after modification
+- **Focus Mode**: Distraction-free writing environment with minimal UI elements
+- **Document Preview**: Quick preview of recent projects in folders without opening full project
+
+#### Quick Tools System
+- **Quick Edit & Quick Chat**: Instant access via Ctrl+K (PC) / ⌘+K (Mac) with inline editing capabilities
+- **High Quality Mode**: Toggle for Quick Tools that uses credits for more complex tasks vs free default mode
+- **Story-Aware Context**: Quick Tools have full access to Story Bible and document context without briefing
+- **Inline Editing**: Quick Edit shows struck-through original text with green replacement text for comparison
+- **Tab Toggle**: Switch between Quick Edit and Quick Chat with Tab key within same interface
+- **Free Quick Tools**: Default free usage without credit consumption for basic operations
+
+#### Advanced AI Features
+- **Muse-Specific Advanced Features**: 
+  - Creativity Level 11 (special ultra-creative mode with different algorithms from standard 1-10 scale)
+  - Up to 10,000 words generation in Draft tool (significantly higher than other models)
+  - 128,000 words context reading capability with pause/resume functionality
+  - Cliché detection and removal system during training for unique prose generation
+  - Unfiltered content generation without safety restrictions for mature themes
+  - Style Examples integration (up to 1,000 words of user writing samples for personalized AI training)
+- **Match My Style**: AI analysis of user's writing to generate personalized style prompts automatically
+- **Tone Shift**: Write continuation in specific tones (Ominous, Fantastical, Fast-Paced, Upbeat, Authoritative, Conflicted, Romantic, Sensual)
+- **Related Words**: Smart thesaurus with contextual suggestions and expandable word cloud interface for single-word selections
+- **Streaming Generation**: Real-time text generation with pause/resume capabilities, progress indicators, and cancellation options
+
+#### Brainstorm System
+- **Category-Specific Brainstorming**: Predefined categories (Dialogue, Characters, World building, Plot points, Names, Places, Objects, Descriptions, Article ideas, Tweets, Something else)
+- **Thumbs Up/Down System**: Voting system with Keepers List functionality for saving preferred suggestions
+- **Save & Exit Workflow**: Session management with persistent Keepers List across brainstorm sessions
+- **Refresh Functionality**: Generate new suggestions while maintaining existing Keepers List
+- **History Integration**: Brainstorm results automatically saved to History panel as organized cards
+
+#### Community & Learning
+- **Community Integration**: Discord community features, learning resources integration, and user-generated content sharing
+- **Prose Quality Guidelines**: Built-in system to avoid vagueness, conflicting information, and confusing wording with real-time suggestions
+- **Laser Tools**: Community term for targeted AI features like Rewrite, Describe, Expand with precision editing capabilities
+- **Kitbashing Workflow**: Advanced feature for combining multiple AI generations and drafts with merge capabilities and version tracking
+- **Muse-Specific Advanced Features**: 
+  - Creativity Level 11 (special ultra-creative mode with different algorithms)
+  - Up to 10,000 words generation in Draft tool
+  - 128,000 words context reading capability with pause/resume
+  - Cliché detection and removal system during training
+  - Unfiltered content generation without safety restrictions
+  - Style Examples integration (up to 1,000 words of user writing samples)
+- **Advanced Plugin Variables**: Extended variable system including `previous_document_text`, `chapter_scenes_extra_instructions`, `is_story_bible_active`, etc.
+- **Hover Menu System**: Context-aware tool access when selecting text with adaptive options
+- **Card Stacking Interface**: Visual organization of AI responses with collapsible cards and prompt context
+- **Project Card System**: Visual project representation on homepage with preview capabilities and recent document access
+- **Deleted Projects Management**: Comprehensive trash and recovery system with folder restoration
+- **File Path Navigation**: Breadcrumb system for nested folder navigation with drag-and-drop support
+- **Document Type Recognition**: Smart handling of different document types and purposes
+- **Token Management**: Behind-the-scenes token counting and optimization for all AI models
+- **Model-Specific Optimizations**: Tailored configurations for different AI models with performance tuning
+- **Content Filter Levels**: Adjustable content filtering based on selected AI model capabilities
+- **Streaming Generation**: Real-time text generation with pause/resume capabilities and progress indicators
+- **Context Window Management**: Intelligent handling of large context windows across different models
+- **Rate Limiting**: Built-in rate limiting for API calls and credit management with queue system
+- **Error Recovery**: Graceful handling of API failures and network issues with retry mechanisms
+- **Performance Monitoring**: Built-in performance tracking and optimization with usage analytics
+- **Accessibility Features**: Screen reader support and comprehensive keyboard navigation
+- **Internationalization Support**: Framework for future multi-language support with locale management
+- **High Quality Mode**: Toggle for Quick Tools that uses credits for more complex tasks
+- **Free Quick Tools**: Default free usage of Quick Edit and Quick Chat without credit consumption
+- **Story-Aware Context**: Quick Tools have full access to Story Bible and document context
+- **Inline Editing**: Quick Edit shows struck-through original text with green replacement text
+- **Tab Toggle**: Switch between Quick Edit and Quick Chat with Tab key
+- **Keyboard Shortcuts**: Ctrl+K (PC) / ⌘+K (Mac) for instant Quick Tools access
+- **Thumbs Up/Down System**: Brainstorm feature voting system with Keepers List functionality
+- **Save & Exit Workflow**: Brainstorm session management with persistent Keepers List
+- **Category-Specific Brainstorming**: Predefined categories (Dialogue, Characters, World building, Plot points, Names, Places, Objects, Descriptions, Article ideas, Tweets, Something else)
+- **Refresh Functionality**: Generate new brainstorm suggestions while maintaining Keepers List
+- **History Integration**: Brainstorm results saved to History panel as cards
+- **Three-Column Layout**: Left project navigation, center editor, right history/cards with responsive design
+- **Toolbar Positioning**: Top toolbar spanning all three columns with feature access
+- **Card Interaction**: Click to expand/collapse card stacks with prompt context display
+- **Prompt Visibility**: Italicized prompt text showing AI consideration context
+- **Feature Attribution**: Clear labeling of which feature generated each card
+- **Document Organization**: Left sidebar with Add New, Import, and folder creation options
+- **Homepage Integration**: Project cards on main homepage with direct project access
+
+### Additional Features Identified from Reference Review:
+- **Laser Tools**: Community term for targeted AI features like Rewrite, Describe, Expand
+- **Kitbashing Workflow**: Advanced feature for combining multiple AI generations and drafts
+- **Prose Quality Guidelines**: Built-in system to avoid vagueness, conflicting information, and confusing wording
+- **Community Integration**: Discord community features and learning resources
+- **Muse-Specific Features**: 
+  - Creativity Level 11 (special ultra-creative mode)
+  - Up to 10,000 words generation in Draft
+  - 128,000 words context reading capability
+  - Cliché detection and removal system
+  - Unfiltered content generation
+- **Advanced Plugin Variables**: Extended variable system including `previous_document_text`, `chapter_scenes_extra_instructions`, etc.
+- **Hover Menu System**: Context-aware tool access when selecting text
+- **Card Stacking**: Visual organization of AI responses with collapsible cards
+- **Project Card System**: Visual project representation on homepage with preview capabilities
+- **Deleted Projects Management**: Comprehensive trash and recovery system
+- **File Path Navigation**: Breadcrumb system for nested folder navigation
+- **Document Type Recognition**: Smart handling of different document types and purposes
+- **Token Management**: Behind-the-scenes token counting and optimization
+- **Model-Specific Optimizations**: Tailored configurations for different AI models
+- **Content Filter Levels**: Adjustable content filtering based on selected AI model
+- **Streaming Generation**: Real-time text generation with pause/resume capabilities
+- **Context Window Management**: Intelligent handling of large context windows across models
+- **Rate Limiting**: Built-in rate limiting for API calls and credit management
+- **Error Recovery**: Graceful handling of API failures and network issues
+- **Performance Monitoring**: Built-in performance tracking and optimization
+- **Accessibility Features**: Screen reader support and keyboard navigation
+- **Internationalization Support**: Framework for future multi-language support
 
 ### Enhanced Database Schema:
 - Added POV and Tense settings to `story_bible` and `outlines` tables.
