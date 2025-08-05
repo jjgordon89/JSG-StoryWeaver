@@ -104,9 +104,12 @@ src/
 - **Document Management**: Create, edit, organize multiple documents per project
 - **Chapter Continuity**: Link documents to create continuous story flow for AI context
 - **Import/Export**: Support for various file formats (.docx, .txt, .rtf, .odt, .csv)
-- **Smart Import**: Novel import with auto-populated Story Bible, character import from text/files
+- **Smart Import**: Novel import with auto-populated Story Bible (up to 120,000 words), character import from text/files (up to 60,000 words, 30 characters max), CSV import for unlimited characters
+- **Document Export**: Individual document export as .docx with formatting preservation
+- **Project Export**: Complete project export as .zip (excludes Story Bible)
+- **Story Bible Export**: Separate CSV export for Outline (chapters/summaries) and Characters (all traits)
 - **Version Control**: Track changes and maintain document history
-- **Collaboration**: Document sharing with clean copy commenting system
+- **Collaboration**: Document sharing with clean copy commenting system, reader display names/anonymous options, private comments between author and individual readers, document duplication for multiple share links, unpublish/republish functionality
 - **Backup System**: Automatic local backups
 
 ### 2. Story Bible System
@@ -116,8 +119,8 @@ src/
 - **Synopsis**: Story summary that influences AI generation and outline creation
 - **Characters**: Detailed character profiles with traits, relationships, and visibility controls
 - **Worldbuilding**: Organized world details, settings, and lore with customizable cards
-- **Outline**: Chapter-by-chapter story structure with unlimited length and document linking
-- **Scenes & Draft**: Building blocks for chapters with AI-generated options and extra instructions
+- **Outline**: Chapter-by-chapter story structure with unlimited length, document linking, Acts as dividers (Part, Book, Episode, Section), document creation from chapters with automatic linking, outline updating from written documents
+- **Scenes & Draft**: Building blocks for chapters with AI-generated options, extra instructions (POV, tense, style notes), Story Bible detection with underlined elements, scene validation with quick fixes, word count and credit estimates
 - **Series Support**: Share Characters, Worldbuilding, and Outlines across multiple projects
 - **Visibility Controls**: Toggle AI access to specific cards or traits for spoiler management
 - **Smart Generation**: AI-powered creation of all Story Bible elements with user refinement
@@ -125,16 +128,16 @@ src/
 ### 3. AI Writing Tools
 
 #### Write Features
-- **Auto Write**: Context-aware text continuation
-- **Guided Write**: Directed writing with user prompts
-- **Tone Shift**: Style-specific writing variations
-- **First Draft**: Complete scene generation from outlines (up to 3000 words)
+- **Auto Write**: Context-aware text continuation (uses up to 1000 words of context, outputs 150-200 words)
+- **Guided Write**: Directed writing with user prompts and AI-generated story ideas
+- **Tone Shift**: Style-specific writing variations and changes
+- **First Draft**: Complete scene generation from prompts (up to 3000 words, only available in empty documents)
 
 #### Editing Tools
-- **Rewrite**: Multiple rewriting styles (shorter, descriptive, show-not-tell) with predefined/custom styles
-- **Describe**: Sensory detail generation with toggleable senses and metaphors
-- **Expand**: Detailed expansion of brief passages
-- **Brainstorm**: Idea generation with "Keepers List" for saving favorites
+- **Rewrite**: Multiple rewriting styles (Rephrase, Shorter, More descriptive, Show-Not-Tell, More Inner Conflict, More Intense) with custom options (max 6,000 words)
+- **Describe**: Sensory detail generation with toggleable senses (sight, sound, touch, taste, smell) and metaphors (considers paragraph + 200 preceding words)
+- **Expand**: Detailed expansion of brief passages (minimum 3 words, maximum 1,000 words)
+- **Brainstorm**: Rapid-fire idea generation with categories (Dialogue, Characters, World building, Plot points, Names, Places, Objects, Descriptions, Article ideas, Tweets, Something else) and "Keepers List" for saving favorites
 - **Quick Tools**: Quick Edit and Quick Chat for in-document AI assistance
 - **Selection Menu**: Context-sensitive tools (Describe, Quick Edit, Related Words, Expand, Visualize)
 - **Related Words**: Smart thesaurus for finding contextually appropriate alternatives
@@ -159,12 +162,17 @@ src/
 - **Template System**: Pre-built plugin templates for common writing tasks
 - **Plugin Guidelines**: Best practices and validation for plugin creation
 - **Credit System**: Plugins use standard credit system based on AI model usage
+- **Sandboxed Execution**: Secure plugin environment with controlled access
+- **API Integration**: Third-party service connections
 
 ### 5. Canvas/Visual Planning
-- **Digital Whiteboard**: Drag-and-drop story planning
-- **Outline Templates**: Hero's Journey, Three-Act Structure, etc.
+- **Digital Whiteboard**: Drag-and-drop story planning with cards, text, and outlines
+- **Outline Templates**: Hero's Journey, Hollywood Beats, Story Circle, Romance Outline with distinct visuals
 - **Visual Story Mapping**: Character arcs and plot threads
 - **Mind Mapping**: Brainstorming visualization
+- **Keyboard Shortcuts**: Full shortcut support (Select all, Delete, Pan, Zoom, Undo/Redo, Reset)
+- **Outline Generation**: Generate complete outlines from single sentences or paragraphs
+- **Copy to Clipboard**: Export canvas outlines to documents or Story Bible
 
 ### 6. Advanced Editor
 - **Rich Text Editing**: Full-featured writing environment with purple highlighting for AI content
@@ -175,18 +183,42 @@ src/
 - **Document Linking**: Connect documents for chapter continuity and AI context
 - **Comment System**: In-document commenting for collaboration and self-notes
 - **Version History**: Document revision tracking
-- **Point of View (POV) & Tense Settings**: Global and per-chapter control over narrative perspective (1st, 2nd, 3rd person) and tense (past, present, future), with the ability to assign a specific character's POV.
+- **Point of View (POV) & Tense Settings**: Global and per-chapter control over narrative perspective (1st, 2nd, 3rd person) and tense (past, present, future), with the ability to assign a specific character's POV
+- **Story Bible Detection**: Visual highlighting of detected Story Bible elements in text
+- **Document Duplication**: Easy document copying for versioning and experimentation
 
-### 7. Advanced AI Features
+### 7. User Interface
+- **Modern Design**: Clean, distraction-free writing environment
+- **Customizable Layout**: Adjustable panels and workspace
+- **Dark/Light Themes**: Multiple theme options
+- **Responsive Design**: Adaptive to different screen sizes
+- **Accessibility**: Screen reader support and keyboard navigation
+- **History Panel**: Track and review AI generation history with undo/redo capabilities
+- **Keyboard Shortcuts**: Comprehensive shortcut system for all major functions
+
+### 8. Advanced AI Features
 - **Chapter Continuity**: AI awareness of linked documents for seamless story flow
 - **Saliency Engine**: Intelligent selection of relevant Story Bible information for AI
 - **Multiple AI Models**: Support for various models (Muse, Claude, GPT) with different capabilities
 - **Prose Modes**: Curated model suites optimized for fiction writing
 - **Style Examples**: Train AI on user's writing style for personalized prose
-- **Credit Management**: Transparent credit usage tracking across all AI features
+- **Credit Management**: Transparent credit usage tracking across all AI features with cost estimates before generation and credit balance display
 - **Content Filtering**: Adjustable content filters based on selected AI model
+- **Model Switching**: Dynamic model selection based on task with dropdown selection
+- **Custom Prompts**: User-defined AI instructions and prompt templates
+- **Related Words**: Contextual word suggestions and alternatives with semantic similarity
+- **Visualize**: AI-generated images from text descriptions (2500 credits per 1024x1024 image, requires 10-3000 words)
+- **Advanced Brainstorming**: Multi-step idea development with context awareness and category-specific prompts
+- **Prose Mode Selection**: Dropdown interface for selecting generation modes before AI operations
 
 ## Database Schema
+
+### Additional Implementation Notes
+- **Template System**: Predefined templates for Story Bible cards (character archetypes, worldbuilding categories)
+- **Outline Acts**: Support for named dividers in outlines (Part, Book, Episode, Section)
+- **Document Linking**: Automatic bidirectional linking between outline chapters and documents
+- **Reverse Sync**: Update outline summaries from written chapter content
+- **Word Limits**: Enforce specific word limits across all AI features for optimal performance
 
 ### SQLite Tables
 ```sql
