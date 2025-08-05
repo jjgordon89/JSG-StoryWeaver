@@ -1669,6 +1669,7 @@ struct CharacterEmbedding {
 - Outline system with document linking
 - Scenes & Draft functionality
 - Series-level sharing of Story Bible elements
+- **Embedding Generation**: Implement the generation and storage of vector embeddings in LanceDB for all new and updated Story Bible elements (characters, worldbuilding, etc.) to support the Phase 4 Saliency Engine.
 
 ### Phase 4: Advanced AI Features (Weeks 16-19)
 - Multiple AI models and prose modes

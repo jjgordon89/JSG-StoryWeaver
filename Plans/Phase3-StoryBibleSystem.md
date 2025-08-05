@@ -27,29 +27,32 @@ Implement the comprehensive Story Bible system that serves as the centralized kn
 ### Week 12: Characters System
 - [ ] Create character profiles with customizable traits
 - [ ] Implement character trait visibility controls
-- [ ] Build character relationship mapping
+- [ ] Build character relationship mapping (graph-based)
+- [ ] Implement graph-based relationship visualization
 - [ ] Add character import from text/files (60K words, 30 chars max)
 - [ ] Create CSV import for unlimited characters
 - [ ] Implement character templates and archetypes
 - [ ] Add character consistency tracking
 - [ ] Build character POV assignment system
+- [ ] Implement CSV export for all character data
 
 ### Week 13: Worldbuilding System
 - [ ] Create worldbuilding cards with customizable fields
 - [ ] Implement worldbuilding trait visibility controls
 - [ ] Build hierarchical worldbuilding organization
 - [ ] Add worldbuilding templates (locations, cultures, magic systems)
-- [ ] Create worldbuilding relationship mapping
+- [ ] Create worldbuilding relationship mapping (graph-based)
 - [ ] Implement worldbuilding generation from prompts
 - [ ] Add worldbuilding consistency validation
-- [ ] Build worldbuilding export capabilities
+- [ ] Build worldbuilding export capabilities (including CSV)
 
 ### Week 14: Outline & Scenes System
 - [ ] Create outline system with unlimited chapter length
 - [ ] Implement Acts/dividers (Part, Book, Episode, Section)
 - [ ] Build document linking from outline chapters
 - [ ] Add automatic document creation from chapters
-- [ ] Implement outline updating from written documents
+- [ ] Implement Reverse Sync to update outline from documents
+- [ ] Implement CSV export for outline structure (chapters and summaries)
 - [ ] Create Scenes & Draft building blocks
 - [ ] Add scene validation with quick fixes
 - [ ] Build word count and credit estimates for scenes
@@ -61,8 +64,16 @@ Implement the comprehensive Story Bible system that serves as the centralized kn
 - [ ] Add series consistency checking
 - [ ] Implement Story Bible detection in text
 - [ ] Create underlined element highlighting
-- [ ] Build Saliency Engine for intelligent AI context
+- [ ] Build advanced Saliency Engine for intelligent AI context
+- [ ] Implement advanced relevance scoring (context, recency, user preference boosts)
+- [ ] Build ContextOptimizer to select elements based on token budget
 - [ ] Add visibility settings for spoiler management
+
+### Weeks 11-15: Backend Architecture & State Management
+- [ ] Design and implement a State Synchronization Manager for real-time data consistency
+- [ ] Develop change propagation logic from Story Bible to documents
+- [ ] Implement Chapter Continuity Manager for seamless AI context
+- [ ] Create a conflict resolution system for synchronization issues
 
 ## Story Bible Architecture
 

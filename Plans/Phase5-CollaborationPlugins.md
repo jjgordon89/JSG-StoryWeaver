@@ -899,6 +899,8 @@ export const PluginBuilder: React.FC<PluginBuilderProps> = ({
 - wasmtime-wasi = "15.0"
 - serde_json = "1.0"
 - uuid = { version = "1.0", features = ["v4"] }
+- y-sync = "0.2.0" # For CRDT-based real-time sync
+- webrtc = "0.7"   # For peer-to-peer collaboration
 
 ### Frontend
 - reactflow = "^11.10.4"
@@ -907,6 +909,33 @@ export const PluginBuilder: React.FC<PluginBuilderProps> = ({
 - konva = "^9.2.0"
 - react-konva = "^18.2.10"
 - @monaco-editor/react = "^4.6.0"
+- yjs = "^13.6.10" # CRDT library for collaboration
+- y-webrtc = "^10.2.5"
+
+## Integration with Core Systems
+To ensure alignment with the overall architecture defined in the `StoryWeaver-MasterPlan.md` and `Enhancement-Specifications.md`, the implementation of Phase 5 will incorporate the following core systems:
+
+### 1. Real-time Collaboration Engine
+The document sharing and collaboration features will be built upon the real-time synchronization framework.
+- **Conflict-Free Replicated Data Types (CRDTs)**: The implementation will use `yjs` on the frontend and a compatible Rust library on the backend to manage concurrent edits and ensure data consistency without relying on a central server for every change. This aligns with the `StateSynchronizationManager` specified in the enhancements document.
+- **WebRTC for Peer-to-Peer Communication**: For smaller collaboration sessions, WebRTC will be utilized for direct peer-to-peer data synchronization, reducing server load and latency.
+
+### 2. Credit System Integration
+The plugin system's credit consumption logic must be fully integrated with the application-wide `CreditManager`.
+- **Pre-generation Cost Estimation**: Before executing a plugin, the `PluginExecutionEngine` will query the `CreditManager` to provide the user with a precise cost estimate. This includes calculating input/output token costs based on the selected model and the complexity of the context variables.
+- **Credit Consumption**: Upon successful execution, the engine will report the actual tokens used to the `CreditManager` to deduct the appropriate amount from the user's balance.
+- **Usage Analytics**: All plugin executions will be logged with the `UsageAnalytics` system to provide users with detailed spending breakdowns.
+
+### 3. Comprehensive Error Handling & Recovery
+The collaboration and plugin systems are complex and prone to network, API, and data errors. The implementation must use the `ErrorRecoveryManager` defined in the enhancement specifications.
+- **Graceful Degradation**: If real-time sync fails, the system should fall back to a "polling" or "manual refresh" mode. If a plugin's selected AI model is unavailable, it should automatically offer to switch to a compatible alternative.
+- **User Feedback**: Clear, actionable error messages will be provided to the user, guiding them on how to resolve issues (e.g., "Content filtered by AI provider, try rephrasing" or "Insufficient credits to run this plugin").
+
+### 4. Centralized State Management
+The frontend components for the Plugin Builder, Marketplace, and Canvas will integrate with the `CentralizedStateManager`. This ensures that UI state is consistent, predictable, and resilient, especially when handling real-time updates from collaboration sessions or background processing from the plugin engine.
+
+### 5. Saliency Engine for Plugin Context
+The `PluginExecutionEngine`'s `VariableInjector` will not assemble context naively. It will use the `SaliencyEngine` to populate variables like `characters`, `worldbuilding`, and `outline`. This ensures that only the most relevant information from the Story Bible is passed to the AI, optimizing both the quality of the output and the credit cost of the operation.
 
 ## Next Phase
 Phase 6 will focus on polish and optimization, including performance improvements, UI/UX refinements, comprehensive testing, and preparation for deployment.

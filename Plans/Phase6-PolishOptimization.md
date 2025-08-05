@@ -15,29 +15,38 @@ Final phase focusing on performance optimization, UI/UX refinements, comprehensi
 
 ## Technical Tasks
 
-### Week 23: Performance & Optimization
-- [ ] Database query optimization and indexing
-- [ ] Memory management and garbage collection tuning
-- [ ] AI response caching and deduplication
-- [ ] Background processing optimization
-- [ ] Large document handling improvements
-- [ ] Vector database performance tuning
-- [ ] Canvas rendering optimization
-- [ ] Plugin execution performance improvements
-- [ ] Network request optimization and retry logic
-- [ ] Resource monitoring and performance metrics
+### Week 23: Performance & UI/UX Polish
+- [ ] **Database & Performance:**
+- [ ]   - Optimize critical database queries and validate indexing strategies.
+- [ ]   - Test and refine memory management, especially for large document handling.
+- [ ]   - Validate lazy loading and caching strategies for documents and Story Bible elements.
+- [ ]   - Test background sync manager for auto-saving and backups under various conditions.
+- [ ]   - Benchmark application startup time and core feature responsiveness.
+- [ ]   - Profile memory usage during extended sessions to identify and fix leaks.
+- [ ] **UI/UX Polish:**
+- [ ]   - Test and refine the three-column responsive layout across all breakpoints.
+- [ ]   - Validate Selection Menu intelligence and context-aware tool availability.
+- [ ]   - Test Card Stacking system for intuitive interaction and organization.
+- [ ]   - Polish Quick Tools inline editing flow (struck-through/green text).
+- [ ]   - Ensure all UI components meet accessibility standards (WCAG 2.1 AA).
 
-### Week 24: Polish & Deployment Preparation
-- [ ] UI/UX refinements and visual polish
-- [ ] Accessibility improvements and screen reader support
-- [ ] Comprehensive error handling and user feedback
-- [ ] Help system and user documentation
-- [ ] Onboarding flow and tutorials
-- [ ] Windows installer (MSI) creation
-- [ ] Auto-update mechanism implementation
-- [ ] Security audit and vulnerability assessment
-- [ ] Final testing and bug fixes
-- [ ] Release preparation and deployment scripts
+### Week 24: Core Logic, Testing & Deployment
+- [ ] **AI & Core Logic Validation:**
+- [ ]   - Validate Saliency Engine relevance algorithms and context optimization.
+- [ ]   - Test Token Management system for accuracy and budget enforcement.
+- [ ]   - Verify Chapter Continuity logic with complex linked document structures.
+- [ ]   - Test credit cost estimation and usage tracking for all AI features.
+- [ ]   - Validate streaming generation with pause/resume functionality.
+- [ ] **Final Testing & Documentation:**
+- [ ]   - Test comprehensive error handling and recovery workflows.
+- [ ]   - Finalize help system, user documentation, and interactive tutorials.
+- [ ]   - Perform final security audit and vulnerability assessment.
+- [ ]   - Conduct final regression testing and fix critical bugs.
+- [ ] **Deployment:**
+- [ ]   - Create and test Windows MSI installer.
+- [ ]   - Create and test portable executable version for Windows.
+- [ ]   - Implement and test auto-update mechanism.
+- [ ]   - Finalize release preparation and deployment scripts.
 
 ## Performance Optimization
 
@@ -1085,6 +1094,8 @@ impl UpdateManager {
 ### Frontend
 - @testing-library/react = "^14.1.0"
 - @testing-library/jest-dom = "^6.2.0"
+- vitest = "^1.1.0"
+- jest-axe = "^8.0.0"
 - playwright = "^1.40.0"
 - axe-core = "^4.8.0" # Accessibility testing
 - lighthouse = "^11.4.0" # Performance auditing
@@ -1092,6 +1103,7 @@ impl UpdateManager {
 ## Final Deliverables
 - Production-ready StoryWeaver application
 - Windows MSI installer package
+- Portable executable package for Windows
 - Comprehensive user documentation
 - Developer documentation and API reference
 - Test suite with high coverage

@@ -1,71 +1,75 @@
 # Phase 2: Core Writing Features (Weeks 6-10)
 
 ## Overview
-Implement the fundamental AI-powered writing tools that form the core of StoryWeaver's functionality, including AI API integrations, text editor enhancements, and essential writing assistance features.
+Implement the fundamental AI-powered writing tools that form the core of StoryWeaver's functionality. This phase focuses on AI API integrations, a highly responsive text editor, essential writing assistance features, and the foundational systems for context management, credit tracking, and robust error handling.
 
 ## Key Objectives
-- Implement AI API integrations (OpenAI, Claude, Gemini, OpenAI-compatible)
-- Enhanced document editor with selection menu
-- Core writing tools (Write modes, Rewrite, Expand, Describe)
-- Quick tools and Quick Chat functionality
-- Related Words feature with contextual suggestions
-- Basic commenting system for collaboration
-- Purple text highlighting for AI-generated content
+- **AI Integration:** Implement a flexible provider system for OpenAI, Claude, Gemini, and OpenAI-compatible endpoints with full streaming support.
+- **Advanced Editor:** Enhance the editor with an intelligent selection menu, a responsive three-column layout, and real-time UI updates for streaming generation.
+- **Core Writing Tools:** Build the main writing and editing tools, including Write, Rewrite, Expand, Describe, Brainstorm, and Visualize.
+- **Intelligent Systems:** Develop the foundational logic for the Saliency Engine (context assembly), a comprehensive Credit Management system, and advanced Error Handling workflows.
+- **Quick Tools:** Implement the Quick Edit and Quick Chat features with story-aware context and a High Quality mode.
+- **Collaboration:** Introduce a basic commenting system and notification framework.
+- **UI/UX:** Implement the card stacking system for AI responses and purple text highlighting for AI-generated content.
 
 ## Technical Tasks
 
-### Week 6: AI Integration Foundation
-- [ ] Implement AI provider abstraction layer
-- [ ] Create OpenAI API integration with streaming support
-- [ ] Add Claude API integration (Anthropic)
-- [ ] Implement Google Gemini API integration
-- [ ] Build OpenAI-compatible provider for custom endpoints
-- [ ] Add rate limiting and error handling for all providers
-- [ ] Implement token counting and cost calculation
-- [ ] Create AI model configuration system
+### Week 6: AI & Systems Foundation
+- **AI Provider Framework:**
+  - [ ] Implement AI provider abstraction layer with support for streaming and embeddings.
+  - [ ] Create integrations for OpenAI, Claude, Gemini, and OpenAI-compatible endpoints.
+  - [ ] Implement DALL-E 3 / Google Imagen integration for the Visualize feature.
+- **Core Systems:**
+  - [ ] **Saliency Engine (Foundation):** Develop initial context relevance algorithms and the context optimizer.
+  - [ ] **Token Management:** Implement precise token counting, optimization strategies, and a token budget calculator.
+  - [ ] **Credit Management:** Build the cost estimation engine, usage tracker, and low-balance warning system.
+  - [ ] **Error Handling:** Create the error recovery manager with strategies for network timeouts, API rate limits, and content filtering.
 
-### Week 7: Enhanced Text Editor
-- [ ] Upgrade Monaco Editor with custom features
-- [ ] Implement selection menu system
-- [ ] Add hover menu for context-sensitive tools
-- [ ] Create purple text highlighting for AI content
-- [ ] Build text selection and range management
-- [ ] Add keyboard shortcuts (Ctrl+K for Quick Tools)
-- [ ] Implement real-time word count and statistics
-- [ ] Create focus mode toggle
+### Week 7: Enhanced & Responsive Editor
+- **UI Framework:**
+  - [ ] **Three-Column Layout:** Implement the responsive layout manager with collapsible side panels.
+  - [ ] Implement column resizing logic with saved user preferences.
+- **Editor Features:**
+  - [ ] Upgrade Monaco Editor with custom features and syntax highlighting.
+  - [ ] **Intelligent Selection Menu:** Implement dynamic tool selection based on context (word count, document type, etc.).
+  - [ ] Add hover menu for context-sensitive tool access.
+  - [ ] **Streaming UI:** Build the UI for real-time text generation (typewriter effect, progress indicators, pause/resume controls).
+  - [ ] Create purple text highlighting for AI-generated content with automatic removal on edit.
+  - [ ] Implement a distraction-free Focus Mode.
 
-### Week 8: Core Writing Tools
-- [ ] Implement Write feature with multiple modes:
-  - Auto Write (context-aware continuation)
-  - Guided Write (directed writing with prompts)
-  - Tone Shift (style-specific variations)
-- [ ] Build Rewrite tool with multiple styles:
-  - Rephrase, Shorter, More descriptive
-  - Show-Not-Tell, More Inner Conflict, More Intense
-- [ ] Create Expand feature for detailed expansion
-- [ ] Implement Describe tool with sensory details
-- [ ] Add configurable creativity levels (1-10)
-- [ ] Build card system for AI responses
+### Week 8: Core Writing & Creative Tools
+- **Writing Tools:**
+  - [ ] Implement **Write** feature with multiple modes (Auto, Guided, Tone Shift).
+  - [ ] Build **Rewrite** tool with multiple styles (Rephrase, Shorter, More Descriptive, etc.).
+  - [ ] Create **Expand** and **Describe** features with sensory detail toggles.
+  - [ ] Add configurable creativity levels (1-10) and Key Details for project-level context.
+- **Creative Tools:**
+  - [ ] **Brainstorm:** Implement the brainstorming tool with category-specific prompts and a "Keepers List" with voting.
+  - [ ] **Visualize:** Build the UI for generating images from text descriptions.
+- **UI:**
+  - [ ] **Card Stacking System:** Implement the UI for organizing AI responses into collapsible, stackable cards with prompt context.
 
-### Week 9: Quick Tools System
-- [ ] Implement Quick Edit functionality
-- [ ] Create Quick Chat interface
-- [ ] Add High Quality mode toggle
-- [ ] Build inline editing with struck-through text
-- [ ] Implement Tab toggle between Quick Edit/Chat
-- [ ] Add story-aware context building
-- [ ] Create session management for undo/redo
-- [ ] Implement free vs credit-based usage
+### Week 9: Quick Tools & Contextual Systems
+- **Quick Tools:**
+  - [ ] Implement Quick Edit and Quick Chat functionality accessible via `Ctrl/Cmd+K`.
+  - [ ] Integrate **High Quality Mode** with credit system warnings.
+  - [ ] Build inline editing UI with struck-through original text and green suggestions.
+  - [ ] Implement Tab toggle between Quick Edit and Quick Chat.
+- **Context & State Management:**
+  - [ ] **Story-Aware Context:** Integrate the Saliency Engine to provide deep context to Quick Tools.
+  - [ ] Implement session management for undo/redo of Quick Tool actions.
+  - [ ] **State Synchronization:** Develop initial logic for multi-document state management and conflict detection.
+  - [ ] Build background processing queue for non-critical AI operations.
 
-### Week 10: Related Words & Comments
-- [ ] Build Related Words feature with contextual analysis
-- [ ] Create expandable word cloud interface
-- [ ] Implement smart thesaurus functionality
-- [ ] Add basic commenting system for documents
-- [ ] Create comment threading and replies
-- [ ] Implement author vs reader comment distinction
-- [ ] Add comment visibility controls
-- [ ] Build notification system for new comments
+### Week 10: Collaboration & Final Touches
+- **Collaboration Features:**
+  - [ ] Implement the basic commenting system with threading and replies.
+  - [ ] Add author vs. reader comment distinction and visibility controls.
+  - [ ] Build a notification system for new comments and other events.
+- **Refinements:**
+  - [ ] **Related Words:** Implement the smart thesaurus with contextual analysis and an expandable word cloud interface.
+  - [ ] **Performance Optimization:** Introduce lazy loading and caching for documents and AI responses.
+  - [ ] Ensure all new features are integrated with the error handling and credit management systems.
 
 ## AI Provider Implementation
 

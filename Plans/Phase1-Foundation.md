@@ -11,6 +11,11 @@ Establish the core infrastructure and basic functionality for StoryWeaver, inclu
 - Simple text editor integration
 - Series support and folder hierarchy
 - Document linking for chapter continuity
+- Establish foundational state management architecture
+- Implement basic error handling and recovery systems
+- Create AI provider abstraction layer
+- Set up performance monitoring foundation
+- Build basic card system for AI responses
 
 ## Technical Tasks
 
@@ -68,6 +73,51 @@ Establish the core infrastructure and basic functionality for StoryWeaver, inclu
 - [ ] Add document version history
 - [ ] Build focus mode for distraction-free writing
 
+## Additional Foundation Components
+
+### State Management Architecture
+- [ ] Implement centralized state management with Zustand
+- [ ] Create state persistence layer for application settings
+- [ ] Set up React Query for server state and caching
+- [ ] Build state synchronization system for real-time updates
+- [ ] Add state validation and error boundaries
+
+### AI Provider Foundation
+- [ ] Create AI provider abstraction layer (trait/interface)
+- [ ] Implement basic OpenAI API integration structure
+- [ ] Set up rate limiting and request queuing
+- [ ] Add API key secure storage using OS keychain
+- [ ] Create token counting and cost estimation foundation
+- [ ] Build error handling for AI service failures
+
+### Card System Foundation
+- [ ] Implement basic AI response card data structure
+- [ ] Create card storage and retrieval system
+- [ ] Build card stacking and organization logic
+- [ ] Add card interaction handlers (expand/collapse)
+- [ ] Implement card history and persistence
+
+### Error Handling & Recovery
+- [ ] Set up comprehensive error logging system
+- [ ] Implement graceful error recovery mechanisms
+- [ ] Create user-friendly error notifications
+- [ ] Add automatic retry logic for transient failures
+- [ ] Build error reporting and diagnostics
+
+### Performance Monitoring Foundation
+- [ ] Implement basic performance metrics collection
+- [ ] Set up memory usage monitoring
+- [ ] Add database query performance tracking
+- [ ] Create performance bottleneck detection
+- [ ] Build optimization recommendations system
+
+### Security & Privacy Foundation
+- [ ] Implement secure API key storage
+- [ ] Set up data encryption for sensitive information
+- [ ] Add input sanitization and validation
+- [ ] Create audit logging for security events
+- [ ] Implement privacy-first data handling
+
 ## Database Schema Implementation
 
 ### Core Tables
@@ -123,6 +173,81 @@ CREATE TABLE document_links (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (from_document_id) REFERENCES documents(id),
     FOREIGN KEY (to_document_id) REFERENCES documents(id)
+);
+
+-- AI Response Cards (Foundation)
+CREATE TABLE ai_response_cards (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    document_id INTEGER,
+    feature_type TEXT NOT NULL,
+    prompt_context TEXT,
+    response_text TEXT,
+    is_stacked BOOLEAN DEFAULT FALSE,
+    stack_order INTEGER,
+    is_starred BOOLEAN DEFAULT FALSE,
+    is_collapsed BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Settings and Configuration
+CREATE TABLE settings (
+    id INTEGER PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Error Logs and Diagnostics
+CREATE TABLE error_logs (
+    id INTEGER PRIMARY KEY,
+    error_type TEXT NOT NULL,
+    error_message TEXT NOT NULL,
+    stack_trace TEXT,
+    context_data JSON,
+    project_id INTEGER,
+    document_id INTEGER,
+    user_action TEXT,
+    severity TEXT DEFAULT 'error', -- 'info', 'warning', 'error', 'critical'
+    is_resolved BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+-- Performance Metrics
+CREATE TABLE performance_metrics (
+    id INTEGER PRIMARY KEY,
+    metric_name TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    metric_unit TEXT, -- 'ms', 'mb', 'count', 'percentage'
+    context_data JSON,
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Deleted Items Recovery System
+CREATE TABLE deleted_items (
+    id INTEGER PRIMARY KEY,
+    item_type TEXT NOT NULL, -- 'project', 'folder', 'document'
+    item_id INTEGER NOT NULL,
+    item_data JSON NOT NULL,
+    parent_id INTEGER,
+    deletion_reason TEXT,
+    deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    can_restore BOOLEAN DEFAULT TRUE
+);
+
+-- User Preferences and Settings
+CREATE TABLE user_preferences (
+    id INTEGER PRIMARY KEY,
+    preference_category TEXT NOT NULL,
+    preference_key TEXT NOT NULL,
+    preference_value TEXT,
+    data_type TEXT DEFAULT 'string', -- 'string', 'integer', 'boolean', 'json'
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(preference_category, preference_key)
 );
 ```
 
