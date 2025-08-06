@@ -97,11 +97,41 @@ pub async fn get_stats() -> Result<DatabaseStats> {
         .await
         .unwrap_or(0);
     
+    let folders_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM folders")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
+    
+    let series_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM series")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
+    
+    let document_links_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM document_links")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
+    
+    let document_versions_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM document_versions")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
+    
+    let deleted_items_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM deleted_items")
+        .fetch_one(pool)
+        .await
+        .unwrap_or(0);
+    
     Ok(DatabaseStats {
         projects_count: projects_count as u32,
         documents_count: documents_count as u32,
         characters_count: characters_count as u32,
         locations_count: locations_count as u32,
+        folders_count: folders_count as u32,
+        series_count: series_count as u32,
+        document_links_count: document_links_count as u32,
+        document_versions_count: document_versions_count as u32,
+        deleted_items_count: deleted_items_count as u32,
     })
 }
 
@@ -112,4 +142,9 @@ pub struct DatabaseStats {
     pub documents_count: u32,
     pub characters_count: u32,
     pub locations_count: u32,
+    pub folders_count: u32,
+    pub series_count: u32,
+    pub document_links_count: u32,
+    pub document_versions_count: u32,
+    pub deleted_items_count: u32,
 }

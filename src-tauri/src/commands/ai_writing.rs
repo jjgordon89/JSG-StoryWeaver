@@ -6,6 +6,7 @@ use crate::ai::{AIProviderManager, AIContext, RewriteStyle};
 use serde::{Deserialize, Serialize};
 use tauri::{State, Manager};
 use std::sync::Arc;
+use std::collections::HashMap;
 
 // Placeholder structs for WriteProcessor and its dependencies
 pub struct ContextBuilder;
@@ -15,7 +16,12 @@ impl ContextBuilder {
         Ok(WriteContext {
             preceding_text: "This is some preceding text.".to_string(),
             story_summary: "A brief story summary.".to_string(),
-            ai_context: AIContext {},
+            ai_context: AIContext {
+                project_id: Some("placeholder_project_id".to_string()),
+                document_id: Some(_document_id.to_string()),
+                story_context: Some("A brief story context.".to_string()),
+                user_preferences: Some(HashMap::new()),
+            },
         })
     }
 }

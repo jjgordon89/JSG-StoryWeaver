@@ -51,3 +51,11 @@
 - **Folder Hierarchy**: A recursive component approach works well for displaying and managing nested folder structures.
 - **Series Support**: Organizing related projects in series allows for shared story bible data and consistent worldbuilding.
 - **Document Linking**: Bidirectional document linking enables continuity between chapters with intuitive navigation.
+
+### Project Documentation and Planning
+- **Documentation Consistency**: Maintain consistency across all documentation files (plans, progress, active context) to ensure a single source of truth about project status.
+- **Regular Documentation Audits**: Periodically audit documentation against actual implementation to catch discrepancies early and maintain accurate project status.
+- **Feature Deferral Documentation**: When deferring features to a later phase, explicitly document this decision in all relevant files to maintain clarity about project scope.
+- **UI/Backend Integration Tracking**: Clearly distinguish between UI-only implementations and fully integrated features with backend support in project documentation.
+- **Critical Path Identification**: Identify and prioritize critical path items that must be completed before moving to the next phase of development.
+- **Completion Criteria**: Define clear, measurable criteria for considering a phase complete to avoid premature advancement to the next phase.

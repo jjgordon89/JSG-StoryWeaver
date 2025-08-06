@@ -6,6 +6,22 @@ use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
+// Import our new models
+mod folder;
+mod series;
+mod document_link;
+mod document_version;
+mod deleted_item;
+mod app_settings;
+
+// Re-export all models
+pub use folder::*;
+pub use series::*;
+pub use document_link::*;
+pub use document_version::*;
+pub use deleted_item::*;
+pub use app_settings::*;
+
 /// Project model - represents a writing project
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Project {
@@ -19,6 +35,8 @@ pub struct Project {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub settings: String, // JSON string for project-specific settings
+    pub series_id: Option<String>, // Reference to series if part of one
+    pub folder_id: Option<String>, // Reference to folder for organization
 }
 
 /// Project status enumeration
@@ -51,6 +69,7 @@ pub struct Document {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub metadata: String, // JSON string for document-specific metadata
+    pub folder_id: Option<String>, // Reference to folder for organization
 }
 
 /// Document type enumeration
@@ -311,6 +330,8 @@ impl Project {
             created_at: now,
             updated_at: now,
             settings: "{}".to_string(),
+            series_id: None,
+            folder_id: None,
         }
     }
 }
@@ -330,6 +351,7 @@ impl Document {
             created_at: now,
             updated_at: now,
             metadata: "{}".to_string(),
+            folder_id: None,
         }
     }
 }

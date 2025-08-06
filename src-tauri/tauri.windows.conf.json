@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "StoryWeaver",
+  "version": "0.1.0",
+  "identifier": "com.jsg-storyweaver",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "StoryWeaver",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "focus": true,
+        "visible": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https://api.openai.com https://api.anthropic.com"
+    }
+  },
+  "plugins": {
+    "fs": {
+      "scope": ["$APPDATA/**", "$APPDATA/StoryWeaver/**", "$DOCUMENT/**"]
+    },
+    "dialog": {},
+    "notification": {},
+    "window": {},
+    "shell": {
+      "open": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "msi",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "copyright": "© 2025 JSG StoryWeaver",
+    "category": "Productivity",
+    "shortDescription": "AI-powered writing assistant for authors",
+    "longDescription": "StoryWeaver is an AI-powered writing assistant that helps authors create, organize, and refine their stories with intelligent suggestions and a comprehensive story bible system.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": {}
+    }
+  }
+}
