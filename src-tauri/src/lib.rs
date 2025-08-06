@@ -2,11 +2,13 @@
 // Phase 1: Foundation Setup
 
 use tauri::Manager;
+use std::sync::Arc;
 
 // Module declarations for Phase 1 foundation
 mod commands;
 mod database;
 mod error;
+pub mod ai;
 mod utils;
 
 // Re-export error types
@@ -44,6 +46,17 @@ pub fn run() {
                     eprintln!("Failed to initialize database: {}", e);
                 }
             });
+
+            // Initialize AIProviderManager and register OpenAIProvider
+            let mut ai_manager = ai::AIProviderManager::new();
+            let openai_provider = Arc::new(ai::OpenAIProvider::new(
+                std::env::var("OPENAI_API_KEY").unwrap_or_default(),
+                "gpt-4-turbo".to_string(),
+            ));
+            ai_manager.register_provider("openai".to_string(), openai_provider);
+            ai_manager.set_default_provider("openai".to_string());
+            app.manage(ai_manager);
+
             Ok(())
         })
         .run(tauri::generate_context!())

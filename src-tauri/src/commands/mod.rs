@@ -12,6 +12,7 @@ pub mod documents;
 pub mod characters;
 pub mod locations;
 pub mod ai_history;
+pub mod ai_writing;
 
 /// Response wrapper for Tauri commands
 #[derive(Debug, Serialize)]
