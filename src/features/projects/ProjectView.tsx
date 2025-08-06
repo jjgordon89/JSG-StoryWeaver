@@ -1,11 +1,15 @@
 import React from 'react';
 import ProjectList from '../../components/project/ProjectList';
 
-const ProjectView: React.FC = () => {
+interface ProjectViewProps {
+  onDocumentSelect?: (documentId: number) => void;
+}
+
+const ProjectView: React.FC<ProjectViewProps> = ({ onDocumentSelect }) => {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-4">Projects</h1>
-      <ProjectList />
+      <ProjectList onDocumentSelect={onDocumentSelect} />
     </div>
   );
 };

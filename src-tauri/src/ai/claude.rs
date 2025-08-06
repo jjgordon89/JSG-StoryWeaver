@@ -1,4 +1,4 @@
-//! OpenAI Provider implementation for StoryWeaver
+//! Claude (Anthropic) Provider implementation for StoryWeaver
 
 use super::{AIProvider, AIContext, TextStream, RewriteStyle};
 use async_trait::async_trait;
@@ -10,65 +10,47 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 // Rate limiting constants
-const REQUESTS_PER_MINUTE: u32 = 60;
-const TOKENS_PER_MINUTE: u32 = 90000;
+const REQUESTS_PER_MINUTE: u32 = 50; // Anthropic's rate limits may differ
+const TOKENS_PER_MINUTE: u32 = 80000;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct ChatMessage {
+#[derive(Debug, Clone, Serialize)]
+struct ClaudeMessage {
     role: String,
-    content: String,
+    content: Vec<ClaudeContent>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct ChatCompletionRequest {
+#[derive(Debug, Clone, Serialize)]
+struct ClaudeContent {
+    #[serde(rename = "type")]
+    content_type: String,
+    text: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ClaudeCompletionRequest {
     model: String,
-    messages: Vec<ChatMessage>,
+    messages: Vec<ClaudeMessage>,
+    max_tokens: u32,
     temperature: f32,
-    max_tokens: Option<u32>,
-    stream: bool,
+    system: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct ChatCompletionChoice {
-    message: ChatMessage,
-    finish_reason: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct ChatCompletionResponse {
+struct ClaudeCompletionResponse {
     id: String,
-    choices: Vec<ChatCompletionChoice>,
+    content: Vec<ClaudeContent>,
     usage: Option<TokenUsage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct TokenUsage {
-    prompt_tokens: u32,
-    completion_tokens: u32,
-    total_tokens: u32,
+    input_tokens: u32,
+    output_tokens: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct EmbeddingRequest {
-    model: String,
-    input: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct EmbeddingData {
-    embedding: Vec<f32>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct EmbeddingResponse {
-    data: Vec<EmbeddingData>,
-    usage: Option<TokenUsage>,
-}
-
-pub struct OpenAIProvider {
+pub struct ClaudeProvider {
     pub api_key: String,
     pub model: String,
-    pub embedding_model: String,
     pub client: reqwest::Client,
     pub rate_limiter: Arc<Mutex<RateLimiter>>,
 }
@@ -122,11 +104,11 @@ impl RateLimiter {
     }
 
     fn update_token_usage(&mut self, usage: &TokenUsage) {
-        self.token_count = self.token_count.saturating_add(usage.total_tokens);
+        self.token_count = self.token_count.saturating_add(usage.input_tokens + usage.output_tokens);
     }
 }
 
-impl OpenAIProvider {
+impl ClaudeProvider {
     pub fn new(api_key: String, model: String) -> Self {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(60))
@@ -136,24 +118,20 @@ impl OpenAIProvider {
         Self {
             api_key,
             model,
-            embedding_model: "text-embedding-ada-002".to_string(),
             client,
             rate_limiter: Arc::new(Mutex::new(RateLimiter::new())),
         }
     }
 
-    fn build_system_message(&self, context: &AIContext) -> ChatMessage {
+    fn build_system_message(&self, context: &AIContext) -> String {
         // Build a system message based on the context
         // This could include information about the document, user preferences, etc.
-        ChatMessage {
-            role: "system".to_string(),
-            content: "You are StoryWeaver, an AI writing assistant. Help the user write their story.".to_string(),
-        }
+        "You are StoryWeaver, an AI writing assistant. Help the user write their story.".to_string()
     }
 }
 
 #[async_trait]
-impl AIProvider for OpenAIProvider {
+impl AIProvider for ClaudeProvider {
     async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String> {
         // Estimate token usage for rate limiting
         let estimated_tokens = (prompt.len() / 4) as u32 + 500; // Rough estimate
@@ -165,38 +143,42 @@ impl AIProvider for OpenAIProvider {
         }
         
         // Build request
-        let system_message = self.build_system_message(context);
-        let user_message = ChatMessage {
+        let system = self.build_system_message(context);
+        let user_message = ClaudeMessage {
             role: "user".to_string(),
-            content: prompt.to_string(),
+            content: vec![ClaudeContent {
+                content_type: "text".to_string(),
+                text: prompt.to_string(),
+            }],
         };
         
-        let request = ChatCompletionRequest {
+        let request = ClaudeCompletionRequest {
             model: self.model.clone(),
-            messages: vec![system_message, user_message],
+            messages: vec![user_message],
+            max_tokens: 1000,
             temperature: 0.7,
-            max_tokens: Some(1000),
-            stream: false,
+            system: Some(system),
         };
         
         // Make API call
-        let response = self.client.post("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.api_key))
+        let response = self.client.post("https://api.anthropic.com/v1/messages")
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
             .header("Content-Type", "application/json")
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .context("Failed to send request to Claude API")?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
         }
         
         // Parse response
-        let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+        let completion: ClaudeCompletionResponse = response.json().await
+            .context("Failed to parse Claude API response")?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -205,10 +187,17 @@ impl AIProvider for OpenAIProvider {
         }
         
         // Extract generated text
-        if let Some(choice) = completion.choices.first() {
-            Ok(choice.message.content.clone())
+        let mut result = String::new();
+        for content in completion.content {
+            if content.content_type == "text" {
+                result.push_str(&content.text);
+            }
+        }
+        
+        if result.is_empty() {
+            Err(anyhow::anyhow!("No text content returned"))
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Ok(result)
         }
     }
 
@@ -235,42 +224,43 @@ impl AIProvider for OpenAIProvider {
             RewriteStyle::MoreDescriptive => "Rewrite this text to be more descriptive and vivid:",
         };
         
-        let system_message = ChatMessage {
-            role: "system".to_string(),
-            content: format!("You are a helpful writing assistant. {}", style_instruction),
-        };
+        let system = format!("You are a helpful writing assistant. {}", style_instruction);
         
-        let user_message = ChatMessage {
+        let user_message = ClaudeMessage {
             role: "user".to_string(),
-            content: text.to_string(),
+            content: vec![ClaudeContent {
+                content_type: "text".to_string(),
+                text: text.to_string(),
+            }],
         };
         
-        let request = ChatCompletionRequest {
+        let request = ClaudeCompletionRequest {
             model: self.model.clone(),
-            messages: vec![system_message, user_message],
+            messages: vec![user_message],
+            max_tokens: (text.len() as u32 / 2), // Limit token usage based on input
             temperature: 0.7,
-            max_tokens: Some(text.len() as u32 / 2), // Limit token usage based on input
-            stream: false,
+            system: Some(system),
         };
         
         // Make API call
-        let response = self.client.post("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.api_key))
+        let response = self.client.post("https://api.anthropic.com/v1/messages")
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
             .header("Content-Type", "application/json")
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .context("Failed to send request to Claude API")?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
         }
         
         // Parse response
-        let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+        let completion: ClaudeCompletionResponse = response.json().await
+            .context("Failed to parse Claude API response")?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -279,60 +269,23 @@ impl AIProvider for OpenAIProvider {
         }
         
         // Extract generated text
-        if let Some(choice) = completion.choices.first() {
-            Ok(choice.message.content.clone())
+        let mut result = String::new();
+        for content in completion.content {
+            if content.content_type == "text" {
+                result.push_str(&content.text);
+            }
+        }
+        
+        if result.is_empty() {
+            Err(anyhow::anyhow!("No text content returned"))
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Ok(result)
         }
     }
 
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
-        // Estimate token usage for rate limiting
-        let estimated_tokens = (text.len() / 4) as u32; // Rough estimate
-        
-        // Wait if we need to respect rate limits
-        {
-            let mut rate_limiter = self.rate_limiter.lock().await;
-            rate_limiter.wait_if_needed(estimated_tokens).await?;
-        }
-        
-        // Build request
-        let request = EmbeddingRequest {
-            model: self.embedding_model.clone(),
-            input: text.to_string(),
-        };
-        
-        // Make API call
-        let response = self.client.post("https://api.openai.com/v1/embeddings")
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
-            .await
-            .context("Failed to send request to OpenAI API")?;
-        
-        // Check for errors
-        if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
-        }
-        
-        // Parse response
-        let embedding_response: EmbeddingResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
-        
-        // Update rate limiter with actual token usage
-        if let Some(usage) = &embedding_response.usage {
-            let mut rate_limiter = self.rate_limiter.lock().await;
-            rate_limiter.update_token_usage(usage);
-        }
-        
-        // Extract embedding
-        if let Some(data) = embedding_response.data.first() {
-            Ok(data.embedding.clone())
-        } else {
-            Err(anyhow::anyhow!("No embedding data returned"))
-        }
+        // Claude doesn't have a native embedding API, so we'll return an error
+        Err(anyhow::anyhow!("Claude does not support embeddings"))
     }
 
     fn supports_streaming(&self) -> bool {
@@ -341,10 +294,10 @@ impl AIProvider for OpenAIProvider {
 
     fn get_context_window(&self) -> usize {
         match self.model.as_str() {
-            "gpt-4-turbo" => 128000,
-            "gpt-4" => 8192,
-            "gpt-3.5-turbo" => 16385,
-            _ => 4096, // Default for unknown models
+            "claude-3-opus" => 200000,
+            "claude-3-sonnet" => 180000,
+            "claude-3-haiku" => 150000,
+            _ => 100000, // Default for unknown models
         }
     }
 
