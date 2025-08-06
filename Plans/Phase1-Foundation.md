@@ -15,23 +15,21 @@
 - State management dependencies (Zustand, React Query)
 
 ### 🔧 **In Progress/Remaining (Frontend & Integration)**
-- Three-column responsive UI layout
-- Project management interface
-- Document editor with auto-save
-- Folder hierarchy and series support
-- Document linking system
-- AI provider abstraction layer
-- Card system UI and interactions
-- Theme support and accessibility
-- Build configuration for Windows MSI
+- [x] Three-column responsive UI layout
+- [x] Project management interface
+- [ ] Document editor with auto-save
+- [ ] Folder hierarchy and series support
+- [ ] Document linking system
+- [ ] AI provider abstraction layer
+- [ ] Card system UI and interactions
+- [ ] Theme support and accessibility
+- [ ] Build configuration for Windows MSI
 
 ### 🎯 **Next Immediate Priorities**
-1. **Create three-column layout** - Main UI foundation
-2. **Build project management interface** - Project creation and organization
-3. **Implement document editor** - Core writing functionality
-4. **Add auto-save system** - Data protection
-5. **Create folder hierarchy** - Project organization
-6. **Implement series support** - Multi-project workflows
+1. **Implement document editor** - Core writing functionality
+2. **Add auto-save system** - Data protection
+3. **Create folder hierarchy** - Project organization
+4. **Implement series support** - Multi-project workflows
 
 ## Overview
 Establish the core infrastructure and basic functionality for StoryWeaver, including the Tauri framework setup, database operations, and fundamental UI components.
@@ -78,8 +76,8 @@ Establish the core infrastructure and basic functionality for StoryWeaver, inclu
 - [ ] Create backup and recovery system
 
 ### Week 3: Core UI Components
-- [ ] Implement three-column layout (navigation, editor, history/cards)
-- [ ] Create responsive design system with Tailwind CSS
+- [x] Implement three-column layout (navigation, editor, history/cards)
+- [x] Create responsive design system with Tailwind CSS
 - [x] Build base UI components using Radix UI:
   - Dialogs and modals
   - Dropdown menus

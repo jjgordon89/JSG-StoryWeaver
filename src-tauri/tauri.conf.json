@@ -28,39 +28,7 @@
       "csp": null
     }
   },
-  "plugins": {
-    "fs": {
-      "scope": ["$APPDATA/*", "$DOCUMENT/*", "$DESKTOP/*"]
-    },
-    "dialog": {
-      "open": true,
-      "save": true
-    },
-    "notification": {
-      "all": true
-    },
-    "windowState": {
-      "filename": "window-state.json"
-    },
-    "clipboardManager": {
-      "all": true
-    },
-    "shell": {
-      "open": true
-    },
-    "updater": {
-      "active": true
-    },
-    "globalShortcut": {
-      "all": true
-    },
-    "store": {
-      "default": "store.json"
-    },
-    "opener": {
-      "enable": true
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
     "targets": "all",
