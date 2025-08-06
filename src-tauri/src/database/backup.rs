@@ -47,14 +47,14 @@ impl BackupManager {
         let wal_path = db_path.with_extension("db-wal");
         let shm_path = db_path.with_extension("db-shm");
         
-        if wal_path.exists() {
+        if Path::new(&wal_path).exists() {
             let backup_wal_path = backup_path.with_extension("db-wal");
             fs::copy(&wal_path, &backup_wal_path)
                 .await
                 .map_err(|e| StoryWeaverError::database(format!("Failed to backup WAL file: {}", e)))?;
         }
         
-        if shm_path.exists() {
+        if Path::new(&shm_path).exists() {
             let backup_shm_path = backup_path.with_extension("db-shm");
             fs::copy(&shm_path, &backup_shm_path)
                 .await
@@ -98,7 +98,7 @@ impl BackupManager {
         let backups_dir = app_data_dir.join("backups");
         let backup_path = backups_dir.join(backup_filename);
         
-        if !backup_path.exists() {
+        if !Path::new(&backup_path).exists() {
             return Err(StoryWeaverError::database(format!("Backup file not found: {}", backup_filename)));
         }
         
@@ -132,13 +132,13 @@ impl BackupManager {
         let db_wal_path = db_path.with_extension("db-wal");
         let db_shm_path = db_path.with_extension("db-shm");
         
-        if backup_wal_path.exists() {
+        if Path::new(&backup_wal_path).exists() {
             fs::copy(&backup_wal_path, &db_wal_path)
                 .await
                 .map_err(|e| StoryWeaverError::database(format!("Failed to restore WAL file: {}", e)))?;
         }
         
-        if backup_shm_path.exists() {
+        if Path::new(&backup_shm_path).exists() {
             fs::copy(&backup_shm_path, &db_shm_path)
                 .await
                 .map_err(|e| StoryWeaverError::database(format!("Failed to restore SHM file: {}", e)))?;
@@ -178,7 +178,7 @@ impl BackupManager {
         let mut backup_infos = Vec::new();
         for backup in backups {
             let backup_path = backups_dir.join(&backup.filename);
-            let file_exists = backup_path.exists();
+            let file_exists = Path::new(&backup_path).exists();
             let file_size = if file_exists {
                 match fs::metadata(&backup_path).await {
                     Ok(metadata) => Some(metadata.len()),
@@ -226,7 +226,7 @@ impl BackupManager {
         let backup_path = backups_dir.join(&backup.filename);
         
         // Delete the backup file if it exists
-        if backup_path.exists() {
+        if Path::new(&backup_path).exists() {
             fs::remove_file(&backup_path)
                 .await
                 .map_err(|e| StoryWeaverError::database(format!("Failed to delete backup file: {}", e)))?;
@@ -235,13 +235,13 @@ impl BackupManager {
             let wal_path = backup_path.with_extension("db-wal");
             let shm_path = backup_path.with_extension("db-shm");
             
-            if wal_path.exists() {
+            if Path::new(&wal_path).exists() {
                 fs::remove_file(&wal_path)
                     .await
                     .map_err(|e| StoryWeaverError::database(format!("Failed to delete WAL file: {}", e)))?;
             }
             
-            if shm_path.exists() {
+            if Path::new(&shm_path).exists() {
                 fs::remove_file(&shm_path)
                     .await
                     .map_err(|e| StoryWeaverError::database(format!("Failed to delete SHM file: {}", e)))?;

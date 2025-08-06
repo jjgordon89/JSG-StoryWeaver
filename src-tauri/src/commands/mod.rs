@@ -13,6 +13,19 @@ pub mod characters;
 pub mod locations;
 pub mod ai_history;
 pub mod ai_writing;
+pub mod folder_commands;
+pub mod series_commands;
+pub mod document_link_commands;
+pub mod backup_commands;
+pub mod trash_commands;
+pub mod version_commands;
+pub mod settings_commands;
+pub mod sync_commands;
+pub mod register_commands;
+pub mod background_commands;
+pub mod performance_commands;
+pub mod security_commands;
+pub mod project_preview_commands;
 
 /// Response wrapper for Tauri commands
 #[derive(Debug, Serialize)]

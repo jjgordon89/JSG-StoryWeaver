@@ -18,6 +18,7 @@ interface CardState {
   toggleCollapse: (cardId: number) => Promise<void>;
   toggleStar: (cardId: number) => Promise<void>;
   deleteCard: (cardId: number) => Promise<void>;
+  updateCards: (cards: AICard[]) => void;
   setFilterType: (type: string | null) => void;
   setSortOrder: (order: 'newest' | 'oldest') => void;
   setShowStarredOnly: (show: boolean) => void;
@@ -139,6 +140,8 @@ export const useCardStore = create<CardState>((set, get) => ({
   setFilterType: (type: string | null) => set({ filterType: type }),
   
   setSortOrder: (order: 'newest' | 'oldest') => set({ sortOrder: order }),
+  
+  updateCards: (cards: AICard[]) => set({ cards }),
   
   setShowStarredOnly: (show: boolean) => set({ showStarredOnly: show }),
 }));

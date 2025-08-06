@@ -1,5 +1,8 @@
 //! Utility functions for StoryWeaver
 
+// Module declarations
+pub mod performance_monitor;
+
 use crate::error::{Result, StoryWeaverError};
 use std::path::Path;
 use uuid::Uuid;

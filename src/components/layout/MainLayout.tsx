@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import ProjectView from '../../features/projects/ProjectView';
 import DocumentEditor from '../editor/DocumentEditor';
 import { useStore } from '../../stores/documentStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { invoke } from '@tauri-apps/api/core';
 
 const MainLayout: React.FC = () => {
   const [activeDocument, setActiveDocument] = useState<{id: number, content: string} | null>(null);
   const { currentDocument, loadDocument } = useStore();
+  const { focusModeEnabled } = useSettingsStore();
   
   // Load a document when selected from the project view
   const handleDocumentSelect = async (documentId: number) => {
@@ -18,7 +20,9 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className={`flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${
+      focusModeEnabled ? 'focus-mode-layout' : ''
+    }`}>
       {/* Left Column (Navigation) */}
       <div className="w-1/4 bg-gray-200 dark:bg-gray-800 p-4 overflow-y-auto">
         <ProjectView onDocumentSelect={handleDocumentSelect} />

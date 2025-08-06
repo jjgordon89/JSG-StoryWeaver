@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProjectCard from './ProjectCard';
+import ProjectPreview from './ProjectPreview';
 import { invoke } from '@tauri-apps/api/core';
 
 interface Project {
@@ -23,6 +24,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [previewProjectId, setPreviewProjectId] = useState<string | null>(null);
 
   // Fetch projects on component mount
   useEffect(() => {
@@ -78,6 +80,21 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
     }
   };
 
+  const handlePreviewClick = (projectId: string) => {
+    setPreviewProjectId(projectId);
+  };
+
+  const handlePreviewClose = () => {
+    setPreviewProjectId(null);
+  };
+
+  const handleOpenProject = () => {
+    if (previewProjectId) {
+      setSelectedProject(previewProjectId);
+      setPreviewProjectId(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Projects list */}
@@ -87,10 +104,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
             <ProjectCard 
               project={project} 
               isSelected={project.id === selectedProject}
+              onPreview={handlePreviewClick}
             />
           </div>
         ))}
       </div>
+
+      {/* Project Preview Modal */}
+      {previewProjectId && (
+        <ProjectPreview 
+          projectId={previewProjectId}
+          onClose={handlePreviewClose}
+          onOpen={handleOpenProject}
+        />
+      )}
 
       {/* Documents list for selected project */}
       {selectedProject && (

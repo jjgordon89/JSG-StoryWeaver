@@ -4,6 +4,10 @@
 use crate::error::{Result, StoryWeaverError};
 use sqlx::{Pool, Sqlite};
 
+// Import migrations
+mod background_tasks;
+mod performance_metrics;
+
 /// Run all database migrations
 pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
     // Enable foreign keys
@@ -23,6 +27,9 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("004_user_preferences", |pool| Box::pin(migration_004_user_preferences(pool))),
         ("005_full_text_search", |pool| Box::pin(migration_005_full_text_search(pool))),
         ("006_indexes", |pool| Box::pin(migration_006_indexes(pool))),
+        ("007_backup_recovery_versioning", |pool| Box::pin(migration_007_backup_recovery_versioning(pool))),
+        ("008_background_tasks", |pool| Box::pin(migration_008_background_tasks(pool))),
+        ("009_performance_metrics", |pool| Box::pin(migration_009_performance_metrics(pool))),
     ];
     
     for (name, migration_fn) in migrations {
@@ -34,6 +41,37 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         }
     }
     
+    Ok(())
+}
+
+/// Migration 008: Add background tasks table
+async fn migration_008_background_tasks(pool: &Pool<Sqlite>) -> Result<()> {
+    background_tasks::create_background_tasks_table(pool).await?;
+    
+    // Add default settings for background processing
+    let default_settings = [
+        ("max_concurrent_tasks", "3"),
+        ("max_task_history", "100"),
+        ("task_cleanup_days", "7"),
+    ];
+    
+    for (key, value) in default_settings {
+        sqlx::query(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)"
+        )
+        .bind(key)
+        .bind(value)
+        .execute(pool)
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to insert background task setting: {}", e)))?;
+    }
+    
+    Ok(())
+}
+
+/// Migration 009: Add performance metrics tables
+async fn migration_009_performance_metrics(pool: &Pool<Sqlite>) -> Result<()> {
+    performance_metrics::create_performance_metrics_table(pool).await?;
     Ok(())
 }
 
@@ -382,6 +420,119 @@ async fn migration_006_indexes(pool: &Pool<Sqlite>) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)",
         "CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects(updated_at)",
         "CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON documents(updated_at)",
+    ];
+    
+    for index_sql in indexes {
+        sqlx::query(index_sql)
+            .execute(pool)
+            .await
+            .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
+    }
+    
+    Ok(())
+}
+
+/// Migration 007: Add backup, recovery, and versioning tables
+async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result<()> {
+    // Create backups table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS backups (
+            id TEXT PRIMARY KEY,
+            filename TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            is_auto BOOLEAN NOT NULL DEFAULT 0,
+            comment TEXT
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create backups table: {}", e)))?;
+    
+    // Create document versions table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS document_versions (
+            id TEXT PRIMARY KEY,
+            document_id TEXT NOT NULL,
+            content TEXT NOT NULL,
+            word_count INTEGER NOT NULL DEFAULT 0,
+            version_number INTEGER NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_by TEXT,
+            comment TEXT,
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create document_versions table: {}", e)))?;
+    
+    // Create deleted items table (trash)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS deleted_items (
+            id TEXT PRIMARY KEY,
+            item_type TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            item_data TEXT NOT NULL,
+            parent_id TEXT,
+            deletion_reason TEXT,
+            deleted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            can_restore BOOLEAN NOT NULL DEFAULT 1
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create deleted_items table: {}", e)))?;
+    
+    // Create settings table for backup and recovery settings
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT UNIQUE NOT NULL,
+            value TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create settings table: {}", e)))?;
+    
+    // Insert default settings
+    let default_settings = [
+        ("auto_backup_interval", "daily"),
+        ("max_auto_backups", "10"),
+        ("max_document_versions", "20"),
+        ("auto_version_on_save", "true"),
+        ("trash_retention_days", "30"),
+    ];
+    
+    for (key, value) in default_settings {
+        sqlx::query(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)"
+        )
+        .bind(key)
+        .bind(value)
+        .execute(pool)
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to insert default setting: {}", e)))?;
+    }
+    
+    // Create indexes for the new tables
+    let indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_document_versions_document_id ON document_versions(document_id)",
+        "CREATE INDEX IF NOT EXISTS idx_document_versions_version_number ON document_versions(version_number)",
+        "CREATE INDEX IF NOT EXISTS idx_deleted_items_item_type ON deleted_items(item_type)",
+        "CREATE INDEX IF NOT EXISTS idx_deleted_items_parent_id ON deleted_items(parent_id)",
+        "CREATE INDEX IF NOT EXISTS idx_deleted_items_deleted_at ON deleted_items(deleted_at)",
+        "CREATE INDEX IF NOT EXISTS idx_backups_is_auto ON backups(is_auto)",
+        "CREATE INDEX IF NOT EXISTS idx_backups_created_at ON backups(created_at)",
     ];
     
     for index_sql in indexes {

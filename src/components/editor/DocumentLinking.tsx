@@ -38,33 +38,19 @@ const DocumentLinking: React.FC<DocumentLinkingProps> = ({ documentId, projectId
     const fetchData = async () => {
       setLoading(true);
       try {
-        // In a real implementation, this would call the Tauri API
-        // For now, using placeholder data
-        
         // Fetch all documents in the project
-        const docsData: Document[] = [
-          { id: 'd1', title: 'Chapter 1: Beginning', document_type: 'chapter', project_id: projectId },
-          { id: 'd2', title: 'Chapter 2: Inciting Incident', document_type: 'chapter', project_id: projectId },
-          { id: 'd3', title: 'Chapter 3: Rising Action', document_type: 'chapter', project_id: projectId },
-          { id: 'd4', title: 'Chapter 4: Midpoint', document_type: 'chapter', project_id: projectId },
-          { id: 'd5', title: 'Chapter 5: Climax', document_type: 'chapter', project_id: projectId },
-          { id: 'd6', title: 'Chapter 6: Resolution', document_type: 'chapter', project_id: projectId },
-          { id: 'd7', title: 'Character Notes', document_type: 'notes', project_id: projectId },
-          { id: 'd8', title: 'Plot Outline', document_type: 'outline', project_id: projectId },
-        ];
+        const docsResponse = await invoke<{ data: Document[] }>('get_documents', { projectId });
+        if (!docsResponse.data) {
+          throw new Error('Failed to fetch documents');
+        }
+        setDocuments(docsResponse.data);
         
-        setDocuments(docsData);
-        
-        // Fetch document links
-        const linksData: DocumentLink[] = [
-          { id: 'l1', from_document_id: 'd1', to_document_id: 'd2', link_order: 1, created_at: new Date().toISOString() },
-          { id: 'l2', from_document_id: 'd2', to_document_id: 'd3', link_order: 1, created_at: new Date().toISOString() },
-          { id: 'l3', from_document_id: 'd3', to_document_id: 'd4', link_order: 1, created_at: new Date().toISOString() },
-          { id: 'l4', from_document_id: 'd4', to_document_id: 'd5', link_order: 1, created_at: new Date().toISOString() },
-          { id: 'l5', from_document_id: 'd5', to_document_id: 'd6', link_order: 1, created_at: new Date().toISOString() },
-        ];
-        
-        setLinks(linksData);
+        // Fetch document links for the current document
+        const linksResponse = await invoke<{ data: DocumentLink[] }>('get_all_links_for_document', { documentId });
+        if (!linksResponse.data) {
+          throw new Error('Failed to fetch document links');
+        }
+        setLinks(linksResponse.data);
       } catch (err) {
         console.error('Error fetching document links:', err);
         setError('Failed to load document links');
@@ -123,20 +109,22 @@ const DocumentLinking: React.FC<DocumentLinkingProps> = ({ documentId, projectId
     if (!selectedDocumentId) return;
     
     try {
-      // In a real implementation, this would call the Tauri API
-      console.log(`Creating ${selectedLinkType} link between ${documentId} and ${selectedDocumentId}`);
-      
-      // Create a new link object
-      const newLink: DocumentLink = {
-        id: `l${links.length + 1}`,
+      // Create request based on link type
+      const request = {
         from_document_id: selectedLinkType === 'previous' ? selectedDocumentId : documentId,
         to_document_id: selectedLinkType === 'previous' ? documentId : selectedDocumentId,
-        link_order: 1, // Default order
-        created_at: new Date().toISOString()
+        link_order: 1 // Default order
       };
       
-      // Update links state
-      setLinks([...links, newLink]);
+      // Call the backend API to create the link
+      const response = await invoke<{ data: DocumentLink }>('create_document_link', { request });
+      
+      if (!response.data) {
+        throw new Error('Failed to create document link');
+      }
+      
+      // Update links state with the new link
+      setLinks([...links, response.data]);
       setSelectedDocumentId(null);
     } catch (err) {
       console.error('Error creating document link:', err);
@@ -147,8 +135,8 @@ const DocumentLinking: React.FC<DocumentLinkingProps> = ({ documentId, projectId
   // Remove a link
   const handleRemoveLink = async (linkId: string) => {
     try {
-      // In a real implementation, this would call the Tauri API
-      console.log(`Removing link ${linkId}`);
+      // Call the backend API to delete the link
+      await invoke('delete_document_link', { id: linkId });
       
       // Update links state
       setLinks(links.filter(link => link.id !== linkId));

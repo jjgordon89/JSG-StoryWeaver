@@ -13,6 +13,7 @@ mod document_link;
 mod document_version;
 mod deleted_item;
 mod app_settings;
+mod performance_metric;
 
 // Re-export all models
 pub use folder::*;
@@ -21,6 +22,7 @@ pub use document_link::*;
 pub use document_version::*;
 pub use deleted_item::*;
 pub use app_settings::*;
+pub use performance_metric::*;
 
 /// Project model - represents a writing project
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

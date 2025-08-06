@@ -34,68 +34,34 @@ const FolderHierarchy: React.FC<FolderHierarchyProps> = ({ projectId, onDocument
     const fetchFolders = async () => {
       setLoading(true);
       try {
-        // In a real implementation, this would call the Tauri API
-        // For now, using placeholder data
-        const folderData: Folder[] = [
-          { id: 'f1', name: 'Chapters', parent_folder_id: null, is_series: false, created_at: new Date().toISOString() },
-          { id: 'f2', name: 'Characters', parent_folder_id: null, is_series: false, created_at: new Date().toISOString() },
-          { id: 'f3', name: 'Act 1', parent_folder_id: 'f1', is_series: false, created_at: new Date().toISOString() },
-          { id: 'f4', name: 'Act 2', parent_folder_id: 'f1', is_series: false, created_at: new Date().toISOString() },
-          { id: 'f5', name: 'Act 3', parent_folder_id: 'f1', is_series: false, created_at: new Date().toISOString() },
-          { id: 'f6', name: 'Main Characters', parent_folder_id: 'f2', is_series: false, created_at: new Date().toISOString() },
-          { id: 'f7', name: 'Supporting Characters', parent_folder_id: 'f2', is_series: false, created_at: new Date().toISOString() },
-        ];
+        // Get folder tree from backend
+        const response = await invoke<{ data: any[] }>('get_folder_tree');
         
-        // Build folder hierarchy
-        const rootFolders: Folder[] = [];
-        const folderMap = new Map<string, Folder>();
+        if (!response.data) {
+          throw new Error('Failed to fetch folder tree');
+        }
         
-        // First pass: create map of all folders
-        folderData.forEach(folder => {
-          folderMap.set(folder.id, { ...folder, children: [] });
-        });
-        
-        // Second pass: build hierarchy
-        folderData.forEach(folder => {
-          const folderWithChildren = folderMap.get(folder.id)!;
-          
-          if (folder.parent_folder_id === null) {
-            rootFolders.push(folderWithChildren);
-          } else {
-            const parent = folderMap.get(folder.parent_folder_id);
-            if (parent) {
-              parent.children = parent.children || [];
-              parent.children.push(folderWithChildren);
-            }
-          }
-        });
-        
+        // Convert the folder tree to our format
+        const rootFolders = response.data.map(convertFolderTreeNode);
         setFolders(rootFolders);
         
         // Fetch documents for each folder
-        const docsData: Record<string, Document[]> = {
-          'f1': [],
-          'f3': [
-            { id: 'd1', title: 'Chapter 1: Beginning', document_type: 'chapter' },
-            { id: 'd2', title: 'Chapter 2: Inciting Incident', document_type: 'chapter' },
-          ],
-          'f4': [
-            { id: 'd3', title: 'Chapter 3: Rising Action', document_type: 'chapter' },
-            { id: 'd4', title: 'Chapter 4: Midpoint', document_type: 'chapter' },
-          ],
-          'f5': [
-            { id: 'd5', title: 'Chapter 5: Climax', document_type: 'chapter' },
-            { id: 'd6', title: 'Chapter 6: Resolution', document_type: 'chapter' },
-          ],
-          'f6': [
-            { id: 'd7', title: 'Protagonist', document_type: 'notes' },
-            { id: 'd8', title: 'Antagonist', document_type: 'notes' },
-          ],
-          'f7': [
-            { id: 'd9', title: 'Sidekick', document_type: 'notes' },
-            { id: 'd10', title: 'Mentor', document_type: 'notes' },
-          ],
-        };
+        const docsData: Record<string, Document[]> = {};
+        
+        // For each folder, fetch its documents
+        const allFolders = getAllFoldersFromTree(rootFolders);
+        for (const folder of allFolders) {
+          try {
+            // This assumes there's a command to get documents by folder ID
+            // If not available, you might need to fetch all documents and filter
+            const docsResponse = await invoke<{ data: Document[] }>('get_documents_by_folder', { folderId: folder.id });
+            if (docsResponse.data) {
+              docsData[folder.id] = docsResponse.data;
+            }
+          } catch (err) {
+            console.error(`Error fetching documents for folder ${folder.id}:`, err);
+          }
+        }
         
         setDocuments(docsData);
       } catch (err) {
@@ -122,14 +88,54 @@ const FolderHierarchy: React.FC<FolderHierarchyProps> = ({ projectId, onDocument
     });
   };
 
+  // Helper function to convert folder tree node from backend format
+  const convertFolderTreeNode = (node: any): Folder => {
+    return {
+      id: node.id,
+      name: node.name,
+      parent_folder_id: node.parent_folder_id,
+      is_series: node.is_series,
+      created_at: node.created_at,
+      children: node.children ? node.children.map(convertFolderTreeNode) : []
+    };
+  };
+  
+  // Helper function to get all folders from tree
+  const getAllFoldersFromTree = (folders: Folder[]): Folder[] => {
+    let result: Folder[] = [];
+    
+    for (const folder of folders) {
+      result.push(folder);
+      if (folder.children && folder.children.length > 0) {
+        result = result.concat(getAllFoldersFromTree(folder.children));
+      }
+    }
+    
+    return result;
+  };
+
   // Create a new folder
   const createFolder = async (parentId: string | null, name: string) => {
     try {
-      // In a real implementation, this would call the Tauri API
-      console.log(`Creating folder "${name}" under parent ${parentId || 'root'}`);
+      // Call the backend API to create a folder
+      const response = await invoke<{ data: Folder }>('create_folder', {
+        request: {
+          name,
+          parent_folder_id: parentId,
+          is_series: false
+        }
+      });
+      
+      if (!response.data) {
+        throw new Error('Failed to create folder');
+      }
       
       // Refresh folder structure
-      // This would be replaced with actual API call and state update
+      const treeResponse = await invoke<{ data: any[] }>('get_folder_tree');
+      if (treeResponse.data) {
+        const rootFolders = treeResponse.data.map(convertFolderTreeNode);
+        setFolders(rootFolders);
+      }
     } catch (err) {
       console.error('Error creating folder:', err);
       setError('Failed to create folder');
@@ -159,15 +165,41 @@ const FolderHierarchy: React.FC<FolderHierarchyProps> = ({ projectId, onDocument
       const { type, id } = draggedItem;
       
       if (type === 'folder') {
-        // In a real implementation, this would call the Tauri API to move the folder
-        console.log(`Moving folder ${id} to folder ${targetFolderId}`);
+        // Update the folder's parent
+        await invoke('update_folder', {
+          request: {
+            id,
+            parent_folder_id: targetFolderId
+          }
+        });
       } else {
-        // In a real implementation, this would call the Tauri API to move the document
-        console.log(`Moving document ${id} to folder ${targetFolderId}`);
+        // Move document to folder
+        await invoke('move_items_to_folder', {
+          request: {
+            folder_id: targetFolderId,
+            project_ids: [],
+            document_ids: [id]
+          }
+        });
       }
       
       // Refresh folder structure
-      // This would be replaced with actual API call and state update
+      const treeResponse = await invoke<{ data: any[] }>('get_folder_tree');
+      if (treeResponse.data) {
+        const rootFolders = treeResponse.data.map(convertFolderTreeNode);
+        setFolders(rootFolders);
+      }
+      
+      // Refresh documents
+      const allFolders = getAllFoldersFromTree(folders);
+      const docsData: Record<string, Document[]> = { ...documents };
+      
+      // Update documents for the target folder
+      const docsResponse = await invoke<{ data: Document[] }>('get_documents_by_folder', { folderId: targetFolderId });
+      if (docsResponse.data) {
+        docsData[targetFolderId] = docsResponse.data;
+        setDocuments(docsData);
+      }
     } catch (err) {
       console.error('Error moving item:', err);
       setError('Failed to move item');

@@ -36,49 +36,19 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
     const fetchSeries = async () => {
       setLoading(true);
       try {
-        // In a real implementation, this would call the Tauri API
-        // For now, using placeholder data
-        const seriesData: Series[] = [
-          { 
-            id: 's1', 
-            name: 'The Chronicles Trilogy', 
-            description: 'Epic fantasy trilogy following the journey of a young hero.',
-            project_count: 3,
-            created_at: new Date().toISOString()
-          },
-          { 
-            id: 's2', 
-            name: 'Detective Mysteries', 
-            description: 'A series of noir detective novels set in the 1940s.',
-            project_count: 2,
-            created_at: new Date().toISOString()
-          },
-          { 
-            id: 's3', 
-            name: 'Sci-Fi Universe', 
-            description: 'Connected stories set in a shared futuristic universe.',
-            project_count: 4,
-            created_at: new Date().toISOString()
-          },
-        ];
-        
-        setSeries(seriesData);
+        // Fetch series with project counts
+        const seriesResponse = await invoke<{ data: Series[] }>('get_series_with_counts');
+        if (!seriesResponse.data) {
+          throw new Error('Failed to fetch series data');
+        }
+        setSeries(seriesResponse.data);
         
         // Fetch all projects
-        const projectsData: Project[] = [
-          { id: 'p1', name: 'The Chronicles: Book 1', description: 'The beginning of the epic journey.', series_id: 's1' },
-          { id: 'p2', name: 'The Chronicles: Book 2', description: 'The hero faces new challenges.', series_id: 's1' },
-          { id: 'p3', name: 'The Chronicles: Book 3', description: 'The epic conclusion.', series_id: 's1' },
-          { id: 'p4', name: 'Murder at Midnight', description: 'A detective investigates a mysterious murder.', series_id: 's2' },
-          { id: 'p5', name: 'The Missing Heiress', description: 'A wealthy heiress disappears without a trace.', series_id: 's2' },
-          { id: 'p6', name: 'Colony Alpha', description: 'The first human colony on Mars.', series_id: 's3' },
-          { id: 'p7', name: 'Deep Space Explorers', description: 'A crew explores the outer reaches of the solar system.', series_id: 's3' },
-          { id: 'p8', name: 'AI Uprising', description: 'Artificial intelligence gains consciousness.', series_id: 's3' },
-          { id: 'p9', name: 'Return to Earth', description: 'Humanity returns to a changed Earth.', series_id: 's3' },
-          { id: 'p10', name: 'Standalone Novel', description: 'A standalone project not part of any series.', series_id: null },
-        ];
-        
-        setProjects(projectsData);
+        const projectsResponse = await invoke<{ data: Project[] }>('get_projects');
+        if (!projectsResponse.data) {
+          throw new Error('Failed to fetch projects');
+        }
+        setProjects(projectsResponse.data);
       } catch (err) {
         console.error('Error fetching series:', err);
         setError('Failed to load series data');
@@ -103,19 +73,25 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
     if (!newSeriesName.trim()) return;
     
     try {
-      // In a real implementation, this would call the Tauri API
-      console.log(`Creating series "${newSeriesName}": ${newSeriesDescription}`);
+      // Call the backend API to create a series
+      const response = await invoke<{ data: Series }>('create_series', {
+        request: {
+          name: newSeriesName,
+          description: newSeriesDescription,
+          folder_id: null // Could be set if needed
+        }
+      });
       
-      // Mock adding the new series to the list
-      const newSeries: Series = {
-        id: `s${series.length + 1}`,
-        name: newSeriesName,
-        description: newSeriesDescription,
-        project_count: 0,
-        created_at: new Date().toISOString()
-      };
+      if (!response.data) {
+        throw new Error('Failed to create series');
+      }
       
-      setSeries([...series, newSeries]);
+      // Refresh series data
+      const seriesResponse = await invoke<{ data: Series[] }>('get_series_with_counts');
+      if (seriesResponse.data) {
+        setSeries(seriesResponse.data);
+      }
+      
       setNewSeriesName('');
       setNewSeriesDescription('');
       setShowNewSeriesForm(false);
@@ -128,13 +104,19 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
   // Add project to series
   const handleAddProjectToSeries = async (projectId: string, seriesId: string) => {
     try {
-      // In a real implementation, this would call the Tauri API
-      console.log(`Adding project ${projectId} to series ${seriesId}`);
+      // Call the backend API to add project to series
+      await invoke('add_project_to_series', { seriesId, projectId });
       
-      // Mock updating the project in the list
+      // Update local state
       setProjects(projects.map(project => 
         project.id === projectId ? { ...project, series_id: seriesId } : project
       ));
+      
+      // Refresh series data to update counts
+      const seriesResponse = await invoke<{ data: Series[] }>('get_series_with_counts');
+      if (seriesResponse.data) {
+        setSeries(seriesResponse.data);
+      }
     } catch (err) {
       console.error('Error adding project to series:', err);
       setError('Failed to add project to series');
@@ -144,13 +126,19 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
   // Remove project from series
   const handleRemoveProjectFromSeries = async (projectId: string) => {
     try {
-      // In a real implementation, this would call the Tauri API
-      console.log(`Removing project ${projectId} from its series`);
+      // Call the backend API to remove project from series
+      await invoke('remove_project_from_series', { projectId });
       
-      // Mock updating the project in the list
+      // Update local state
       setProjects(projects.map(project => 
         project.id === projectId ? { ...project, series_id: null } : project
       ));
+      
+      // Refresh series data to update counts
+      const seriesResponse = await invoke<{ data: Series[] }>('get_series_with_counts');
+      if (seriesResponse.data) {
+        setSeries(seriesResponse.data);
+      }
     } catch (err) {
       console.error('Error removing project from series:', err);
       setError('Failed to remove project from series');

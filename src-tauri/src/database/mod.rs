@@ -9,6 +9,7 @@ use tauri::{AppHandle, Manager};
 pub mod models;
 pub mod migrations;
 pub mod operations;
+pub mod backup;
 
 /// Database connection pool
 static mut DB_POOL: Option<Pool<Sqlite>> = None;

@@ -53,6 +53,24 @@ pub enum StoryWeaverError {
     #[error("Document too large: {size} bytes (max: {max_size})")]
     DocumentTooLarge { size: u64, max_size: u64 },
     
+    // Folder Errors
+    #[error("Folder not found: {id}")]
+    FolderNotFound { id: String },
+    
+    #[error("Folder not empty: {id}")]
+    FolderNotEmpty { id: String },
+    
+    // Series Errors
+    #[error("Series not found: {id}")]
+    SeriesNotFound { id: String },
+    
+    #[error("Series not empty: {id}")]
+    SeriesNotEmpty { id: String },
+    
+    // Document Link Errors
+    #[error("Document link not found: {id}")]
+    DocumentLinkNotFound { id: String },
+    
     // AI Provider Errors
     #[error("AI provider error: {provider} - {message}")]
     AIProvider { provider: String, message: String },
@@ -106,6 +124,18 @@ pub enum StoryWeaverError {
     #[error("Encryption failed: {message}")]
     Encryption { message: String },
     
+    #[error("Decryption failed: {message}")]
+    Decryption { message: String },
+    
+    #[error("Security error: {message}")]
+    SecurityError { message: String },
+    
+    #[error("Privacy error: {message}")]
+    PrivacyError { message: String },
+    
+    #[error("Validation error: {message}")]
+    ValidationError { message: String },
+    
     #[error("Input validation failed: {field} - {message}")]
     InputValidation { field: String, message: String },
     
@@ -118,6 +148,9 @@ pub enum StoryWeaverError {
     
     #[error("Connection failed: {url} - {message}")]
     ConnectionFailed { url: String, message: String },
+    
+    #[error("Failed to emit event: {0}")]
+    EventEmitError(String),
     
     // Configuration Errors
     #[error("Configuration error: {key} - {message}")]
@@ -132,6 +165,18 @@ pub enum StoryWeaverError {
     
     #[error("Deserialization failed: {message}")]
     Deserialization { message: String },
+    
+    #[error("Parse error: {message}")]
+    ParseError { message: String },
+    
+    #[error("Version not found: {id}")]
+    VersionNotFound { id: String },
+    
+    #[error("Deleted item not found: {id}")]
+    DeletedItemNotFound { id: String },
+    
+    #[error("Operation not supported: {operation}")]
+    UnsupportedOperation { operation: String },
     
     // Generic Errors
     #[error("Internal error: {message}")]
@@ -183,6 +228,27 @@ impl StoryWeaverError {
     pub fn validation<S: Into<String>>(message: S) -> Self {
         Self::InputValidation {
             field: "general".to_string(),
+            message: message.into(),
+        }
+    }
+    
+    /// Create a serialization error
+    pub fn serialization<S: Into<String>>(message: S) -> Self {
+        Self::Serialization {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a deserialization error
+    pub fn deserialization<S: Into<String>>(message: S) -> Self {
+        Self::Deserialization {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a parse error
+    pub fn parse_error<S: Into<String>>(message: S) -> Self {
+        Self::ParseError {
             message: message.into(),
         }
     }

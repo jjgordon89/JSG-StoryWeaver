@@ -1,0 +1,187 @@
+/* Focus Mode Styles */
+
+/* Base focus mode styles */
+.focus-mode-editor {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+/* Monaco editor overrides for focus mode */
+body.focus-mode .monaco-editor .margin,
+body.focus-mode .monaco-editor .minimap {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+body.focus-mode .monaco-editor .margin:hover,
+body.focus-mode .monaco-editor .minimap:hover {
+  opacity: 1;
+}
+
+/* Highlight current line in focus mode */
+body.focus-mode .monaco-editor .current-line {
+  background-color: rgba(100, 100, 100, 0.1);
+  border-left: 2px solid rgba(100, 149, 237, 0.7);
+}
+
+/* Fade non-active lines in focus mode */
+body.focus-mode .monaco-editor .view-line:not(.current-line) {
+  opacity: 0.8;
+}
+
+body.focus-mode {
+  --focus-transition: all 0.5s ease;
+}
+
+/* Container styles when focus mode is active */
+.focus-mode-container.is-focused {
+  max-width: 100%;
+  transition: var(--focus-transition);
+}
+
+/* Hide navigation panel in focus mode */
+body.focus-mode .focus-mode-container.is-focused ~ div[class*="w-1/4"]:first-of-type {
+  transform: translateX(-100%);
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: var(--focus-transition);
+}
+
+/* Hide right panel in focus mode */
+body.focus-mode .focus-mode-container.is-focused ~ div[class*="w-1/4"]:last-of-type {
+  transform: translateX(100%);
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: var(--focus-transition);
+}
+
+/* Expand editor to full width in focus mode */
+body.focus-mode .focus-mode-container.is-focused {
+  width: 100%;
+  max-width: 100%;
+  transition: var(--focus-transition);
+}
+
+/* Dim UI elements in focus mode */
+body.focus-mode-dim .focus-mode-container.is-focused h2,
+body.focus-mode-dim .focus-mode-container.is-focused .bg-gray-100,
+body.focus-mode-dim .focus-mode-container.is-focused .dark\:bg-gray-800 {
+  opacity: 0.5;
+  transition: var(--focus-transition);
+}
+
+/* Show UI elements on hover in dim mode */
+body.focus-mode-dim .focus-mode-container.is-focused h2:hover,
+body.focus-mode-dim .focus-mode-container.is-focused .bg-gray-100:hover,
+body.focus-mode-dim .focus-mode-container.is-focused .dark\:bg-gray-800:hover {
+  opacity: 1;
+}
+
+/* Focus mode toggle button */
+.focus-mode-toggle {
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.focus-mode-toggle:hover {
+  opacity: 1;
+}
+
+/* Animations for entering/exiting focus mode */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+body.focus-mode .focus-mode-container.is-focused {
+  animation: fadeIn 0.5s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  body.focus-mode .focus-mode-container.is-focused {
+    padding: 1rem;
+  }
+}
+
+/* Accessibility - respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  body.focus-mode,
+  .focus-mode-container.is-focused,
+  body.focus-mode .focus-mode-container.is-focused ~ div[class*="w-1/4"] {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Focus mode layout styles */
+.focus-mode-layout .flex-1 {
+  transition: width 0.5s ease, max-width 0.5s ease;
+}
+
+body.focus-mode .focus-mode-layout .flex-1 {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Toggle button styles */
+.toggle-checkbox {
+  transition: transform 0.3s ease;
+}
+
+.toggle-checkbox:checked {
+  transform: translateX(100%);
+}
+
+.toggle-label {
+  transition: background-color 0.3s ease;
+}
+
+/* Custom scrollbar for focus mode */
+body.focus-mode ::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.focus-mode ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.focus-mode ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+body.focus-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Keyboard shortcut hint */
+.focus-mode-hint {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 100;
+}
+
+body.focus-mode .focus-mode-hint {
+  opacity: 0.7;
+  animation: fadeOut 3s forwards 2s;
+}
+
+@keyframes fadeOut {
+  from { opacity: 0.7; }
+  to { opacity: 0; }
+}

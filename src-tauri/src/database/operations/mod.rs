@@ -7,6 +7,8 @@ mod app_settings_ops;
 mod project_ops;
 mod document_ops;
 mod character_ops;
+mod background_task_ops;
+mod performance_metric_ops;
 
 // Re-export all operations
 pub use folder_ops::*;
@@ -18,6 +20,8 @@ pub use app_settings_ops::*;
 pub use project_ops::*;
 pub use document_ops::*;
 pub use character_ops::*;
+pub use background_task_ops::*;
+pub use performance_metric_ops::*;
 
 // Define the original operations
 pub struct ProjectOps;
@@ -25,3 +29,5 @@ pub struct DocumentOps;
 pub struct CharacterOps;
 pub struct LocationOps;
 pub struct AIHistoryOps;
+pub struct BackgroundTaskOps;
+pub struct PerformanceMetricOps;
