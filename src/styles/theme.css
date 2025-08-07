@@ -160,3 +160,28 @@ select:focus-visible {
   outline: 3px solid hsl(var(--ring));
   outline-offset: 2px;
 }
+
+/* AI Text Highlighting Styles */
+.ai-generated-text {
+  background-color: rgba(147, 51, 234, 0.15) !important;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.4) !important;
+  color: #9333ea !important;
+  transition: all 0.2s ease;
+}
+
+.ai-generated-text:hover {
+  background-color: rgba(147, 51, 234, 0.25) !important;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.6) !important;
+}
+
+/* Dark theme support for AI text */
+.monaco-editor.vs-dark .ai-generated-text {
+  background-color: rgba(147, 51, 234, 0.2) !important;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.5) !important;
+  color: #c084fc !important;
+}
+
+.monaco-editor.vs-dark .ai-generated-text:hover {
+  background-color: rgba(147, 51, 234, 0.3) !important;
+  border-bottom: 1px solid rgba(147, 51, 234, 0.7) !important;
+}

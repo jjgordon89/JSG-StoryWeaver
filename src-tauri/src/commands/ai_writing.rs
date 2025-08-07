@@ -519,3 +519,25 @@ pub async fn tone_shift_write(
         Err(e) => CommandResponse::error(format!("Tone shift write failed: {}", e)),
     }
 }
+
+#[tauri::command]
+pub async fn get_related_words(
+    state: State<'_, Arc<AIProviderManager>>,
+    word: String,
+    context: Option<String>,
+) -> CommandResponse<Vec<String>> {
+    match state.get_default_provider() {
+        Some(provider) => {
+            let mut ai_context = crate::ai::AIContext::default();
+            if let Some(ctx) = context {
+                ai_context.preceding_text = Some(ctx);
+            }
+            
+            match provider.related_words(&word, &ai_context).await {
+                Ok(words) => CommandResponse::success(words),
+                Err(e) => CommandResponse::error(format!("Failed to get related words: {}", e)),
+            }
+        }
+        None => CommandResponse::error("No AI provider available".to_string()),
+    }
+}

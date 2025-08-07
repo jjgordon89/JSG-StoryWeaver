@@ -5,6 +5,7 @@ import { useStore } from '../../stores/documentStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useVersionStore, DocumentVersion } from '../../stores/versionStore';
 import { invoke } from '../../utils/tauriSafe';
+import { AITextDecorationManager } from '../../utils/aiTextDecorations';
 import FocusMode from './FocusMode';
 import FocusModeSettings from './FocusModeSettings';
 import VersionHistory from './VersionHistory';
@@ -29,6 +30,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showQuickTools, setShowQuickTools] = useState(false);
   const [quickToolsPosition, setQuickToolsPosition] = useState({ x: 0, y: 0 });
+  const [aiDecorationManager, setAiDecorationManager] = useState<AITextDecorationManager | null>(null);
   const [aiMenuVisible, setAIMenuVisible] = useState(false);
   const [aiMenuPosition, setAIMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -55,6 +57,15 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
       }
     }
   }, []);
+
+  // Cleanup effect for AI decoration manager
+  useEffect(() => {
+    return () => {
+      if (aiDecorationManager) {
+        aiDecorationManager.dispose();
+      }
+    };
+  }, [aiDecorationManager]);
 
   // Keyboard shortcuts using react-hotkeys-hook
   useHotkeys('ctrl+k, cmd+k', (e) => {
@@ -145,10 +156,21 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         text: text,
         forceMoveMarkers: true
       }]);
+      
+      // Add purple highlighting to AI-generated content
+       if (aiDecorationManager) {
+         const newRange = {
+           startLineNumber: selection.startLineNumber,
+           startColumn: selection.startColumn,
+           endLineNumber: selection.startLineNumber,
+           endColumn: selection.startColumn + text.length
+         };
+         aiDecorationManager.addAITextRange(newRange);
+       }
     }
     
     setAIMenuVisible(false);
-  }, []);
+  }, [aiDecorationManager]);
 
   // Handle text replacement from AI
   const handleReplaceText = useCallback((text: string) => {
@@ -163,10 +185,21 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         text: text,
         forceMoveMarkers: true
       }]);
+      
+      // Add purple highlighting to AI-generated content
+       if (aiDecorationManager) {
+         const newRange = {
+           startLineNumber: selection.startLineNumber,
+           startColumn: selection.startColumn,
+           endLineNumber: selection.startLineNumber,
+           endColumn: selection.startColumn + text.length
+         };
+         aiDecorationManager.addAITextRange(newRange);
+       }
     }
     
     setAIMenuVisible(false);
-  }, []);
+  }, [aiDecorationManager]);
 
   // Handle selection change to update selected text
   const handleSelectionChange = useCallback(() => {
@@ -201,6 +234,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
       renderLineHighlight: 'all',
       padding: { top: 16 },
     });
+
+    // Initialize AI decoration manager
+    const decorationManager = new AITextDecorationManager(editor);
+    setAiDecorationManager(decorationManager);
 
     // Set initial word count
     setWordCount(calculateWordCount(initialContent));
@@ -440,6 +477,32 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
               selectedText={selectedText}
               documentContext={content}
             />
+          </div>
+        )}
+        
+        {/* Quick Tools Modal - Triggered by Ctrl+K */}
+        {showQuickTools && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+            onClick={() => setShowQuickTools(false)}
+          >
+            <div 
+              className="relative"
+              style={{
+                left: quickToolsPosition.x - 160, // Center the 320px wide component
+                top: quickToolsPosition.y - 200   // Position above cursor
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <AIQuickTools
+                selectedText={selectedText}
+                documentContext={content}
+                onInsertText={handleInsertText}
+                onReplaceText={handleReplaceText}
+                onClose={() => setShowQuickTools(false)}
+                className=""
+              />
+            </div>
           </div>
         )}
         

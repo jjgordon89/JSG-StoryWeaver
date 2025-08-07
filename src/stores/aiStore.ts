@@ -92,6 +92,9 @@ interface AIState {
   quickEdit: (text: string, instruction: string, settings?: Partial<QuickEditSettings>) => Promise<string>;
   quickChat: (message: string, context?: string) => Promise<string>;
   
+  // Related words
+  getRelatedWords: (word: string, context?: string) => Promise<string[]>;
+  
   // Streaming controls
   startStreaming: (streamId: string) => void;
   pauseStreaming: () => void;
@@ -447,6 +450,32 @@ export const useAIStore = create<AIState>((set, get) => ({
         return result.data;
       } else {
         throw new Error(result.error || 'Quick chat failed');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: errorMessage });
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  getRelatedWords: async (word: string, context = '') => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const result = await invoke<{ success: boolean; data?: string[]; error?: string }>(
+        'get_related_words',
+        {
+          word,
+          context,
+        }
+      );
+      
+      if (result.success && result.data) {
+        return result.data;
+      } else {
+        throw new Error(result.error || 'Failed to get related words');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
