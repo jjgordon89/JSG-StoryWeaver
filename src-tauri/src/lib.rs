@@ -8,6 +8,7 @@ use std::sync::Arc;
 mod commands;
 mod database;
 mod error;
+mod models;
 pub mod ai;
 pub mod background;
 mod utils;
@@ -163,7 +164,22 @@ pub fn run() {
             commands::ai_writing::visualize_scene,
             commands::ai_writing::quick_edit,
             commands::ai_writing::quick_chat,
-            commands::ai_writing::tone_shift_write
+            commands::ai_writing::tone_shift_write,
+            commands::ai_writing::get_related_words,
+            
+            // AI Card commands
+            commands::ai_cards::create_ai_card,
+            commands::ai_cards::get_ai_card,
+            commands::ai_cards::get_ai_cards,
+            commands::ai_cards::update_ai_card,
+            commands::ai_cards::delete_ai_card,
+            commands::ai_cards::get_ai_cards_by_project,
+            commands::ai_cards::get_ai_cards_by_document,
+            commands::ai_cards::get_stacked_ai_cards,
+            commands::ai_cards::get_starred_ai_cards,
+            commands::ai_cards::toggle_ai_card_stack,
+            commands::ai_cards::toggle_ai_card_star,
+            commands::ai_cards::toggle_ai_card_collapse
         ])
         .setup(|app| {
             // Initialize database on startup

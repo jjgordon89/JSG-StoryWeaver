@@ -7,10 +7,19 @@ pub mod app_settings_ops;
 pub mod project_ops;
 pub mod document_ops;
 pub mod character_ops;
+pub mod location_ops;
 pub mod background_task_ops;
 pub mod performance_metric_ops;
+pub mod story_bible_ops;
+pub mod timeline_ops;
+pub mod plot_thread_ops;
+pub mod character_trait_ops;
+pub mod world_element_ops;
+pub mod outline_ops;
+pub mod outline_act_ops;
+pub mod scene_ops;
 
-// Re-export all operations
+// Re-export for convenience
 pub use folder_ops::*;
 pub use series_ops::*;
 pub use document_link_ops::*;
@@ -20,8 +29,17 @@ pub use app_settings_ops::*;
 pub use project_ops::*;
 pub use document_ops::*;
 pub use character_ops::*;
+pub use location_ops::*;
 pub use background_task_ops::*;
 pub use performance_metric_ops::*;
+pub use story_bible_ops::*;
+pub use timeline_ops::*;
+pub use plot_thread_ops::*;
+pub use character_trait_ops::*;
+pub use world_element_ops::*;
+pub use outline_ops::*;
+pub use outline_act_ops::*;
+pub use scene_ops::*;
 
 // Define the original operations
 pub struct ProjectOps;
@@ -31,3 +49,11 @@ pub struct LocationOps;
 pub struct AIHistoryOps;
 pub struct BackgroundTaskOps;
 pub struct PerformanceMetricOps;
+pub struct StoryBibleOps;
+pub struct TimelineOps;
+pub struct PlotThreadOps;
+pub struct CharacterTraitOps;
+pub struct WorldElementOps;
+pub struct OutlineOps;
+pub struct OutlineActOps;
+pub struct SceneOps;

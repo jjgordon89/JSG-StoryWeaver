@@ -13,6 +13,7 @@ pub mod characters;
 pub mod locations;
 pub mod ai_history;
 pub mod ai_writing;
+pub mod ai_cards;
 pub mod folder_commands;
 pub mod series_commands;
 pub mod document_link_commands;

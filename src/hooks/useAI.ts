@@ -45,33 +45,37 @@ export const useAI = () => {
   const generateCardsFromText = useCallback(async (
     text: string,
     documentId: number,
-    cardCount: number = 2
+    cardCount: number = 2,
+    projectId?: number,
+    featureType: string = 'suggestion'
   ) => {
     try {
-      // This would call a backend command to generate cards
-      // For now, we'll create mock cards based on the text
-      const cards: Partial<AICard>[] = [];
+      const cards: AICard[] = [];
       
       for (let i = 0; i < cardCount; i++) {
-        cards.push({
-          id: Date.now() + i,
-          content: `Generated card ${i + 1} based on: ${text.substring(0, 100)}...`,
-          type: 'suggestion',
-          documentId,
-          projectId: 1, // This should come from context
-          timestamp: new Date().toISOString(),
-          isStarred: false,
-          isCollapsed: false,
-          metadata: {
-            source: 'ai_generation',
-            confidence: 0.8,
-            tokens_used: 50,
-          },
-        });
+        const cardData = {
+          project_id: projectId || 1, // This should come from context
+          document_id: documentId,
+          feature_type: featureType,
+          prompt_context: `Generated from text: ${text.substring(0, 100)}...`,
+          response_text: `Generated card ${i + 1} based on: ${text.substring(0, 200)}...`,
+          model_used: 'gpt-4',
+          token_count: 50,
+          cost_estimate: 0.001,
+          is_stacked: false,
+          is_starred: false,
+          is_collapsed: false
+        };
+        
+        // Create card via backend
+        const createdCard = await invoke('create_ai_card', { cardData });
+        if (createdCard.success) {
+          cards.push(createdCard.data);
+        }
       }
       
-      // Add cards to store
-      cards.forEach(card => cardStore.addCard(card as AICard));
+      // Refresh cards in store
+      await cardStore.fetchCards(projectId, documentId);
       
       return cards;
     } catch (error) {

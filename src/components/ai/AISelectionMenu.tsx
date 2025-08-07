@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
 import { useAICredits } from '../../hooks/useAI';
+import RelatedWords from './RelatedWords';
 
 interface AISelectionMenuProps {
   isOpen: boolean;
@@ -135,6 +136,7 @@ export const AISelectionMenu: React.FC<AISelectionMenuProps> = ({
   const [quickEditInstruction, setQuickEditInstruction] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [result, setResult] = useState<string>('');
+  const [showRelatedWords, setShowRelatedWords] = useState(false);
   
   const menuRef = useRef<HTMLDivElement>(null);
   
@@ -162,6 +164,12 @@ export const AISelectionMenu: React.FC<AISelectionMenuProps> = ({
     };
   }, [isOpen, onClose]);
   
+  // Helper function to check if selected text is a single word
+  const isSingleWord = (text: string): boolean => {
+    const trimmed = text.trim();
+    return trimmed.length > 0 && !trimmed.includes(' ') && /^[a-zA-Z]+$/.test(trimmed);
+  };
+
   // Reset state when menu opens/closes
   useEffect(() => {
     if (!isOpen) {
@@ -169,9 +177,13 @@ export const AISelectionMenu: React.FC<AISelectionMenuProps> = ({
       setUserPrompt('');
       setQuickEditInstruction('');
       setResult('');
+      setShowRelatedWords(false);
       resetProcessedText();
+    } else {
+      // Check if we should show related words for single word selection
+      setShowRelatedWords(isSingleWord(selectedText));
     }
-  }, [isOpen, resetProcessedText]);
+  }, [isOpen, selectedText, resetProcessedText]);
   
   const handleToolSelect = useCallback((tool: AITool) => {
     setSelectedTool(tool);
@@ -266,6 +278,17 @@ export const AISelectionMenu: React.FC<AISelectionMenuProps> = ({
       onClose();
     }
   }, [result, processedText, streamedContent, onTextReplace, onClose]);
+
+  const handleWordSelect = useCallback((word: string) => {
+    if (onTextReplace) {
+      onTextReplace(word);
+      onClose();
+    }
+  }, [onTextReplace, onClose]);
+
+  const handleRelatedWordsClose = useCallback(() => {
+    setShowRelatedWords(false);
+  }, []);
   
   const getAvailableTools = () => {
     return AI_TOOLS.filter(tool => {
@@ -375,7 +398,25 @@ export const AISelectionMenu: React.FC<AISelectionMenuProps> = ({
             
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col">
-              {selectedTool ? (
+              {showRelatedWords ? (
+                <div className="flex-1 p-4">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      Related Words for "{selectedText}"
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Click any word to replace the selected text
+                    </p>
+                  </div>
+                  <RelatedWords
+                    word={selectedText}
+                    position={{ x: 0, y: 0 }}
+                    onClose={handleRelatedWordsClose}
+                    onWordSelect={handleWordSelect}
+                    context={""}
+                  />
+                </div>
+              ) : selectedTool ? (
                 <>
                   {/* Tool Configuration */}
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700">

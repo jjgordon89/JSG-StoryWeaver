@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { CardStack } from './CardStack';
 import { Button } from '../ui/Button';
 import { FilterIcon, SortIcon } from '../ui/Icons';
+import { useCardStore } from '../../stores/cardStore';
 
 export interface AICard {
   id: number;
@@ -28,97 +29,42 @@ export const CardSystem: React.FC<CardSystemProps> = ({
   documentId,
   onCardAction,
 }) => {
-  const [cards, setCards] = useState<AICard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
-  const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const {
+    cards,
+    loading,
+    error,
+    filterType,
+    sortOrder,
+    showStarredOnly,
+    fetchCards,
+    toggleCollapse,
+    toggleStar,
+    deleteCard,
+    setFilterType,
+    setSortOrder,
+    setShowStarredOnly,
+  } = useCardStore();
 
   // Fetch cards from the database
   useEffect(() => {
-    const fetchCards = async () => {
-      try {
-        setLoading(true);
-        // In a real implementation, this would be a call to the Tauri backend
-        // For now, we'll simulate with mock data
-        const mockCards: AICard[] = [
-          {
-            id: 1,
-            projectId,
-            documentId,
-            featureType: 'Brainstorm',
-            promptContext: 'Help me brainstorm ideas for my protagonist',
-            responseText: 'Here are some character ideas for your protagonist:\n\n1. A former detective who left the force after a case went wrong\n2. A botanist who discovers a plant with unusual properties\n3. A librarian who can hear the whispers of books\n4. A chef who can taste emotions in food',
-            isStacked: false,
-            isStarred: true,
-            isCollapsed: false,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: 2,
-            projectId,
-            documentId,
-            featureType: 'Expand',
-            promptContext: 'Expand on the setting description',
-            responseText: 'The small coastal town of Harborview sits perched on rocky cliffs overlooking the turbulent Pacific. Victorian houses in faded pastels line narrow streets that wind up from the harbor. The air always carries the scent of salt and pine, and fog rolls in most evenings, transforming familiar landmarks into ghostly silhouettes.',
-            isStacked: false,
-            isStarred: false,
-            isCollapsed: true,
-            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          },
-          {
-            id: 3,
-            projectId,
-            documentId,
-            featureType: 'Rewrite',
-            promptContext: 'Rewrite this dialogue to be more tense',
-            responseText: '"I told you not to come back here." His voice dropped to a whisper, but the threat in it filled the room.\n\nShe stepped closer, not breaking eye contact. "You don\'t get to decide that anymore."\n\nHis hand twitched toward the drawer. "Last warning."\n\n"Too late for warnings," she said, revealing what she\'d been holding behind her back.',
-            isStacked: false,
-            isStarred: true,
-            isCollapsed: false,
-            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          },
-        ];
-        
-        setCards(mockCards);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching cards:', err);
-        setError('Failed to load AI response cards');
-        setLoading(false);
-      }
-    };
-
-    fetchCards();
-  }, [projectId, documentId]);
+    fetchCards(projectId, documentId);
+  }, [projectId, documentId, fetchCards]);
 
   // Handle toggling card collapse state
-  const handleToggleCollapse = (cardId: number) => {
-    setCards(prevCards =>
-      prevCards.map(card =>
-        card.id === cardId ? { ...card, isCollapsed: !card.isCollapsed } : card
-      )
-    );
-    
+  const handleToggleCollapse = async (cardId: number) => {
+    await toggleCollapse(cardId);
     onCardAction?.('toggle_collapse', cardId);
   };
 
   // Handle toggling card star state
-  const handleToggleStar = (cardId: number) => {
-    setCards(prevCards =>
-      prevCards.map(card =>
-        card.id === cardId ? { ...card, isStarred: !card.isStarred } : card
-      )
-    );
-    
+  const handleToggleStar = async (cardId: number) => {
+    await toggleStar(cardId);
     onCardAction?.('toggle_star', cardId);
   };
 
   // Handle deleting a card
-  const handleDeleteCard = (cardId: number) => {
-    setCards(prevCards => prevCards.filter(card => card.id !== cardId));
-    
+  const handleDeleteCard = async (cardId: number) => {
+    await deleteCard(cardId);
     onCardAction?.('delete', cardId);
   };
 

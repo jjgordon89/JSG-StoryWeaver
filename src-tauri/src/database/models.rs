@@ -383,7 +383,6 @@ impl Character {
 
 impl Location {
     pub fn new(project_id: String, name: String, location_type: LocationType) -> Self {
-        let now = Utc::now();
         Self {
             id: Uuid::new_v4().to_string(),
             project_id,
@@ -396,9 +395,225 @@ impl Location {
             history: None,
             significance: None,
             visibility: VisibilityLevel::Relevant,
-            created_at: now,
-            updated_at: now,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
             metadata: "{}".to_string(),
+        }
+    }
+}
+
+/// Story Bible model - core story bible structure
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct StoryBible {
+    pub id: String,
+    pub project_id: String,
+    pub braindump: Option<String>,
+    pub synopsis: Option<String>,
+    pub genre: Option<String>,
+    pub style: Option<String>,
+    pub style_examples: Option<String>,
+    pub pov_mode: String, // 'global', 'per_chapter', 'mixed'
+    pub global_pov: Option<String>,
+    pub global_tense: Option<String>,
+    pub global_character_pov_ids: String, // JSON array of character IDs
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Character trait model - for character trait details
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct CharacterTrait {
+    pub id: String,
+    pub character_id: String,
+    pub trait_name: String,
+    pub trait_value: Option<String>,
+    pub is_visible: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Worldbuilding element model - for worldbuilding cards
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct WorldElement {
+    pub id: String,
+    pub project_id: Option<String>,
+    pub series_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub element_type: String,
+    pub properties: String, // JSON string for custom properties
+    pub is_visible: bool,
+    pub original_project_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Outline model - for chapter outlines
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Outline {
+    pub id: String,
+    pub project_id: String,
+    pub chapter_number: Option<i32>,
+    pub title: Option<String>,
+    pub summary: Option<String>,
+    pub pov: Option<String>,
+    pub tense: Option<String>,
+    pub character_pov_ids: String, // JSON array of character IDs
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Outline act model - for acts/dividers in outlines
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct OutlineAct {
+    pub id: String,
+    pub outline_id: String,
+    pub act_type: ActType,
+    pub act_number: i32,
+    pub title: String,
+    pub position: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Act type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "text")]
+pub enum ActType {
+    #[sqlx(rename = "part")]
+    Part,
+    #[sqlx(rename = "book")]
+    Book,
+    #[sqlx(rename = "episode")]
+    Episode,
+    #[sqlx(rename = "section")]
+    Section,
+}
+
+/// Scene model - for scene building blocks
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Scene {
+    pub id: String,
+    pub outline_id: String,
+    pub scene_number: i32,
+    pub title: Option<String>,
+    pub summary: Option<String>,
+    pub extra_instructions: Option<String>,
+    pub pov: Option<String>,
+    pub tense: Option<String>,
+    pub character_pov_ids: String, // JSON array of character IDs
+    pub word_count_estimate: Option<i32>,
+    pub credit_estimate: Option<f64>,
+    pub is_validated: bool,
+    pub validation_issues: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Implementation for StoryBible
+impl StoryBible {
+    pub fn new(project_id: String) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            project_id,
+            braindump: None,
+            synopsis: None,
+            genre: None,
+            style: None,
+            style_examples: None,
+            pov_mode: "global".to_string(),
+            global_pov: Some("3rd Person Limited".to_string()),
+            global_tense: Some("Past".to_string()),
+            global_character_pov_ids: "[]".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+/// Implementation for CharacterTrait
+impl CharacterTrait {
+    pub fn new(character_id: String, trait_name: String, trait_value: Option<String>) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            character_id,
+            trait_name,
+            trait_value,
+            is_visible: true,
+            created_at: Utc::now(),
+        }
+    }
+}
+
+/// Implementation for WorldElement
+impl WorldElement {
+    pub fn new(project_id: Option<String>, name: String, element_type: String) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            project_id,
+            series_id: None,
+            name,
+            description: None,
+            element_type,
+            properties: "{}".to_string(),
+            is_visible: true,
+            original_project_id: project_id.clone(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+/// Implementation for Outline
+impl Outline {
+    pub fn new(project_id: String, chapter_number: Option<i32>) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            project_id,
+            chapter_number,
+            title: None,
+            summary: None,
+            pov: None,
+            tense: None,
+            character_pov_ids: "[]".to_string(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+/// Implementation for OutlineAct
+impl OutlineAct {
+    pub fn new(outline_id: String, act_type: ActType, act_number: i32, title: String, position: i32) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            outline_id,
+            act_type,
+            act_number,
+            title,
+            position,
+            created_at: Utc::now(),
+        }
+    }
+}
+
+/// Implementation for Scene
+impl Scene {
+    pub fn new(outline_id: String, scene_number: i32) -> Self {
+        Self {
+            id: Uuid::new_v4().to_string(),
+            outline_id,
+            scene_number,
+            title: None,
+            summary: None,
+            extra_instructions: None,
+            pov: None,
+            tense: None,
+            character_pov_ids: "[]".to_string(),
+            word_count_estimate: None,
+            credit_estimate: None,
+            is_validated: false,
+            validation_issues: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 }

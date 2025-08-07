@@ -1493,12 +1493,55 @@ impl AIProvider for OpenAIProvider {
             rate_limiter.wait_if_needed(estimated_tokens).await?;
         }
         
-        // In a real implementation, this would call the DALL-E API
-        // For now, return a placeholder
+        // Build DALL-E 3 request
+        let request = serde_json::json!({
+            "model": "dall-e-3",
+            "prompt": prompt,
+            "n": 1,
+            "size": "1024x1024",
+            "quality": "standard",
+            "style": "vivid"
+        });
         
-        // Simulate API delay
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        // Make API call to DALL-E
+        let response = self.client
+            .post("https://api.openai.com/v1/images/generations")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to DALL-E API")?;
         
-        Ok("https://example.com/generated-image.png".to_string())
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(anyhow::anyhow!("DALL-E API error: {}", error_text));
+        }
+        
+        // Parse response
+        let response_json: serde_json::Value = response.json().await
+            .context("Failed to parse DALL-E response")?;
+        
+        // Update rate limiter with actual usage
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(&TokenUsage {
+                prompt_tokens: estimated_tokens,
+                completion_tokens: 0,
+                total_tokens: estimated_tokens,
+            });
+        }
+        
+        // Extract image URL from response
+        if let Some(data) = response_json["data"].as_array() {
+            if let Some(first_image) = data.first() {
+                if let Some(url) = first_image["url"].as_str() {
+                    return Ok(url.to_string());
+                }
+            }
+        }
+        
+        Err(anyhow::anyhow!("Failed to extract image URL from DALL-E response"))
     }
 }

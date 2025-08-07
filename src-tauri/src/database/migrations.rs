@@ -30,6 +30,8 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("007_backup_recovery_versioning", |pool| Box::pin(migration_007_backup_recovery_versioning(pool))),
         ("008_background_tasks", |pool| Box::pin(migration_008_background_tasks(pool))),
         ("009_performance_metrics", |pool| Box::pin(migration_009_performance_metrics(pool))),
+        ("010_ai_response_cards", |pool| Box::pin(migration_010_ai_response_cards(pool))),
+        ("011_story_bible_core", |pool| Box::pin(migration_011_story_bible_core(pool))),
     ];
     
     for (name, migration_fn) in migrations {
@@ -41,6 +43,58 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         }
     }
     
+    Ok(())
+}
+
+/// Migration 010: Create AI response cards table
+async fn migration_010_ai_response_cards(pool: &Pool<Sqlite>) -> Result<()> {
+    // Create ai_response_cards table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS ai_response_cards (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            document_id TEXT,
+            feature_type TEXT NOT NULL,
+            prompt_context TEXT NOT NULL,
+            response_text TEXT NOT NULL,
+            model_used TEXT,
+            token_count INTEGER,
+            cost_estimate REAL,
+            is_stacked BOOLEAN NOT NULL DEFAULT 0,
+            is_starred BOOLEAN NOT NULL DEFAULT 0,
+            is_collapsed BOOLEAN NOT NULL DEFAULT 0,
+            stack_position INTEGER,
+            tags TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create ai_response_cards table: {}", e)))?;
+
+    // Create indexes for the ai_response_cards table
+    let indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_project_id ON ai_response_cards(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_document_id ON ai_response_cards(document_id)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_feature_type ON ai_response_cards(feature_type)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_is_stacked ON ai_response_cards(is_stacked)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_is_starred ON ai_response_cards(is_starred)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_created_at ON ai_response_cards(created_at)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_cards_stack_position ON ai_response_cards(stack_position)",
+    ];
+
+    for index_sql in indexes {
+        sqlx::query(index_sql)
+            .execute(pool)
+            .await
+            .map_err(|e| StoryWeaverError::database(format!("Failed to create ai_response_cards index: {}", e)))?;
+    }
+
     Ok(())
 }
 
@@ -420,7 +474,7 @@ async fn migration_006_indexes(pool: &Pool<Sqlite>) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)",
         "CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects(updated_at)",
         "CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON documents(updated_at)",
-    ];
+    ]
     
     for index_sql in indexes {
         sqlx::query(index_sql)
@@ -429,6 +483,162 @@ async fn migration_006_indexes(pool: &Pool<Sqlite>) -> Result<()> {
             .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
     }
     
+    Ok(())
+}
+
+/// Migration 011: Create story bible core tables
+async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
+    // Create story_bible table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS story_bible (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL UNIQUE,
+            braindump TEXT,
+            synopsis TEXT,
+            genre TEXT,
+            style TEXT,
+            pov_mode TEXT NOT NULL DEFAULT 'single',
+            global_pov TEXT,
+            global_tense TEXT NOT NULL DEFAULT 'past',
+            global_character_pov_ids TEXT NOT NULL DEFAULT '[]',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create story_bible table: {}", e)))?;
+
+    // Create character_traits table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS character_traits (
+            id TEXT PRIMARY KEY,
+            character_id TEXT NOT NULL,
+            trait_name TEXT NOT NULL,
+            trait_value TEXT NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create character_traits table: {}", e)))?;
+
+    // Create worldbuilding table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS worldbuilding (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            series_id TEXT,
+            name TEXT NOT NULL,
+            description TEXT,
+            element_type TEXT NOT NULL,
+            is_visible BOOLEAN NOT NULL DEFAULT 1,
+            original_project_id TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
+            FOREIGN KEY (original_project_id) REFERENCES projects(id) ON DELETE SET NULL
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create worldbuilding table: {}", e)))?;
+
+    // Create outlines table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS outlines (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            chapter_number INTEGER,
+            title TEXT NOT NULL,
+            summary TEXT,
+            pov TEXT,
+            tense TEXT,
+            character_pov_ids TEXT NOT NULL DEFAULT '[]',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create outlines table: {}", e)))?;
+
+    // Create outline_acts table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS outline_acts (
+            id TEXT PRIMARY KEY,
+            outline_id TEXT NOT NULL,
+            act_type TEXT NOT NULL,
+            act_number INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (outline_id) REFERENCES outlines(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create outline_acts table: {}", e)))?;
+
+    // Create scenes table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS scenes (
+            id TEXT PRIMARY KEY,
+            outline_id TEXT NOT NULL,
+            scene_number INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            summary TEXT,
+            extra_instructions TEXT,
+            pov TEXT,
+            tense TEXT,
+            character_pov_ids TEXT NOT NULL DEFAULT '[]',
+            word_count_estimate INTEGER,
+            credit_estimate REAL,
+            is_validated BOOLEAN NOT NULL DEFAULT 0,
+            validation_issues TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (outline_id) REFERENCES outlines(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create scenes table: {}", e)))?;
+
+    // Create indexes for story bible tables
+    let indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_story_bible_project_id ON story_bible(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_character_traits_character_id ON character_traits(character_id)",
+        "CREATE INDEX IF NOT EXISTS idx_worldbuilding_project_id ON worldbuilding(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_worldbuilding_series_id ON worldbuilding(series_id)",
+        "CREATE INDEX IF NOT EXISTS idx_outlines_project_id ON outlines(project_id)",
+        "CREATE INDEX IF NOT EXISTS idx_outline_acts_outline_id ON outline_acts(outline_id)",
+        "CREATE INDEX IF NOT EXISTS idx_scenes_outline_id ON scenes(outline_id)",
+    ];
+
+    for index_sql in indexes {
+        sqlx::query(index_sql)
+            .execute(pool)
+            .await
+            .map_err(|e| StoryWeaverError::database(format!("Failed to create story bible index: {}", e)))?;
+    }
+
     Ok(())
 }
 
