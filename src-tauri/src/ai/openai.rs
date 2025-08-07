@@ -213,9 +213,63 @@ impl AIProvider for OpenAIProvider {
     }
 
     async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> Result<TextStream> {
-        // For now, we'll just return a placeholder
-        // In a real implementation, this would use the streaming API
-        Ok(TextStream)
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (prompt.len() / 4) as u32 + 500; // Rough estimate
+        
+        // Wait if we need to respect rate limits
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build request
+        let system_message = self.build_system_message(context);
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt.to_string(),
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(1000),
+            stream: true, // Enable streaming
+        };
+        
+        // Make API call with streaming
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Create a new TextStream
+        let mut text_stream = TextStream::new();
+        
+        // In a real implementation, we would process the streaming response
+        // For now, we'll simulate streaming with a simple delay
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        text_stream.append("This is a simulated streaming response from OpenAI. ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        text_stream.append("In a real implementation, we would process the chunks from the streaming API. ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        text_stream.append("The response would be built up incrementally as data arrives.");
+        
+        // Mark the stream as complete
+        text_stream.complete();
+        
+        Ok(text_stream)
     }
 
     async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> Result<String> {
@@ -230,9 +284,16 @@ impl AIProvider for OpenAIProvider {
         
         // Build prompt based on rewrite style
         let style_instruction = match style {
-            RewriteStyle::Rephrase => "Rephrase this text while keeping the same meaning:",
-            RewriteStyle::Shorter => "Rewrite this text to be more concise:",
-            RewriteStyle::MoreDescriptive => "Rewrite this text to be more descriptive and vivid:",
+            RewriteStyle::Rephrase => "Rephrase this text while keeping the same meaning:".to_string(),
+            RewriteStyle::Shorter => "Rewrite this text to be more concise:".to_string(),
+            RewriteStyle::MoreDescriptive => "Rewrite this text to be more descriptive and vivid:".to_string(),
+            RewriteStyle::Longer => "Expand this text with more details and elaboration:".to_string(),
+            RewriteStyle::MoreFormal => "Rewrite this text in a more formal, professional tone:".to_string(),
+            RewriteStyle::MoreCasual => "Rewrite this text in a more casual, conversational tone:".to_string(),
+            RewriteStyle::MoreVivid => "Rewrite this text with more vivid imagery and sensory details:".to_string(),
+            RewriteStyle::MoreDirect => "Rewrite this text to be more direct and straightforward:".to_string(),
+            RewriteStyle::MorePoetic => "Rewrite this text in a more poetic, lyrical style:".to_string(),
+            RewriteStyle::ToneShift(tone) => format!("Rewrite this text in a {} tone:", tone),
         };
         
         let system_message = ChatMessage {
@@ -350,5 +411,685 @@ impl AIProvider for OpenAIProvider {
 
     fn get_model_name(&self) -> &str {
         &self.model
+    }
+    
+    fn get_provider_name(&self) -> &str {
+        "OpenAI"
+    }
+    
+    fn supports_image_generation(&self) -> bool {
+        true // OpenAI supports DALL-E for image generation
+    }
+    
+    // Implement the new methods required by the AIProvider trait
+    
+    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> Result<TextStream> {
+        // Similar to rewrite_text but with streaming support
+        let estimated_tokens = (text.len() / 4) as u32 + 500;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build prompt based on rewrite style
+        let style_instruction = match style {
+            RewriteStyle::Rephrase => "Rephrase this text while keeping the same meaning:".to_string(),
+            RewriteStyle::Shorter => "Rewrite this text to be more concise:".to_string(),
+            RewriteStyle::MoreDescriptive => "Rewrite this text to be more descriptive and vivid:".to_string(),
+            RewriteStyle::Longer => "Expand this text with more details and elaboration:".to_string(),
+            RewriteStyle::MoreFormal => "Rewrite this text in a more formal, professional tone:".to_string(),
+            RewriteStyle::MoreCasual => "Rewrite this text in a more casual, conversational tone:".to_string(),
+            RewriteStyle::MoreVivid => "Rewrite this text with more vivid imagery and sensory details:".to_string(),
+            RewriteStyle::MoreDirect => "Rewrite this text to be more direct and straightforward:".to_string(),
+            RewriteStyle::MorePoetic => "Rewrite this text in a more poetic, lyrical style:".to_string(),
+            RewriteStyle::ToneShift(tone) => format!("Rewrite this text in a {} tone:", tone),
+        };
+        
+        // For now, simulate streaming with a simple implementation
+        let mut text_stream = TextStream::new();
+        
+        // Simulate streaming with delays
+        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        text_stream.append("Rewriting text... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        text_stream.append("Applying style changes... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        
+        // Get the full rewritten text
+        let rewritten = self.rewrite_text(text, style).await?;
+        text_stream.append(&rewritten);
+        text_stream.complete();
+        
+        Ok(text_stream)
+    }
+    
+    async fn expand_text(&self, text: &str, context: &AIContext) -> Result<String> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (text.len() / 4) as u32 + 500;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a skilled writing assistant. Expand the following text with more details, descriptions, and depth while maintaining the original style and intent.".to_string(),
+        };
+        
+        // Build user message with context
+        let mut prompt = String::new();
+        
+        // Add genre context if available
+        if let Some(genre) = &context.genre {
+            prompt.push_str(&format!("Genre: {}\n\n", genre));
+        }
+        
+        // Add writing style if available
+        if let Some(style) = &context.writing_style {
+            prompt.push_str(&format!("Writing style: {}\n\n", style));
+        }
+        
+        // Add the text to expand
+        prompt.push_str(&format!("Text to expand:\n{}\n\n", text));
+        
+        // Add any key details to include
+        if let Some(details) = &context.key_details {
+            if !details.is_empty() {
+                prompt.push_str("Please include these key details in the expansion:\n");
+                for detail in details {
+                    prompt.push_str(&format!("- {}\n", detail));
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(2000), // Allow for significant expansion
+            stream: false,
+        };
+        
+        // Make API call
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Parse response
+        let completion: ChatCompletionResponse = response.json().await
+            .context("Failed to parse OpenAI API response")?;
+        
+        // Update rate limiter with actual token usage
+        if let Some(usage) = &completion.usage {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(usage);
+        }
+        
+        // Extract generated text
+        if let Some(choice) = completion.choices.first() {
+            Ok(choice.message.content.clone())
+        } else {
+            Err(anyhow::anyhow!("No completion choices returned"))
+        }
+    }
+    
+    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> Result<TextStream> {
+        // For now, simulate streaming with a simple implementation
+        let mut text_stream = TextStream::new();
+        
+        // Simulate streaming with delays
+        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        text_stream.append("Expanding text... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        text_stream.append("Adding details... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        
+        // Get the full expanded text
+        let expanded = self.expand_text(text, context).await?;
+        text_stream.append(&expanded);
+        text_stream.complete();
+        
+        Ok(text_stream)
+    }
+    
+    async fn describe_scene(&self, description: &str, context: &AIContext) -> Result<String> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (description.len() / 4) as u32 + 500;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a skilled writing assistant specializing in vivid, sensory descriptions. Create a detailed scene description based on the provided information.".to_string(),
+        };
+        
+        // Build user message with context
+        let mut prompt = String::new();
+        
+        // Add genre context if available
+        if let Some(genre) = &context.genre {
+            prompt.push_str(&format!("Genre: {}\n\n", genre));
+        }
+        
+        // Add writing style if available
+        if let Some(style) = &context.writing_style {
+            prompt.push_str(&format!("Writing style: {}\n\n", style));
+        }
+        
+        // Add the scene to describe
+        prompt.push_str(&format!("Scene to describe:\n{}\n\n", description));
+        
+        // Add any key details to include
+        if let Some(details) = &context.key_details {
+            if !details.is_empty() {
+                prompt.push_str("Please include these key details in the description:\n");
+                for detail in details {
+                    prompt.push_str(&format!("- {}\n", detail));
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        // Add character context if available
+        if let Some(characters) = &context.characters {
+            if !characters.is_empty() {
+                prompt.push_str("Characters present in the scene:\n");
+                for character in characters {
+                    prompt.push_str(&format!("- {}", character.name));
+                    if let Some(desc) = &character.description {
+                        prompt.push_str(&format!(": {}", desc));
+                    }
+                    prompt.push_str("\n");
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        // Add location context if available
+        if let Some(locations) = &context.locations {
+            if !locations.is_empty() {
+                prompt.push_str("Location details:\n");
+                for location in locations {
+                    prompt.push_str(&format!("- {}", location.name));
+                    if let Some(desc) = &location.description {
+                        prompt.push_str(&format!(": {}", desc));
+                    }
+                    prompt.push_str("\n");
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(2000),
+            stream: false,
+        };
+        
+        // Make API call
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Parse response
+        let completion: ChatCompletionResponse = response.json().await
+            .context("Failed to parse OpenAI API response")?;
+        
+        // Update rate limiter with actual token usage
+        if let Some(usage) = &completion.usage {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(usage);
+        }
+        
+        // Extract generated text
+        if let Some(choice) = completion.choices.first() {
+            Ok(choice.message.content.clone())
+        } else {
+            Err(anyhow::anyhow!("No completion choices returned"))
+        }
+    }
+    
+    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> Result<TextStream> {
+        // For now, simulate streaming with a simple implementation
+        let mut text_stream = TextStream::new();
+        
+        // Simulate streaming with delays
+        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        text_stream.append("Creating scene description... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        text_stream.append("Adding sensory details... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        
+        // Get the full scene description
+        let scene = self.describe_scene(description, context).await?;
+        text_stream.append(&scene);
+        text_stream.complete();
+        
+        Ok(text_stream)
+    }
+    
+    async fn brainstorm(&self, topic: &str, context: &AIContext) -> Result<Vec<String>> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (topic.len() / 4) as u32 + 500;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a creative writing assistant. Generate a list of ideas based on the provided topic. Each idea should be distinct and presented as a separate item in a numbered list.".to_string(),
+        };
+        
+        // Build user message with context
+        let mut prompt = String::new();
+        
+        // Add genre context if available
+        if let Some(genre) = &context.genre {
+            prompt.push_str(&format!("Genre: {}\n\n", genre));
+        }
+        
+        // Add the topic to brainstorm
+        prompt.push_str(&format!("Topic to brainstorm ideas for:\n{}\n\n", topic));
+        
+        // Add any key details to consider
+        if let Some(details) = &context.key_details {
+            if !details.is_empty() {
+                prompt.push_str("Please consider these key details in your brainstorming:\n");
+                for detail in details {
+                    prompt.push_str(&format!("- {}\n", detail));
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        prompt.push_str("Generate at least 10 creative ideas. Format each idea as a numbered list item.");
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.8, // Higher temperature for more creative ideas
+            max_tokens: Some(2000),
+            stream: false,
+        };
+        
+        // Make API call
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Parse response
+        let completion: ChatCompletionResponse = response.json().await
+            .context("Failed to parse OpenAI API response")?;
+        
+        // Update rate limiter with actual token usage
+        if let Some(usage) = &completion.usage {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(usage);
+        }
+        
+        // Extract generated text and parse into a list of ideas
+        if let Some(choice) = completion.choices.first() {
+            let content = &choice.message.content;
+            
+            // Parse the numbered list into separate ideas
+            let ideas: Vec<String> = content
+                .lines()
+                .filter_map(|line| {
+                    // Look for lines that start with a number followed by a period or parenthesis
+                    if line.trim().is_empty() {
+                        return None;
+                    }
+                    
+                    let line = line.trim();
+                    
+                    // Check if line starts with a number (with or without period/parenthesis)
+                    if line.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+                        // Remove the number prefix and return the idea
+                        let parts: Vec<&str> = line.splitn(2, |c: char| c == '.' || c == ')' || c == ':').collect();
+                        if parts.len() > 1 {
+                            Some(parts[1].trim().to_string())
+                        } else {
+                            Some(line.to_string())
+                        }
+                    } else {
+                        // Include lines that don't match the pattern as well
+                        Some(line.to_string())
+                    }
+                })
+                .collect();
+            
+            Ok(ideas)
+        } else {
+            Err(anyhow::anyhow!("No completion choices returned"))
+        }
+    }
+    
+    async fn related_words(&self, word: &str, context: &AIContext) -> Result<Vec<String>> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (word.len() / 4) as u32 + 200;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a helpful writing assistant with expertise in vocabulary and language. Provide related words, synonyms, and contextually relevant alternatives for the given word.".to_string(),
+        };
+        
+        // Build user message with context
+        let mut prompt = String::new();
+        
+        // Add the word to find related words for
+        prompt.push_str(&format!("Word: {}\n\n", word));
+        
+        // Add context from the document if available
+        if let Some(preceding) = &context.preceding_text {
+            if !preceding.is_empty() {
+                let context_snippet = if preceding.len() > 200 {
+                    // Take the last 200 characters for context
+                    &preceding[preceding.len() - 200..]
+                } else {
+                    preceding
+                };
+                prompt.push_str(&format!("Context: {}\n\n", context_snippet));
+            }
+        }
+        
+        prompt.push_str("Please provide a list of related words, synonyms, and contextually relevant alternatives. Format the response as a simple comma-separated list without explanations.");
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.5,
+            max_tokens: Some(500),
+            stream: false,
+        };
+        
+        // Make API call
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Parse response
+        let completion: ChatCompletionResponse = response.json().await
+            .context("Failed to parse OpenAI API response")?;
+        
+        // Update rate limiter with actual token usage
+        if let Some(usage) = &completion.usage {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(usage);
+        }
+        
+        // Extract generated text and parse into a list of words
+        if let Some(choice) = completion.choices.first() {
+            let content = &choice.message.content;
+            
+            // Parse the comma-separated list into individual words
+            let words: Vec<String> = content
+                .split(',')
+                .map(|word| word.trim().to_string())
+                .filter(|word| !word.is_empty())
+                .collect();
+            
+            Ok(words)
+        } else {
+            Err(anyhow::anyhow!("No completion choices returned"))
+        }
+    }
+    
+    async fn quick_edit(&self, text: &str, instruction: &str) -> Result<String> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (text.len() / 4) as u32 + (instruction.len() / 4) as u32 + 300;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a helpful writing assistant. Edit the provided text according to the user's instructions. Return only the edited text without explanations or comments.".to_string(),
+        };
+        
+        // Build user message
+        let prompt = format!("Text to edit:\n{}\n\nInstructions:\n{}", text, instruction);
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.5,
+            max_tokens: Some((text.len() as u32 * 2).max(500)), // Allow for expansion
+            stream: false,
+        };
+        
+        // Make API call
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Parse response
+        let completion: ChatCompletionResponse = response.json().await
+            .context("Failed to parse OpenAI API response")?;
+        
+        // Update rate limiter with actual token usage
+        if let Some(usage) = &completion.usage {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(usage);
+        }
+        
+        // Extract generated text
+        if let Some(choice) = completion.choices.first() {
+            Ok(choice.message.content.clone())
+        } else {
+            Err(anyhow::anyhow!("No completion choices returned"))
+        }
+    }
+    
+    async fn quick_chat(&self, message: &str, context: &AIContext) -> Result<String> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (message.len() / 4) as u32 + 300;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let mut system_content = "You are StoryWeaver, an AI writing assistant. You help the user with their writing project by answering questions and providing guidance.".to_string();
+        
+        // Add story context if available
+        if let Some(story_context) = &context.story_context {
+            system_content.push_str(&format!("\n\nStory context: {}", story_context));
+        }
+        
+        // Add genre if available
+        if let Some(genre) = &context.genre {
+            system_content.push_str(&format!("\n\nGenre: {}", genre));
+        }
+        
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: system_content,
+        };
+        
+        // Build user message
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: message.to_string(),
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(1000),
+            stream: false,
+        };
+        
+        // Make API call
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Parse response
+        let completion: ChatCompletionResponse = response.json().await
+            .context("Failed to parse OpenAI API response")?;
+        
+        // Update rate limiter with actual token usage
+        if let Some(usage) = &completion.usage {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.update_token_usage(usage);
+        }
+        
+        // Extract generated text
+        if let Some(choice) = completion.choices.first() {
+            Ok(choice.message.content.clone())
+        } else {
+            Err(anyhow::anyhow!("No completion choices returned"))
+        }
+    }
+    
+    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> Result<TextStream> {
+        // For now, simulate streaming with a simple implementation
+        let mut text_stream = TextStream::new();
+        
+        // Simulate streaming with delays
+        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        text_stream.append("Thinking... ");
+        
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        
+        // Get the full response
+        let response = self.quick_chat(message, context).await?;
+        text_stream.append(&response);
+        text_stream.complete();
+        
+        Ok(text_stream)
+    }
+    
+    async fn generate_image(&self, prompt: &str) -> Result<String> {
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (prompt.len() / 4) as u32 + 100;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // In a real implementation, this would call the DALL-E API
+        // For now, return a placeholder
+        
+        // Simulate API delay
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        
+        Ok("https://example.com/generated-image.png".to_string())
     }
 }

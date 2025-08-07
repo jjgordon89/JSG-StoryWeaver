@@ -3,6 +3,8 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { emitSyncEvent, SyncEventType } from '../../utils/stateSynchronizer';
 import { PerformanceSettings } from './PerformanceSettings';
 import { PerformanceDashboard } from './PerformanceDashboard';
+import SystemSettings from './SystemSettings';
+import DataManagement from './DataManagement';
 
 export const AppSettings: React.FC = () => {
   const {
@@ -21,7 +23,7 @@ export const AppSettings: React.FC = () => {
   } = useSettingsStore();
   
   const [isSaved, setIsSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'performance' | 'dashboard'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'performance' | 'dashboard' | 'system' | 'data-management'>('general');
   
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,6 +102,32 @@ export const AppSettings: React.FC = () => {
               type="button"
             >
               Performance Dashboard
+            </button>
+          </li>
+          <li className="mr-2">
+            <button
+              className={`inline-block p-4 border-b-2 rounded-t-lg ${
+                activeTab === 'system'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent hover:text-gray-600 hover:border-gray-300'
+              }`}
+              onClick={() => setActiveTab('system')}
+              type="button"
+            >
+              System
+            </button>
+          </li>
+          <li className="mr-2">
+            <button
+              className={`inline-block p-4 border-b-2 rounded-t-lg ${
+                activeTab === 'data-management'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent hover:text-gray-600 hover:border-gray-300'
+              }`}
+              onClick={() => setActiveTab('data-management')}
+              type="button"
+            >
+              Data Management
             </button>
           </li>
         </ul>
@@ -329,8 +357,12 @@ export const AppSettings: React.FC = () => {
       </form>
       ) : activeTab === 'performance' ? (
         <PerformanceSettings />
-      ) : (
+      ) : activeTab === 'dashboard' ? (
         <PerformanceDashboard />
+      ) : activeTab === 'system' ? (
+        <SystemSettings />
+      ) : (
+        <DataManagement />
       )}
     </div>
   );

@@ -9,32 +9,180 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+/// AI Context with more detailed information for better generation
 pub struct AIContext {
-    // Add fields as needed for context (e.g., user, document, settings)
+    // Project and document identifiers
     pub project_id: Option<String>,
     pub document_id: Option<String>,
+    
+    // Content context
+    pub preceding_text: Option<String>,  // Text before cursor for continuation
+    pub following_text: Option<String>,  // Text after cursor for context
+    pub selected_text: Option<String>,   // Currently selected text (for rewrite, etc.)
+    pub story_context: Option<String>,   // Summary of the story/document
+    
+    // Story Bible elements relevant to current context
+    pub characters: Option<Vec<Character>>,
+    pub locations: Option<Vec<Location>>,
+    pub plot_threads: Option<Vec<PlotThread>>,
+    
+    // User preferences and settings
     pub user_preferences: Option<HashMap<String, String>>,
-    pub story_context: Option<String>,
+    pub writing_style: Option<String>,   // User's preferred writing style
+    pub tone: Option<String>,            // Desired tone for generation
+    pub creativity_level: Option<u8>,    // 1-10 scale for generation creativity
+    
+    // Feature-specific context
+    pub feature_type: Option<WritingFeature>,
+    pub feature_options: Option<HashMap<String, String>>,
+    
+    // Additional metadata
+    pub word_count_target: Option<usize>,
+    pub genre: Option<String>,
+    pub key_details: Option<Vec<String>>, // Important details to include
 }
 
-pub struct TextStream; // Placeholder for streaming responses
+/// Character information for context
+pub struct Character {
+    pub name: String,
+    pub description: Option<String>,
+    pub role: Option<String>,
+    pub relevance: Option<u8>, // 1-10 scale of relevance to current context
+}
+
+/// Location information for context
+pub struct Location {
+    pub name: String,
+    pub description: Option<String>,
+    pub relevance: Option<u8>, // 1-10 scale of relevance to current context
+}
+
+/// Plot thread information for context
+pub struct PlotThread {
+    pub name: String,
+    pub description: Option<String>,
+    pub relevance: Option<u8>, // 1-10 scale of relevance to current context
+}
+
+impl AIContext {
+    pub fn new() -> Self {
+        Self {
+            project_id: None,
+            document_id: None,
+            preceding_text: None,
+            following_text: None,
+            selected_text: None,
+            story_context: None,
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: None,
+            writing_style: None,
+            tone: None,
+            creativity_level: None,
+            feature_type: None,
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
+        }
+    }
+}
+
+/// Streaming text response from AI providers
+pub struct TextStream {
+    pub content: String,
+    pub is_complete: bool,
+    pub token_count: usize,
+}
+
+impl TextStream {
+    pub fn new() -> Self {
+        Self {
+            content: String::new(),
+            is_complete: false,
+            token_count: 0,
+        }
+    }
+
+    pub fn append(&mut self, text: &str) {
+        self.content.push_str(text);
+        // Rough estimate of tokens (characters / 4)
+        self.token_count = self.content.len() / 4;
+    }
+
+    pub fn complete(&mut self) {
+        self.is_complete = true;
+    }
+}
 
 pub enum RewriteStyle {
     Rephrase,
     Shorter,
     MoreDescriptive,
-    // Add more styles as needed
+    Longer,
+    MoreFormal,
+    MoreCasual,
+    MoreVivid,
+    MoreDirect,
+    MorePoetic,
+    ToneShift(String), // Custom tone with description
+}
+
+/// Writing feature types
+pub enum WritingFeature {
+    Write,
+    Rewrite(RewriteStyle),
+    Expand,
+    Describe,
+    Brainstorm,
+    Visualize,
+    RelatedWords,
+    QuickEdit,
+    QuickChat,
 }
 
 #[async_trait]
 pub trait AIProvider: Send + Sync {
+    // Basic text generation
     async fn generate_text(&self, prompt: &str, context: &AIContext) -> anyhow::Result<String>;
     async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    
+    // Rewrite functionality
     async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<String>;
+    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<TextStream>;
+    
+    // Expand functionality - add more detail to text
+    async fn expand_text(&self, text: &str, context: &AIContext) -> anyhow::Result<String>;
+    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    
+    // Describe functionality - generate vivid descriptions
+    async fn describe_scene(&self, description: &str, context: &AIContext) -> anyhow::Result<String>;
+    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    
+    // Brainstorm functionality - generate ideas
+    async fn brainstorm(&self, topic: &str, context: &AIContext) -> anyhow::Result<Vec<String>>;
+    
+    // Related words functionality - thesaurus and contextual alternatives
+    async fn related_words(&self, word: &str, context: &AIContext) -> anyhow::Result<Vec<String>>;
+    
+    // Quick tools
+    async fn quick_edit(&self, text: &str, instruction: &str) -> anyhow::Result<String>;
+    async fn quick_chat(&self, message: &str, context: &AIContext) -> anyhow::Result<String>;
+    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    
+    // Image generation for Visualize feature
+    async fn generate_image(&self, prompt: &str) -> anyhow::Result<String>; // Returns URL or base64 image
+    
+    // Embeddings for semantic search and context relevance
     async fn generate_embedding(&self, text: &str) -> anyhow::Result<Vec<f32>>;
+    
+    // Provider information
     fn supports_streaming(&self) -> bool;
+    fn supports_image_generation(&self) -> bool;
     fn get_context_window(&self) -> usize;
     fn get_model_name(&self) -> &str;
+    fn get_provider_name(&self) -> &str;
 }
 
 pub use openai::OpenAIProvider;
