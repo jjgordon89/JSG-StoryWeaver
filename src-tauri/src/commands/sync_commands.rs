@@ -44,7 +44,7 @@ pub async fn emit_sync_event(
         
         // Emit the event to all windows
         app_handle
-            .emit_all(&request.event_type, request.payload)
+            .emit_to(window.label(), &request.event_type, request.payload)
             .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
         
         Ok(())
@@ -75,7 +75,7 @@ pub fn emit_document_update(
     }
     
     app_handle
-        .emit_all("document_updated", payload)
+        .emit_to("main", "document_updated", payload)
         .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
     
     Ok(())
@@ -95,7 +95,7 @@ pub fn emit_settings_update(
     });
     
     app_handle
-        .emit_all("settings_updated", payload)
+        .emit_to("main", "settings_updated", payload)
         .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
     
     Ok(())
@@ -128,7 +128,7 @@ pub fn emit_card_update(
     }
     
     app_handle
-        .emit_all("card_updated", payload)
+        .emit_to("main", "card_updated", payload)
         .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
     
     Ok(())
@@ -164,7 +164,7 @@ pub fn emit_project_update(
     }
     
     app_handle
-        .emit_all("project_updated", payload)
+        .emit_to("main", "project_updated", payload)
         .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
     
     Ok(())
@@ -190,7 +190,7 @@ pub fn emit_folder_update(
     }
     
     app_handle
-        .emit_all("folder_updated", payload)
+        .emit_to("main", "folder_updated", payload)
         .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
     
     Ok(())
@@ -221,7 +221,7 @@ pub fn emit_series_update(
     }
     
     app_handle
-        .emit_all("series_updated", payload)
+        .emit_to("main", "series_updated", payload)
         .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
     
     Ok(())

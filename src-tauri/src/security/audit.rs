@@ -4,7 +4,7 @@
 //! such as login attempts, API key changes, and other sensitive operations.
 
 use crate::error::StoryWeaverError;
-use crate::database::get_connection_pool;
+use crate::database::get_pool;
 use sqlx::{Pool, Sqlite};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
@@ -104,7 +104,7 @@ impl AuditLogger {
         )
         .fetch_one(&*self.pool)
         .await
-        .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to log audit event: {}", e)))?
+        .map_err(|e| StoryWeaverError::Database { message: format!("Failed to log audit event: {}", e) })?
         .id;
 
         Ok(event_id)
@@ -141,7 +141,7 @@ impl AuditLogger {
         )
         .fetch_all(&*self.pool)
         .await
-        .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to fetch audit events: {}", e)))?;
+        .map_err(|e| StoryWeaverError::Database { message: format!("Failed to fetch audit events: {}", e) })?;
 
         let events = rows
             .into_iter()
@@ -189,7 +189,7 @@ static mut AUDIT_LOGGER: Option<Arc<AuditLogger>> = None;
 /// Initialize the audit logger
 pub async fn init() -> Result<(), StoryWeaverError> {
     // Create the audit_logs table if it doesn't exist
-    let pool = get_connection_pool().await?;
+    let pool = get_pool()?;
     
     sqlx::query(
         r#"
@@ -210,7 +210,7 @@ pub async fn init() -> Result<(), StoryWeaverError> {
     )
     .execute(&*pool)
     .await
-    .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to create audit_logs table: {}", e)))?;
+    .map_err(|e| StoryWeaverError::Database { message: format!("Failed to create audit_logs table: {}", e) })?;
 
     // Create index on created_at for faster queries
     sqlx::query(
@@ -218,7 +218,7 @@ pub async fn init() -> Result<(), StoryWeaverError> {
     )
     .execute(&*pool)
     .await
-    .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to create audit logs index: {}", e)))?;
+    .map_err(|e| StoryWeaverError::Database { message: format!("Failed to create audit logs index: {}", e) })?;
 
     let logger = AuditLogger::new(pool);
     
@@ -234,7 +234,7 @@ pub fn get_audit_logger() -> Result<Arc<AuditLogger>, StoryWeaverError> {
     unsafe {
         match &AUDIT_LOGGER {
             Some(logger) => Ok(logger.clone()),
-            None => Err(StoryWeaverError::SecurityError("Audit logger not initialized".to_string())),
+            None => Err(StoryWeaverError::SecurityError{ message: "Audit logger not initialized".to_string() }),
         }
     }
 }

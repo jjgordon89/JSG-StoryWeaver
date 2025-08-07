@@ -49,6 +49,20 @@ impl AITaskProcessor {
             story_context: task.metadata.get("story_context")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string()),
+            preceding_text: None,
+            following_text: None,
+            selected_text: None,
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            writing_style: None,
+            tone: None,
+            creativity_level: None,
+            feature_type: None,
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Generate text

@@ -7,6 +7,8 @@ use crate::error::StoryWeaverError;
 use crate::security::encryption::{encrypt_string, decrypt_string};
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+use crate::database::get_pool;
+use regex::Regex;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -94,7 +96,7 @@ impl PrivacyManager {
 }
 
 /// Data categories for privacy purposes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum DataCategory {
     /// Personal identifiable information
     PII,
@@ -150,16 +152,14 @@ pub fn get_privacy_manager() -> Result<Arc<PrivacyManager>, StoryWeaverError> {
     unsafe {
         match &PRIVACY_MANAGER {
             Some(manager) => Ok(manager.clone()),
-            None => Err(StoryWeaverError::SecurityError("Privacy manager not initialized".to_string())),
+            None => Err(StoryWeaverError::SecurityError{ message: "Privacy manager not initialized".to_string() }),
         }
     }
 }
 
 /// Load privacy settings from the database
 async fn load_privacy_settings() -> Result<PrivacySettings, StoryWeaverError> {
-    use crate::database::get_connection_pool;
-    
-    let pool = get_connection_pool().await?;
+    let pool = get_pool()?;
     
     // Check if privacy settings exist in the database
     let row = sqlx::query!(
@@ -169,13 +169,13 @@ async fn load_privacy_settings() -> Result<PrivacySettings, StoryWeaverError> {
     )
     .fetch_optional(&*pool)
     .await
-    .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to fetch privacy settings: {}", e)))?;
+    .map_err(|e| StoryWeaverError::Database{ message: format!("Failed to fetch privacy settings: {}", e) })?;
     
     match row {
         Some(row) => {
             // Parse the settings from JSON
             let settings: PrivacySettings = serde_json::from_str(&row.value)
-                .map_err(|e| StoryWeaverError::DataError(format!("Failed to parse privacy settings: {}", e)))?;
+                .map_err(|e| StoryWeaverError::Deserialization{ message: format!("Failed to parse privacy settings: {}", e) })?;
             
             Ok(settings)
         },
@@ -185,7 +185,7 @@ async fn load_privacy_settings() -> Result<PrivacySettings, StoryWeaverError> {
             
             // Save the default settings to the database
             let settings_json = serde_json::to_string(&default_settings)
-                .map_err(|e| StoryWeaverError::DataError(format!("Failed to serialize privacy settings: {}", e)))?;
+                .map_err(|e| StoryWeaverError::Serialization{ message: format!("Failed to serialize privacy settings: {}", e) })?;
             
             sqlx::query!(
                 r#"
@@ -196,7 +196,7 @@ async fn load_privacy_settings() -> Result<PrivacySettings, StoryWeaverError> {
             )
             .execute(&*pool)
             .await
-            .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to save privacy settings: {}", e)))?;
+            .map_err(|e| StoryWeaverError::Database{ message: format!("Failed to save privacy settings: {}", e) })?;
             
             Ok(default_settings)
         }
@@ -205,12 +205,10 @@ async fn load_privacy_settings() -> Result<PrivacySettings, StoryWeaverError> {
 
 /// Save privacy settings to the database
 pub async fn save_privacy_settings(settings: &PrivacySettings) -> Result<(), StoryWeaverError> {
-    use crate::database::get_connection_pool;
-    
-    let pool = get_connection_pool().await?;
+    let pool = get_pool()?;
     
     let settings_json = serde_json::to_string(settings)
-        .map_err(|e| StoryWeaverError::DataError(format!("Failed to serialize privacy settings: {}", e)))?;
+        .map_err(|e| StoryWeaverError::Serialization{ message: format!("Failed to serialize privacy settings: {}", e) })?;
     
     sqlx::query!(
         r#"
@@ -221,7 +219,7 @@ pub async fn save_privacy_settings(settings: &PrivacySettings) -> Result<(), Sto
     )
     .execute(&*pool)
     .await
-    .map_err(|e| StoryWeaverError::DatabaseError(format!("Failed to save privacy settings: {}", e)))?;
+    .map_err(|e| StoryWeaverError::Database{ message: format!("Failed to save privacy settings: {}", e) })?;
     
     Ok(())
 }
@@ -230,8 +228,8 @@ pub async fn save_privacy_settings(settings: &PrivacySettings) -> Result<(), Sto
 pub fn anonymize_data(data: &str) -> String {
     // Simple anonymization by replacing email addresses with [EMAIL]
     // and names with [NAME]
-    let email_regex = regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
-    let name_regex = regex::Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap();
+    let email_regex = Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
+    let name_regex = Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap();
     
     let data = email_regex.replace_all(data, "[EMAIL]");
     let data = name_regex.replace_all(&data, "[NAME]");
@@ -253,7 +251,7 @@ pub async fn process_data_for_privacy(
     match category {
         DataCategory::UsageStats => {
             if !settings.collect_usage_stats {
-                return Err(StoryWeaverError::PrivacyError("Usage statistics collection is disabled".to_string()));
+                return Err(StoryWeaverError::PrivacyError{ message: "Usage statistics collection is disabled".to_string() });
             }
             processed_data = anonymize_data(&processed_data);
         },
@@ -262,7 +260,7 @@ pub async fn process_data_for_privacy(
         },
         DataCategory::Credentials => {
             if !settings.store_api_keys_locally {
-                return Err(StoryWeaverError::PrivacyError("API key storage is disabled".to_string()));
+                return Err(StoryWeaverError::PrivacyError{ message: "API key storage is disabled".to_string() });
             }
             
             if settings.encrypt_sensitive_data {

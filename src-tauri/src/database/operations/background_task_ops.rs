@@ -3,7 +3,7 @@
 
 use crate::background::{Task, TaskPriority, TaskStatus, TaskType};
 use crate::error::{Result, StoryWeaverError};
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, Row};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
@@ -35,7 +35,7 @@ impl BackgroundTaskOps {
         
         // Serialize metadata to JSON
         let metadata_json = serde_json::to_string(&task.metadata)
-            .map_err(|e| StoryWeaverError::serialization { message: e.to_string() })?;
+            .map_err(|e| StoryWeaverError::Serialization { message: e.to_string() })?;
         
         // Insert or update task
         sqlx::query(
@@ -239,7 +239,7 @@ impl BackgroundTaskOps {
         // Parse metadata
         let metadata_str: &str = record.get("metadata");
         let metadata = serde_json::from_str(metadata_str)
-            .map_err(|e| StoryWeaverError::deserialization { message: format!("Failed to parse task metadata: {}", e) })?;
+            .map_err(|e| StoryWeaverError::Deserialization { message: format!("Failed to parse task metadata: {}", e) })?;
         
         // Parse dates
         let created_at: DateTime<Utc> = record.get("created_at");

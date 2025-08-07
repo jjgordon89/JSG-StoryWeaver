@@ -13,18 +13,18 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::fs;
 use std::path::PathBuf;
-use tauri::api::path;
+use tauri::path::BaseDirectory;
+use tauri::{AppHandle, Manager};
 
 /// Encryption manager for handling sensitive data
-#[derive(Debug)]
 pub struct EncryptionManager {
     cipher: Arc<RwLock<Aes256Gcm>>,
 }
 
 impl EncryptionManager {
     /// Create a new encryption manager
-    pub async fn new() -> Result<Self, StoryWeaverError> {
-        let key_path = get_key_path()?;
+    pub async fn new(app_handle: &AppHandle) -> Result<Self, StoryWeaverError> {
+        let key_path = get_key_path(app_handle)?;
         let key = load_or_create_key(&key_path)?;
         
         let cipher = Aes256Gcm::new(&key);
@@ -44,7 +44,7 @@ impl EncryptionManager {
         // Encrypt the data
         let ciphertext = cipher
             .encrypt(&nonce, data.as_bytes())
-            .map_err(|e| StoryWeaverError::SecurityError(format!("Encryption failed: {}", e)))?;
+            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Encryption failed: {}", e) })?;
         
         // Combine nonce and ciphertext and encode as base64
         let mut combined = nonce.to_vec();
@@ -59,11 +59,11 @@ impl EncryptionManager {
         
         // Decode from base64
         let combined = BASE64.decode(encrypted_data)
-            .map_err(|e| StoryWeaverError::SecurityError(format!("Base64 decoding failed: {}", e)))?;
+            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Base64 decoding failed: {}", e) })?;
         
         // Split into nonce and ciphertext
         if combined.len() < 12 {
-            return Err(StoryWeaverError::SecurityError("Invalid encrypted data".to_string()));
+            return Err(StoryWeaverError::SecurityError{ message: "Invalid encrypted data".to_string() });
         }
         
         let (nonce_bytes, ciphertext) = combined.split_at(12);
@@ -72,21 +72,21 @@ impl EncryptionManager {
         // Decrypt the data
         let plaintext = cipher
             .decrypt(nonce, ciphertext)
-            .map_err(|e| StoryWeaverError::SecurityError(format!("Decryption failed: {}", e)))?;
+            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Decryption failed: {}", e) })?;
         
         String::from_utf8(plaintext)
-            .map_err(|e| StoryWeaverError::SecurityError(format!("UTF-8 decoding failed: {}", e)))
+            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("UTF-8 decoding failed: {}", e) })
     }
 }
 
 /// Get the path to the encryption key file
-fn get_key_path() -> Result<PathBuf, StoryWeaverError> {
-    let app_data_dir = path::app_data_dir(&tauri::Config::default())
-        .ok_or_else(|| StoryWeaverError::SecurityError("Failed to get app data directory".to_string()))?;
+fn get_key_path(app_handle: &AppHandle) -> Result<PathBuf, StoryWeaverError> {
+    let app_data_dir = app_handle.path_resolver().app_data_dir()
+        .ok_or_else(|| StoryWeaverError::SecurityError{ message: "Failed to get app data directory".to_string() })?;
     
     let key_dir = app_data_dir.join("keys");
     fs::create_dir_all(&key_dir)
-        .map_err(|e| StoryWeaverError::SecurityError(format!("Failed to create key directory: {}", e)))?;
+        .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to create key directory: {}", e) })?;
     
     Ok(key_dir.join("encryption_key.bin"))
 }
@@ -96,10 +96,10 @@ fn load_or_create_key(key_path: &PathBuf) -> Result<Key<Aes256Gcm>, StoryWeaverE
     if key_path.exists() {
         // Load existing key
         let key_bytes = fs::read(key_path)
-            .map_err(|e| StoryWeaverError::SecurityError(format!("Failed to read encryption key: {}", e)))?;
+            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to read encryption key: {}", e) })?;
         
         if key_bytes.len() != 32 {
-            return Err(StoryWeaverError::SecurityError("Invalid encryption key length".to_string()));
+            return Err(StoryWeaverError::SecurityError{ message: "Invalid encryption key length".to_string() });
         }
         
         let key = Key::<Aes256Gcm>::from_slice(&key_bytes).clone();
@@ -110,7 +110,7 @@ fn load_or_create_key(key_path: &PathBuf) -> Result<Key<Aes256Gcm>, StoryWeaverE
         
         // Save the key
         fs::write(key_path, key.as_slice())
-            .map_err(|e| StoryWeaverError::SecurityError(format!("Failed to save encryption key: {}", e)))?;
+            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to save encryption key: {}", e) })?;
         
         Ok(key)
     }
@@ -120,8 +120,8 @@ fn load_or_create_key(key_path: &PathBuf) -> Result<Key<Aes256Gcm>, StoryWeaverE
 static mut ENCRYPTION_MANAGER: Option<Arc<EncryptionManager>> = None;
 
 /// Initialize the encryption manager
-pub async fn init() -> Result<(), StoryWeaverError> {
-    let manager = EncryptionManager::new().await?;
+pub async fn init(app_handle: &AppHandle) -> Result<(), StoryWeaverError> {
+    let manager = EncryptionManager::new(app_handle).await?;
     
     unsafe {
         ENCRYPTION_MANAGER = Some(Arc::new(manager));
@@ -135,7 +135,7 @@ pub fn get_encryption_manager() -> Result<Arc<EncryptionManager>, StoryWeaverErr
     unsafe {
         match &ENCRYPTION_MANAGER {
             Some(manager) => Ok(manager.clone()),
-            None => Err(StoryWeaverError::SecurityError("Encryption manager not initialized".to_string())),
+            None => Err(StoryWeaverError::SecurityError{ message: "Encryption manager not initialized".to_string() }),
         }
     }
 }

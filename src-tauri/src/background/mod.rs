@@ -1,6 +1,8 @@
 //! Background Processing Foundation for StoryWeaver
 //! Provides a task queue system for managing long-running operations
 
+pub mod ai_processor;
+
 use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;

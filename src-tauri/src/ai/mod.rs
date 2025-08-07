@@ -3,6 +3,8 @@
 
 pub mod openai;
 pub mod claude;
+pub mod gemini;
+pub mod write_processor;
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -10,6 +12,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// AI Context with more detailed information for better generation
+#[derive(Debug, Default, Clone)]
 pub struct AIContext {
     // Project and document identifiers
     pub project_id: Option<String>,
@@ -43,6 +46,7 @@ pub struct AIContext {
 }
 
 /// Character information for context
+#[derive(Debug, Clone)]
 pub struct Character {
     pub name: String,
     pub description: Option<String>,
@@ -51,6 +55,7 @@ pub struct Character {
 }
 
 /// Location information for context
+#[derive(Debug, Clone)]
 pub struct Location {
     pub name: String,
     pub description: Option<String>,
@@ -58,38 +63,15 @@ pub struct Location {
 }
 
 /// Plot thread information for context
+#[derive(Debug, Clone)]
 pub struct PlotThread {
     pub name: String,
     pub description: Option<String>,
     pub relevance: Option<u8>, // 1-10 scale of relevance to current context
 }
 
-impl AIContext {
-    pub fn new() -> Self {
-        Self {
-            project_id: None,
-            document_id: None,
-            preceding_text: None,
-            following_text: None,
-            selected_text: None,
-            story_context: None,
-            characters: None,
-            locations: None,
-            plot_threads: None,
-            user_preferences: None,
-            writing_style: None,
-            tone: None,
-            creativity_level: None,
-            feature_type: None,
-            feature_options: None,
-            word_count_target: None,
-            genre: None,
-            key_details: None,
-        }
-    }
-}
-
 /// Streaming text response from AI providers
+#[derive(Debug, Default, Clone)]
 pub struct TextStream {
     pub content: String,
     pub is_complete: bool,
@@ -98,11 +80,7 @@ pub struct TextStream {
 
 impl TextStream {
     pub fn new() -> Self {
-        Self {
-            content: String::new(),
-            is_complete: false,
-            token_count: 0,
-        }
+        Self::default()
     }
 
     pub fn append(&mut self, text: &str) {
@@ -116,6 +94,7 @@ impl TextStream {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum RewriteStyle {
     Rephrase,
     Shorter,
@@ -130,6 +109,7 @@ pub enum RewriteStyle {
 }
 
 /// Writing feature types
+#[derive(Debug, Clone)]
 pub enum WritingFeature {
     Write,
     Rewrite(RewriteStyle),
@@ -187,6 +167,7 @@ pub trait AIProvider: Send + Sync {
 
 pub use openai::OpenAIProvider;
 pub use claude::ClaudeProvider;
+pub use gemini::GeminiProvider;
 
 pub struct AIProviderManager {
     providers: HashMap<String, Arc<dyn AIProvider>>,

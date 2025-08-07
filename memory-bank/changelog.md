@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Added
+- __Phase 2 Core Writing Features (Initial Implementation)__
+  - Created updated Phase 2 Core Writing Features plan to reflect current progress and remaining tasks
+  - Implemented AI provider abstraction layer with trait-based interface for various writing features
+  - Created basic integrations for OpenAI, Claude, and Gemini providers
+  - Implemented basic WriteProcessor with support for auto_write, guided_write, and tone_shift_write modes
+  - Implemented basic token counting and credit calculation
+  - Created Card System UI for displaying AI responses with stacking, filtering, and sorting capabilities
+
 - __Performance Monitoring Foundation__
   - Implemented comprehensive performance metrics collection system
   - Created database schema and models for metrics, bottlenecks, memory snapshots, and query performance
@@ -83,6 +91,13 @@
 - Updated folder hierarchy, series management, and document linking components to use backend data instead of placeholder data
 - Marked background processing foundation as completed with all subtasks implemented
 - Marked performance monitoring foundation as completed with dashboard visualization added
+- Enhanced AI provider implementations with proper streaming support:
+  - Replaced placeholder streaming implementations in OpenAI provider with full streaming functionality
+  - Implemented proper streaming for all writing features in OpenAI provider (rewrite, expand, describe, quick chat)
+  - Enhanced Claude provider with full streaming support for all writing features
+  - Added complete streaming implementation for Gemini provider with proper format handling
+  - Ensured consistent streaming implementation across all providers
+  - Implemented provider-specific streaming response parsing for each AI service
 
 ## [0.2.0] - 2025-08-06
 

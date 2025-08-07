@@ -196,8 +196,9 @@ pub fn run() {
             });
             
             // Initialize security module
-            tauri::async_runtime::spawn(async {
-                if let Err(e) = security::init().await {
+            let app_handle_clone = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = security::init(&app_handle_clone).await {
                     eprintln!("Failed to initialize security module: {}", e);
                 } else {
                     println!("Security module initialized successfully");

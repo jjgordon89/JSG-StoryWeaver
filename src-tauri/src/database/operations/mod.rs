@@ -1,14 +1,14 @@
-mod folder_ops;
-mod series_ops;
-mod document_link_ops;
-mod document_version_ops;
-mod deleted_item_ops;
-mod app_settings_ops;
-mod project_ops;
-mod document_ops;
-mod character_ops;
-mod background_task_ops;
-mod performance_metric_ops;
+pub mod folder_ops;
+pub mod series_ops;
+pub mod document_link_ops;
+pub mod document_version_ops;
+pub mod deleted_item_ops;
+pub mod app_settings_ops;
+pub mod project_ops;
+pub mod document_ops;
+pub mod character_ops;
+pub mod background_task_ops;
+pub mod performance_metric_ops;
 
 // Re-export all operations
 pub use folder_ops::*;

@@ -7,11 +7,11 @@
 //! - Audit logging for security events
 //! - Privacy-first data handling
 
-mod api_keys;
-mod encryption;
-mod validation;
-mod audit;
-mod privacy;
+pub mod api_keys;
+pub mod encryption;
+pub mod validation;
+pub mod audit;
+pub mod privacy;
 
 pub use api_keys::*;
 pub use encryption::*;
@@ -20,11 +20,12 @@ pub use audit::*;
 pub use privacy::*;
 
 use crate::error::StoryWeaverError;
+use tauri::AppHandle;
 
 /// Initialize the security module
-pub async fn init() -> Result<(), StoryWeaverError> {
+pub async fn init(app_handle: &AppHandle) -> Result<(), StoryWeaverError> {
     // Initialize encryption
-    encryption::init().await?;
+    encryption::init(app_handle).await?;
     
     // Initialize audit logging
     audit::init().await?;

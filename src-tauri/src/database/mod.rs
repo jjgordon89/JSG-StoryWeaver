@@ -4,7 +4,10 @@
 use crate::error::{Result, StoryWeaverError};
 use sqlx::{sqlite::SqlitePool, Pool, Sqlite};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tauri::{AppHandle, Manager};
+
+pub type DbPool = Pool<Sqlite>;
 
 pub mod models;
 pub mod migrations;
@@ -12,7 +15,7 @@ pub mod operations;
 pub mod backup;
 
 /// Database connection pool
-static mut DB_POOL: Option<Pool<Sqlite>> = None;
+static mut DB_POOL: Option<Arc<DbPool>> = None;
 
 /// Initialize the database
 pub async fn init(app_handle: &AppHandle) -> Result<()> {
@@ -49,16 +52,16 @@ pub async fn init(app_handle: &AppHandle) -> Result<()> {
     
     // Store the pool globally
     unsafe {
-        DB_POOL = Some(pool);
+        DB_POOL = Some(Arc::new(pool));
     }
     
     Ok(())
 }
 
 /// Get the database pool
-pub fn get_pool() -> Result<&'static Pool<Sqlite>> {
+pub fn get_pool() -> Result<Arc<DbPool>> {
     unsafe {
-        DB_POOL.as_ref().ok_or_else(|| {
+        DB_POOL.as_ref().cloned().ok_or_else(|| {
             StoryWeaverError::database("Database not initialized")
         })
     }

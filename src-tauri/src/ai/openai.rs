@@ -255,16 +255,46 @@ impl AIProvider for OpenAIProvider {
         // Create a new TextStream
         let mut text_stream = TextStream::new();
         
-        // In a real implementation, we would process the streaming response
-        // For now, we'll simulate streaming with a simple delay
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        text_stream.append("This is a simulated streaming response from OpenAI. ");
+        // Process the streaming response
+        let mut stream = response.bytes_stream();
+        use futures_util::StreamExt;
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        text_stream.append("In a real implementation, we would process the chunks from the streaming API. ");
-        
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        text_stream.append("The response would be built up incrementally as data arrives.");
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+            
+            // OpenAI sends "data: " prefixed SSE events
+            for line in chunk_str.lines() {
+                if line.starts_with("data: ") {
+                    let data = &line[6..]; // Skip "data: " prefix
+                    
+                    // Skip empty lines and [DONE] marker
+                    if data.is_empty() || data == "[DONE]" {
+                        continue;
+                    }
+                    
+                    // Parse the JSON data
+                    match serde_json::from_str::<serde_json::Value>(data) {
+                        Ok(json) => {
+                            // Extract the content from the JSON
+                            if let Some(content) = json
+                                .get("choices")
+                                .and_then(|choices| choices.get(0))
+                                .and_then(|choice| choice.get("delta"))
+                                .and_then(|delta| delta.get("content"))
+                                .and_then(|content| content.as_str())
+                            {
+                                text_stream.append(content);
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Error parsing JSON from stream: {}", e);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
         
         // Mark the stream as complete
         text_stream.complete();
@@ -424,7 +454,7 @@ impl AIProvider for OpenAIProvider {
     // Implement the new methods required by the AIProvider trait
     
     async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> Result<TextStream> {
-        // Similar to rewrite_text but with streaming support
+        // Estimate token usage for rate limiting
         let estimated_tokens = (text.len() / 4) as u32 + 500;
         
         {
@@ -446,21 +476,84 @@ impl AIProvider for OpenAIProvider {
             RewriteStyle::ToneShift(tone) => format!("Rewrite this text in a {} tone:", tone),
         };
         
-        // For now, simulate streaming with a simple implementation
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: format!("You are a helpful writing assistant. {}", style_instruction),
+        };
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: text.to_string(),
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(text.len() as u32 * 2), // Allow for expansion
+            stream: true, // Enable streaming
+        };
+        
+        // Make API call with streaming
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Create a new TextStream
         let mut text_stream = TextStream::new();
         
-        // Simulate streaming with delays
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        text_stream.append("Rewriting text... ");
+        // Process the streaming response
+        let mut stream = response.bytes_stream();
+        use futures_util::StreamExt;
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        text_stream.append("Applying style changes... ");
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+            
+            // OpenAI sends "data: " prefixed SSE events
+            for line in chunk_str.lines() {
+                if line.starts_with("data: ") {
+                    let data = &line[6..]; // Skip "data: " prefix
+                    
+                    // Skip empty lines and [DONE] marker
+                    if data.is_empty() || data == "[DONE]" {
+                        continue;
+                    }
+                    
+                    // Parse the JSON data
+                    match serde_json::from_str::<serde_json::Value>(data) {
+                        Ok(json) => {
+                            // Extract the content from the JSON
+                            if let Some(content) = json
+                                .get("choices")
+                                .and_then(|choices| choices.get(0))
+                                .and_then(|choice| choice.get("delta"))
+                                .and_then(|delta| delta.get("content"))
+                                .and_then(|content| content.as_str())
+                            {
+                                text_stream.append(content);
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Error parsing JSON from stream: {}", e);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
-        // Get the full rewritten text
-        let rewritten = self.rewrite_text(text, style).await?;
-        text_stream.append(&rewritten);
+        // Mark the stream as complete
         text_stream.complete();
         
         Ok(text_stream)
@@ -555,21 +648,120 @@ impl AIProvider for OpenAIProvider {
     }
     
     async fn expand_text_stream(&self, text: &str, context: &AIContext) -> Result<TextStream> {
-        // For now, simulate streaming with a simple implementation
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (text.len() / 4) as u32 + 500;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a skilled writing assistant. Expand the following text with more details, descriptions, and depth while maintaining the original style and intent.".to_string(),
+        };
+        
+        // Build user message with context
+        let mut prompt = String::new();
+        
+        // Add genre context if available
+        if let Some(genre) = &context.genre {
+            prompt.push_str(&format!("Genre: {}\n\n", genre));
+        }
+        
+        // Add writing style if available
+        if let Some(style) = &context.writing_style {
+            prompt.push_str(&format!("Writing style: {}\n\n", style));
+        }
+        
+        // Add the text to expand
+        prompt.push_str(&format!("Text to expand:\n{}\n\n", text));
+        
+        // Add any key details to include
+        if let Some(details) = &context.key_details {
+            if !details.is_empty() {
+                prompt.push_str("Please include these key details in the expansion:\n");
+                for detail in details {
+                    prompt.push_str(&format!("- {}\n", detail));
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(2000), // Allow for significant expansion
+            stream: true, // Enable streaming
+        };
+        
+        // Make API call with streaming
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Create a new TextStream
         let mut text_stream = TextStream::new();
         
-        // Simulate streaming with delays
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        text_stream.append("Expanding text... ");
+        // Process the streaming response
+        let mut stream = response.bytes_stream();
+        use futures_util::StreamExt;
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        text_stream.append("Adding details... ");
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+            
+            // OpenAI sends "data: " prefixed SSE events
+            for line in chunk_str.lines() {
+                if line.starts_with("data: ") {
+                    let data = &line[6..]; // Skip "data: " prefix
+                    
+                    // Skip empty lines and [DONE] marker
+                    if data.is_empty() || data == "[DONE]" {
+                        continue;
+                    }
+                    
+                    // Parse the JSON data
+                    match serde_json::from_str::<serde_json::Value>(data) {
+                        Ok(json) => {
+                            // Extract the content from the JSON
+                            if let Some(content) = json
+                                .get("choices")
+                                .and_then(|choices| choices.get(0))
+                                .and_then(|choice| choice.get("delta"))
+                                .and_then(|delta| delta.get("content"))
+                                .and_then(|content| content.as_str())
+                            {
+                                text_stream.append(content);
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Error parsing JSON from stream: {}", e);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
-        // Get the full expanded text
-        let expanded = self.expand_text(text, context).await?;
-        text_stream.append(&expanded);
+        // Mark the stream as complete
         text_stream.complete();
         
         Ok(text_stream)
@@ -694,21 +886,150 @@ impl AIProvider for OpenAIProvider {
     }
     
     async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> Result<TextStream> {
-        // For now, simulate streaming with a simple implementation
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (description.len() / 4) as u32 + 500;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: "You are a skilled writing assistant specializing in vivid, sensory descriptions. Create a detailed scene description based on the provided information.".to_string(),
+        };
+        
+        // Build user message with context
+        let mut prompt = String::new();
+        
+        // Add genre context if available
+        if let Some(genre) = &context.genre {
+            prompt.push_str(&format!("Genre: {}\n\n", genre));
+        }
+        
+        // Add writing style if available
+        if let Some(style) = &context.writing_style {
+            prompt.push_str(&format!("Writing style: {}\n\n", style));
+        }
+        
+        // Add the scene to describe
+        prompt.push_str(&format!("Scene to describe:\n{}\n\n", description));
+        
+        // Add any key details to include
+        if let Some(details) = &context.key_details {
+            if !details.is_empty() {
+                prompt.push_str("Please include these key details in the description:\n");
+                for detail in details {
+                    prompt.push_str(&format!("- {}\n", detail));
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        // Add character context if available
+        if let Some(characters) = &context.characters {
+            if !characters.is_empty() {
+                prompt.push_str("Characters present in the scene:\n");
+                for character in characters {
+                    prompt.push_str(&format!("- {}", character.name));
+                    if let Some(desc) = &character.description {
+                        prompt.push_str(&format!(": {}", desc));
+                    }
+                    prompt.push_str("\n");
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        // Add location context if available
+        if let Some(locations) = &context.locations {
+            if !locations.is_empty() {
+                prompt.push_str("Location details:\n");
+                for location in locations {
+                    prompt.push_str(&format!("- {}", location.name));
+                    if let Some(desc) = &location.description {
+                        prompt.push_str(&format!(": {}", desc));
+                    }
+                    prompt.push_str("\n");
+                }
+                prompt.push_str("\n");
+            }
+        }
+        
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: prompt,
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(2000),
+            stream: true, // Enable streaming
+        };
+        
+        // Make API call with streaming
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Create a new TextStream
         let mut text_stream = TextStream::new();
         
-        // Simulate streaming with delays
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        text_stream.append("Creating scene description... ");
+        // Process the streaming response
+        let mut stream = response.bytes_stream();
+        use futures_util::StreamExt;
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        text_stream.append("Adding sensory details... ");
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+            
+            // OpenAI sends "data: " prefixed SSE events
+            for line in chunk_str.lines() {
+                if line.starts_with("data: ") {
+                    let data = &line[6..]; // Skip "data: " prefix
+                    
+                    // Skip empty lines and [DONE] marker
+                    if data.is_empty() || data == "[DONE]" {
+                        continue;
+                    }
+                    
+                    // Parse the JSON data
+                    match serde_json::from_str::<serde_json::Value>(data) {
+                        Ok(json) => {
+                            // Extract the content from the JSON
+                            if let Some(content) = json
+                                .get("choices")
+                                .and_then(|choices| choices.get(0))
+                                .and_then(|choice| choice.get("delta"))
+                                .and_then(|delta| delta.get("content"))
+                                .and_then(|content| content.as_str())
+                            {
+                                text_stream.append(content);
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Error parsing JSON from stream: {}", e);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
-        // Get the full scene description
-        let scene = self.describe_scene(description, context).await?;
-        text_stream.append(&scene);
+        // Mark the stream as complete
         text_stream.complete();
         
         Ok(text_stream)
@@ -1058,18 +1379,106 @@ impl AIProvider for OpenAIProvider {
     }
     
     async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> Result<TextStream> {
-        // For now, simulate streaming with a simple implementation
+        // Estimate token usage for rate limiting
+        let estimated_tokens = (message.len() / 4) as u32 + 300;
+        
+        {
+            let mut rate_limiter = self.rate_limiter.lock().await;
+            rate_limiter.wait_if_needed(estimated_tokens).await?;
+        }
+        
+        // Build system message
+        let mut system_content = "You are StoryWeaver, an AI writing assistant. You help the user with their writing project by answering questions and providing guidance.".to_string();
+        
+        // Add story context if available
+        if let Some(story_context) = &context.story_context {
+            system_content.push_str(&format!("\n\nStory context: {}", story_context));
+        }
+        
+        // Add genre if available
+        if let Some(genre) = &context.genre {
+            system_content.push_str(&format!("\n\nGenre: {}", genre));
+        }
+        
+        let system_message = ChatMessage {
+            role: "system".to_string(),
+            content: system_content,
+        };
+        
+        // Build user message
+        let user_message = ChatMessage {
+            role: "user".to_string(),
+            content: message.to_string(),
+        };
+        
+        let request = ChatCompletionRequest {
+            model: self.model.clone(),
+            messages: vec![system_message, user_message],
+            temperature: 0.7,
+            max_tokens: Some(1000),
+            stream: true, // Enable streaming
+        };
+        
+        // Make API call with streaming
+        let response = self.client.post("https://api.openai.com/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .context("Failed to send request to OpenAI API")?;
+        
+        // Check for errors
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+        }
+        
+        // Create a new TextStream
         let mut text_stream = TextStream::new();
         
-        // Simulate streaming with delays
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        text_stream.append("Thinking... ");
+        // Process the streaming response
+        let mut stream = response.bytes_stream();
+        use futures_util::StreamExt;
         
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk_str = String::from_utf8_lossy(&chunk);
+            
+            // OpenAI sends "data: " prefixed SSE events
+            for line in chunk_str.lines() {
+                if line.starts_with("data: ") {
+                    let data = &line[6..]; // Skip "data: " prefix
+                    
+                    // Skip empty lines and [DONE] marker
+                    if data.is_empty() || data == "[DONE]" {
+                        continue;
+                    }
+                    
+                    // Parse the JSON data
+                    match serde_json::from_str::<serde_json::Value>(data) {
+                        Ok(json) => {
+                            // Extract the content from the JSON
+                            if let Some(content) = json
+                                .get("choices")
+                                .and_then(|choices| choices.get(0))
+                                .and_then(|choice| choice.get("delta"))
+                                .and_then(|delta| delta.get("content"))
+                                .and_then(|content| content.as_str())
+                            {
+                                text_stream.append(content);
+                            }
+                        },
+                        Err(e) => {
+                            eprintln!("Error parsing JSON from stream: {}", e);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
         
-        // Get the full response
-        let response = self.quick_chat(message, context).await?;
-        text_stream.append(&response);
+        // Mark the stream as complete
         text_stream.complete();
         
         Ok(text_stream)
