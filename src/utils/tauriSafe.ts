@@ -1,10 +1,25 @@
+// Extend Window interface to include Tauri API
+declare global {
+  interface Window {
+    __TAURI__?: {
+      core: {
+        invoke: <T = any>(cmd: string, args?: Record<string, any>) => Promise<T>;
+      };
+      event: {
+        listen: <T = any>(event: string, handler: (event: { payload: T }) => void) => Promise<() => void>;
+        emit: <T = any>(event: string, payload?: T) => Promise<void>;
+      };
+    };
+  }
+}
+
 // Check if we're running in Tauri environment
 const isTauri = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
 
 // Get Tauri invoke function if available
 const getTauriInvoke = () => {
   if (isTauri && window.__TAURI__) {
-    return (window as any).__TAURI__.core.invoke;
+    return window.__TAURI__.core.invoke;
   }
   return null;
 };
@@ -12,7 +27,7 @@ const getTauriInvoke = () => {
 // Get Tauri listen function if available
 const getTauriListen = () => {
   if (isTauri && window.__TAURI__) {
-    return (window as any).__TAURI__.event.listen;
+    return window.__TAURI__.event.listen;
   }
   return null;
 };
@@ -47,7 +62,7 @@ export async function emit<T = any>(event: string, payload?: T): Promise<void> {
     return Promise.resolve();
   }
   
-  const tauriEmit = (window as any).__TAURI__.event.emit;
+  const tauriEmit = window.__TAURI__.event.emit;
   return tauriEmit(event, payload);
 }
 
@@ -79,13 +94,27 @@ export async function invoke<T = any>(cmd: string, args?: Record<string, any>): 
       case 'set_setting':
         return undefined as T;
       
+      case 'auto_write_stream':
+      case 'guided_write_stream':
+        return { success: true, stream_id: `mock_${Date.now()}` } as T;
+      
+      case 'auto_write':
+      case 'guided_write':
+        return {
+          generated_text: 'Mock AI generated text for development',
+          tokens_used: 25,
+          processing_time: 1000,
+          context_used: 'Mock context',
+          model_used: 'mock-model'
+        } as T;
+      
       default:
         // For unknown commands, return empty object or throw error based on needs
         return {} as T;
     }
   }
   
-  return tauriInvoke<T>(cmd, args);
+  return tauriInvoke(cmd, args);
 }
 
 /**

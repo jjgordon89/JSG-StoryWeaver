@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAIStore, WriteSettings, RewriteSettings, ExpandSettings, BrainstormSettings, WriteResult, useAIStreaming } from '../stores/aiStore';
 import { useCardStore } from '../stores/cardStore';
 import { AICard } from '../components/cards/CardSystem';
+import { invoke, listen } from '../utils/tauriSafe';
 
 // Re-export useAIStreaming for convenience
 export { useAIStreaming };
@@ -119,32 +120,69 @@ export const useAIWriteStream = () => {
     setStreamedContent('');
     
     try {
-      // For now, simulate streaming by calling the regular write function
-      // In the future, this would call a streaming-enabled backend command
-      let result: WriteResult;
+      // Set up event listeners for streaming
+      const unlistenChunk = await listen('ai_stream_chunk', (event: any) => {
+        const chunk = event.payload;
+        if (chunk.stream_id === streamId) {
+          updateStreamingText(chunk.content);
+          setStreamedContent(chunk.content);
+          
+          if (chunk.is_complete) {
+            stopStreaming();
+          }
+        }
+      });
       
+      const unlistenError = await listen('ai_stream_error', (event: any) => {
+        console.error('Streaming error:', event.payload);
+        stopStreaming();
+      });
+      
+      // Clean up listeners when streaming stops
+      const cleanup = () => {
+        unlistenChunk();
+        unlistenError();
+      };
+      
+      // Start the streaming command
+      let response: any;
       if (userPrompt) {
-        result = await guidedWrite(documentId, userPrompt, settings);
+        response = await invoke('guided_write_stream', {
+          documentId,
+          userPrompt,
+          settings: { ...useAIStore.getState().defaultWriteSettings, ...settings }
+        });
       } else {
-        result = await autoWrite(documentId, cursorPosition, settings);
+        response = await invoke('auto_write_stream', {
+          documentId,
+          cursorPosition,
+          settings: { ...useAIStore.getState().defaultWriteSettings, ...settings }
+        });
       }
       
-      // Simulate streaming by gradually revealing the text
-      const text = result.generated_text;
-      const words = text.split(' ');
-      
-      for (let i = 0; i < words.length; i++) {
-        if (!streaming.isStreaming) break; // Stop if streaming was cancelled
-        
-        const partialText = words.slice(0, i + 1).join(' ');
-        updateStreamingText(partialText);
-        setStreamedContent(partialText);
-        
-        // Simulate typing delay
-        await new Promise(resolve => setTimeout(resolve, 50));
+      if (!response.success) {
+        cleanup();
+        throw new Error('Failed to start streaming');
       }
       
-      return result;
+      // Return a promise that resolves when streaming is complete
+      return new Promise<WriteResult>((resolve, reject) => {
+        const checkComplete = () => {
+          if (!streaming.isStreaming) {
+            cleanup();
+            resolve({
+              generated_text: streamedContent,
+              tokens_used: Math.floor(streamedContent.length / 4),
+              processing_time: Date.now() - parseInt(streamId.split('_')[1]),
+              context_used: '',
+              model_used: 'streaming'
+            });
+          } else {
+            setTimeout(checkComplete, 100);
+          }
+        };
+        checkComplete();
+      });
     } catch (error) {
       stopStreaming();
       throw error;

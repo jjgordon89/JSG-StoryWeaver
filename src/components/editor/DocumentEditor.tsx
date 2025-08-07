@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as monaco from 'monaco-editor';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { useStore } from '../../stores/documentStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useVersionStore, DocumentVersion } from '../../stores/versionStore';
@@ -26,6 +27,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const [showFocusModeSettings, setShowFocusModeSettings] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showQuickTools, setShowQuickTools] = useState(false);
+  const [quickToolsPosition, setQuickToolsPosition] = useState({ x: 0, y: 0 });
   const [aiMenuVisible, setAIMenuVisible] = useState(false);
   const [aiMenuPosition, setAIMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -38,6 +41,34 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
 
   // Auto-save debouncer
   const saveDebouncer = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle opening Quick Tools at cursor position
+  const handleOpenQuickTools = useCallback(() => {
+    if (editorRef.current) {
+      const position = editorRef.current.getPosition();
+      if (position) {
+        const coords = editorRef.current.getScrolledVisiblePosition(position);
+        if (coords) {
+          setQuickToolsPosition({ x: coords.left + 50, y: coords.top + 50 });
+          setShowQuickTools(true);
+        }
+      }
+    }
+  }, []);
+
+  // Keyboard shortcuts using react-hotkeys-hook
+  useHotkeys('ctrl+k, cmd+k', (e) => {
+    e.preventDefault();
+    handleOpenQuickTools();
+  }, { enableOnFormTags: true });
+
+  useHotkeys('escape', () => {
+    if (showQuickTools) {
+      setShowQuickTools(false);
+    } else if (aiMenuVisible) {
+      setAIMenuVisible(false);
+    }
+  }, { enableOnFormTags: true });
 
   // Calculate word count
   const calculateWordCount = useCallback((text: string): number => {
@@ -248,10 +279,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         }
       }
       
-      // Escape to close AI menu
-      if (e.key === 'Escape') {
-        setAIMenuVisible(false);
-      }
+      // Note: Escape handling moved to react-hotkeys-hook
     };
 
     window.addEventListener('keydown', handleKeyDown);

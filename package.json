@@ -46,6 +46,7 @@
     "lucide-react": "^0.536.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hotkeys-hook": "^5.1.0",
     "tailwind-merge": "^2.0.0",
     "zustand": "^4.4.0"
   },

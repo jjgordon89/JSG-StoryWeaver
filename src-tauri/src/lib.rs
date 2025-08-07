@@ -149,7 +149,21 @@ pub fn run() {
             commands::security_commands::has_api_key,
             commands::security_commands::delete_api_key,
             commands::security_commands::get_privacy_settings,
-            commands::security_commands::update_privacy_settings
+            commands::security_commands::update_privacy_settings,
+            
+            // AI Writing commands
+            commands::ai_writing::auto_write,
+            commands::ai_writing::guided_write,
+            commands::ai_writing::auto_write_stream,
+            commands::ai_writing::guided_write_stream,
+            commands::ai_writing::rewrite_text,
+            commands::ai_writing::expand_text,
+            commands::ai_writing::describe_scene,
+            commands::ai_writing::brainstorm,
+            commands::ai_writing::visualize_scene,
+            commands::ai_writing::quick_edit,
+            commands::ai_writing::quick_chat,
+            commands::ai_writing::tone_shift_write
         ])
         .setup(|app| {
             // Initialize database on startup

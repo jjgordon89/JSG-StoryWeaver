@@ -80,77 +80,79 @@ export function useStateSynchronization() {
     }
 
     // Set up listeners for various state change events
-    const unsubscribePromises: Promise<() => void>[] = [];
+    const unsubscribePromises: Promise<(() => void) | null>[] = [];
 
     // Document events
-    unsubscribePromises.push(
-      listen<DocumentSyncPayload>(SyncEventType.DOCUMENT_UPDATED, ({ payload }) => {
-        // If this document is currently loaded, update it
-        if (documentStore.currentDocument && documentStore.currentDocument.id === payload.documentId) {
-          const updatedDoc = { ...documentStore.currentDocument };
-          
-          if (payload.content !== undefined) updatedDoc.content = payload.content;
-          if (payload.name !== undefined) updatedDoc.name = payload.name;
-          if (payload.wordCount !== undefined) updatedDoc.word_count = payload.wordCount;
-          if (payload.updatedAt !== undefined) updatedDoc.updated_at = payload.updatedAt;
-          
-          documentStore.setCurrentDocument(updatedDoc);
-        }
-      })
-    );
+    const documentListener = listen<DocumentSyncPayload>(SyncEventType.DOCUMENT_UPDATED, ({ payload }) => {
+      // If this document is currently loaded, update it
+      if (documentStore.currentDocument && documentStore.currentDocument.id === payload.documentId) {
+        const updatedDoc = { ...documentStore.currentDocument };
+        
+        if (payload.content !== undefined) updatedDoc.content = payload.content;
+        if (payload.name !== undefined) updatedDoc.name = payload.name;
+        if (payload.wordCount !== undefined) updatedDoc.word_count = payload.wordCount;
+        if (payload.updatedAt !== undefined) updatedDoc.updated_at = payload.updatedAt;
+        
+        documentStore.setCurrentDocument(updatedDoc);
+      }
+    });
+    
+    unsubscribePromises.push(documentListener);
 
     // Settings events
-    unsubscribePromises.push(
-      listen<SettingsSyncPayload>(SyncEventType.SETTINGS_UPDATED, ({ payload }) => {
-        // Update settings based on category
-        if (payload.category === 'focusMode') {
-          if (payload.key === 'enabled') {
-            if (settingsStore.focusModeEnabled !== payload.value) {
-              settingsStore.toggleFocusMode();
-            }
-          } else if (payload.key.startsWith('options.')) {
-            const optionKey = payload.key.replace('options.', '') as keyof typeof settingsStore.focusModeOptions;
-            settingsStore.updateFocusModeOptions({ [optionKey]: payload.value });
+    const settingsListener = listen<SettingsSyncPayload>(SyncEventType.SETTINGS_UPDATED, ({ payload }) => {
+      // Update settings based on category
+      if (payload.category === 'focusMode') {
+        if (payload.key === 'enabled') {
+          if (settingsStore.focusModeEnabled !== payload.value) {
+            settingsStore.toggleFocusMode();
           }
-        } else if (payload.category === 'theme') {
-          settingsStore.setTheme(payload.value);
-        } else if (payload.category === 'editor') {
-          settingsStore.updateEditorSettings({ [payload.key]: payload.value });
-        } else if (payload.category === 'accessibility') {
-          settingsStore.updateAccessibilitySettings({ [payload.key]: payload.value });
-        } else if (payload.category === 'app') {
-          settingsStore.updateAppSettings({ [payload.key]: payload.value });
+        } else if (payload.key.startsWith('options.')) {
+          const optionKey = payload.key.replace('options.', '') as keyof typeof settingsStore.focusModeOptions;
+          settingsStore.updateFocusModeOptions({ [optionKey]: payload.value });
         }
-      })
-    );
+      } else if (payload.category === 'theme') {
+        settingsStore.setTheme(payload.value);
+      } else if (payload.category === 'editor') {
+        settingsStore.updateEditorSettings({ [payload.key]: payload.value });
+      } else if (payload.category === 'accessibility') {
+        settingsStore.updateAccessibilitySettings({ [payload.key]: payload.value });
+      } else if (payload.category === 'app') {
+        settingsStore.updateAppSettings({ [payload.key]: payload.value });
+      }
+    });
+    
+    unsubscribePromises.push(settingsListener);
 
     // Card events
-    unsubscribePromises.push(
-      listen<CardSyncPayload>(SyncEventType.CARD_UPDATED, ({ payload }) => {
-        // Find and update the card in the store
-        const cards = cardStore.cards;
-        const cardIndex = cards.findIndex(card => card.id === payload.cardId);
+    const cardListener = listen<CardSyncPayload>(SyncEventType.CARD_UPDATED, ({ payload }) => {
+      // Find and update the card in the store
+      const cards = cardStore.cards;
+      const cardIndex = cards.findIndex(card => card.id === payload.cardId);
+      
+      if (cardIndex !== -1) {
+        const updatedCards = [...cards];
+        const updatedCard = { ...updatedCards[cardIndex] };
         
-        if (cardIndex !== -1) {
-          const updatedCards = [...cards];
-          const updatedCard = { ...updatedCards[cardIndex] };
-          
-          if (payload.isStarred !== undefined) updatedCard.isStarred = payload.isStarred;
-          if (payload.isCollapsed !== undefined) updatedCard.isCollapsed = payload.isCollapsed;
-          if (payload.responseText !== undefined) updatedCard.responseText = payload.responseText;
-          
-          updatedCards[cardIndex] = updatedCard;
-          // We'll update the cardStore interface to include this method
-          cardStore.updateCards(updatedCards);
-        }
-      })
-    );
+        if (payload.isStarred !== undefined) updatedCard.isStarred = payload.isStarred;
+        if (payload.isCollapsed !== undefined) updatedCard.isCollapsed = payload.isCollapsed;
+        if (payload.responseText !== undefined) updatedCard.responseText = payload.responseText;
+        
+        updatedCards[cardIndex] = updatedCard;
+        // We'll update the cardStore interface to include this method
+        cardStore.updateCards(updatedCards);
+      }
+    });
+    
+    unsubscribePromises.push(cardListener);
 
     // Clean up listeners when component unmounts
     return () => {
       unsubscribePromises.forEach(async (unsubscribePromise) => {
         const unsubscribe = await unsubscribePromise;
-        unsubscribe();
+        if (unsubscribe) {
+          unsubscribe();
+        }
       });
     };
   }, [documentStore, settingsStore, cardStore]);
