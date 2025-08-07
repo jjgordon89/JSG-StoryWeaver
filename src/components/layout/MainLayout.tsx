@@ -3,7 +3,7 @@ import ProjectView from '../../features/projects/ProjectView';
 import DocumentEditor from '../editor/DocumentEditor';
 import { useStore } from '../../stores/documentStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../../utils/tauriSafe';
 
 const MainLayout: React.FC = () => {
   const [activeDocument, setActiveDocument] = useState<{id: number, content: string} | null>(null);

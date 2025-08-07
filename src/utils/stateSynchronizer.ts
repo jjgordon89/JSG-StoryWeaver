@@ -1,8 +1,11 @@
-import { listen } from '@tauri-apps/api/event';
+import { listen } from './tauriSafe';
 import { useEffect } from 'react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useStore as useDocumentStore } from '../stores/documentStore';
 import { useCardStore } from '../stores/cardStore';
+
+// Check if we're running in Tauri environment
+const isTauri = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
 
 // Define event types for state synchronization
 export enum SyncEventType {
@@ -71,6 +74,11 @@ export function useStateSynchronization() {
   const cardStore = useCardStore();
 
   useEffect(() => {
+    // Only set up listeners if we're running in Tauri environment
+    if (!isTauri) {
+      return;
+    }
+
     // Set up listeners for various state change events
     const unsubscribePromises: Promise<() => void>[] = [];
 
@@ -150,8 +158,8 @@ export function useStateSynchronization() {
 
 // Helper function to emit synchronization events
 export async function emitSyncEvent<T>(eventType: SyncEventType, payload: T) {
-  // Import dynamically to avoid circular dependencies
-  const { emit } = await import('@tauri-apps/api/event');
+  // Use safe emit wrapper to avoid Tauri import errors in web environment
+  const { emit } = await import('./tauriSafe');
   return emit(eventType, payload);
 }
 

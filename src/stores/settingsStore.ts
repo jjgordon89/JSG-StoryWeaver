@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauriSafe';
 import { withSyncMiddleware, SyncEventType, createPayloadMapper } from '../utils/stateSynchronizer';
 
 interface SettingsState {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../stores/projectStore';
-import { invoke } from '@tauri-apps/api';
+import { invoke } from '../../utils/tauriSafe';
 import { v4 as uuidv4 } from 'uuid';
 
 // Define explicit types

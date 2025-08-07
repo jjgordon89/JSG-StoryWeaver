@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProjectCard from './ProjectCard';
 import ProjectPreview from './ProjectPreview';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../../utils/tauriSafe';
 
 interface Project {
   id: string;

@@ -3,10 +3,13 @@ import * as monaco from 'monaco-editor';
 import { useStore } from '../../stores/documentStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useVersionStore, DocumentVersion } from '../../stores/versionStore';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../../utils/tauriSafe';
 import FocusMode from './FocusMode';
 import FocusModeSettings from './FocusModeSettings';
 import VersionHistory from './VersionHistory';
+import { AISelectionMenu, AIWritingPanel, AIQuickTools } from '../ai';
+import { Button } from '../ui/button';
+import { Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import '../../styles/focus-mode.css';
 import { emitSyncEvent, SyncEventType } from '../../utils/stateSynchronizer';
 
@@ -22,6 +25,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const [wordCount, setWordCount] = useState(0);
   const [showFocusModeSettings, setShowFocusModeSettings] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [aiMenuVisible, setAIMenuVisible] = useState(false);
+  const [aiMenuPosition, setAIMenuPosition] = useState({ x: 0, y: 0 });
+  const [selectedText, setSelectedText] = useState('');
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -94,6 +101,57 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
     }, 1500); // 1.5-second debounce
   }, [documentId, saveDocument, calculateWordCount]);
 
+  // Handle text insertion from AI
+  const handleInsertText = useCallback((text: string) => {
+    if (!editorRef.current) return;
+    
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+    
+    if (selection) {
+      editor.executeEdits('ai-insert', [{
+        range: selection,
+        text: text,
+        forceMoveMarkers: true
+      }]);
+    }
+    
+    setAIMenuVisible(false);
+  }, []);
+
+  // Handle text replacement from AI
+  const handleReplaceText = useCallback((text: string) => {
+    if (!editorRef.current) return;
+    
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+    
+    if (selection && !selection.isEmpty()) {
+      editor.executeEdits('ai-replace', [{
+        range: selection,
+        text: text,
+        forceMoveMarkers: true
+      }]);
+    }
+    
+    setAIMenuVisible(false);
+  }, []);
+
+  // Handle selection change to update selected text
+  const handleSelectionChange = useCallback(() => {
+    if (!editorRef.current) return;
+    
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+    
+    if (selection && !selection.isEmpty()) {
+      const selectedText = editor.getModel()?.getValueInRange(selection) || '';
+      setSelectedText(selectedText);
+    } else {
+      setSelectedText('');
+    }
+  }, []);
+
   // Initialize editor
   useEffect(() => {
     if (!containerRef.current) return;
@@ -121,11 +179,27 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
       handleEditorChange(editor.getValue());
     });
 
+    // Set up selection change handler
+    const selectionDisposable = editor.onDidChangeCursorSelection(() => {
+      handleSelectionChange();
+    });
+
+    // Set up context menu for AI tools
+    const contextMenuDisposable = editor.onContextMenu((e) => {
+      const selection = editor.getSelection();
+      if (selection && !selection.isEmpty()) {
+        setAIMenuPosition({ x: e.event.posx, y: e.event.posy });
+        setAIMenuVisible(true);
+      }
+    });
+
     editorRef.current = editor;
 
     // Cleanup
     return () => {
       changeDisposable.dispose();
+      selectionDisposable.dispose();
+      contextMenuDisposable.dispose();
       editor.dispose();
       editorRef.current = null;
       
@@ -134,7 +208,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         clearTimeout(saveDebouncer.current);
       }
     };
-  }, [initialContent, handleEditorChange, calculateWordCount]);
+  }, [initialContent, handleEditorChange, calculateWordCount, handleSelectionChange]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -152,11 +226,37 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         e.preventDefault();
         setShowVersionHistory(true);
       }
+      
+      // Ctrl+Shift+A or Cmd+Shift+A to toggle AI panel
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        setShowAIPanel(!showAIPanel);
+      }
+      
+      // Ctrl+Space or Cmd+Space to show AI menu
+      if ((e.ctrlKey || e.metaKey) && e.key === ' ') {
+        e.preventDefault();
+        if (editorRef.current) {
+          const position = editorRef.current.getPosition();
+          if (position) {
+            const coords = editorRef.current.getScrolledVisiblePosition(position);
+            if (coords) {
+              setAIMenuPosition({ x: coords.left, y: coords.top });
+              setAIMenuVisible(true);
+            }
+          }
+        }
+      }
+      
+      // Escape to close AI menu
+      if (e.key === 'Escape') {
+        setAIMenuVisible(false);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleEditorChange]);
+  }, [handleEditorChange, showAIPanel]);
   
   // Handle restoring a version
   const handleRestoreVersion = (version: DocumentVersion) => {
@@ -229,6 +329,35 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
                   <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
               </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAIPanel(!showAIPanel)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="Toggle AI Panel (Ctrl+Shift+A)"
+              >
+                {showAIPanel ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (editorRef.current) {
+                    const position = editorRef.current.getPosition();
+                    if (position) {
+                      const coords = editorRef.current.getScrolledVisiblePosition(position);
+                      if (coords) {
+                        setAIMenuPosition({ x: coords.left, y: coords.top });
+                        setAIMenuVisible(true);
+                      }
+                    }
+                  }
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                title="AI Tools (Ctrl+Space)"
+              >
+                <Wand2 size={18} />
+              </Button>
               <button
                 onClick={() => setShowFocusModeSettings(true)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -241,10 +370,50 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
               </button>
             </div>
         </div>
-        <div 
-          ref={containerRef} 
-          className={`flex-grow overflow-hidden ${focusModeEnabled ? 'focus-mode-editor' : ''}`}
+        <div className="flex flex-grow overflow-hidden">
+          <div 
+            ref={containerRef} 
+            className={`flex-grow overflow-hidden ${focusModeEnabled ? 'focus-mode-editor' : ''}`}
+          />
+          
+          {/* AI Writing Panel */}
+          {showAIPanel && (
+            <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <AIWritingPanel
+                isOpen={showAIPanel}
+                onToggle={() => setShowAIPanel(!showAIPanel)}
+                onInsertText={handleInsertText}
+                onReplaceText={handleReplaceText}
+                selectedText={selectedText}
+                documentContext={content}
+              />
+            </div>
+          )}
+        </div>
+        
+        {/* AI Selection Menu */}
+        <AISelectionMenu
+          visible={aiMenuVisible}
+          position={aiMenuPosition}
+          onClose={() => setAIMenuVisible(false)}
+          onInsertText={handleInsertText}
+          onReplaceText={handleReplaceText}
+          selectedText={selectedText}
+          documentContext={content}
         />
+        
+        {/* AI Quick Tools - Always available */}
+        {!focusModeEnabled && (
+          <div className="absolute bottom-4 right-4">
+            <AIQuickTools
+              compact
+              onInsertText={handleInsertText}
+              onReplaceText={handleReplaceText}
+              selectedText={selectedText}
+              documentContext={content}
+            />
+          </div>
+        )}
         
         {/* Focus Mode Settings Dialog */}
         <FocusModeSettings 
