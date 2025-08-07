@@ -179,7 +179,35 @@ pub fn run() {
             commands::ai_cards::get_starred_ai_cards,
             commands::ai_cards::toggle_ai_card_stack,
             commands::ai_cards::toggle_ai_card_star,
-            commands::ai_cards::toggle_ai_card_collapse
+            commands::ai_cards::toggle_ai_card_collapse,
+            
+            // Story Bible commands
+            commands::story_bible::create_or_update_story_bible,
+            commands::story_bible::get_story_bible,
+            commands::story_bible::create_character_trait,
+            commands::story_bible::get_character_traits,
+            commands::story_bible::update_character_trait,
+            commands::story_bible::delete_character_trait,
+            commands::story_bible::create_world_element,
+            commands::story_bible::get_world_elements,
+            commands::story_bible::get_world_element,
+            commands::story_bible::update_world_element,
+            commands::story_bible::delete_world_element,
+            commands::story_bible::search_world_elements,
+            commands::story_bible::create_outline,
+            commands::story_bible::get_outlines,
+            commands::story_bible::get_outline,
+            commands::story_bible::get_outline_by_chapter,
+            commands::story_bible::update_outline,
+            commands::story_bible::delete_outline,
+            commands::story_bible::search_outlines,
+            commands::story_bible::create_scene,
+            commands::story_bible::get_scenes,
+            commands::story_bible::get_scene,
+            commands::story_bible::update_scene,
+            commands::story_bible::delete_scene,
+            commands::story_bible::validate_scene,
+            commands::story_bible::search_scenes
         ])
         .setup(|app| {
             // Initialize database on startup

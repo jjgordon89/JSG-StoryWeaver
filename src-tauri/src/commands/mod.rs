@@ -11,6 +11,7 @@ pub mod projects;
 pub mod documents;
 pub mod characters;
 pub mod locations;
+pub mod story_bible;
 pub mod ai_history;
 pub mod ai_writing;
 pub mod ai_cards;
