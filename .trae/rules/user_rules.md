@@ -1,328 +1,149 @@
-# TRAE IDE User Rules & Best Practices
-
-## Comprehensive guidelines for maximizing TRAE IDE capabilities and achieving optimal development results
+# Trae IDE Continuous Improvement Protocol
 
 ---
 
-## 🎯 Core Philosophy
+**Description:** Defines Trae IDE's mandatory protocol for self-reflection, persistent knowledge capture using dedicated logs, and continuous improvement of its operational knowledge before task completion
 
-**TRAE IDE is designed for intelligent, context-aware development.** These rules help you leverage its full potential through strategic usage patterns, optimal configurations, and best practices that enhance productivity and code quality.
+**Author:** Adapted for Trae IDE
 
----
+Version 1.0
 
-## 🚀 Getting Started with TRAE IDE
+## Tags
 
-### Essential Setup
+[
 
-- **Workspace Organization:** Always work within properly structured project directories
-- **Context Awareness:** TRAE IDE learns from your codebase - maintain clean, well-documented code
-- **File Management:** Use descriptive file names and logical folder structures
-- **Version Control:** Integrate with Git for optimal change tracking and collaboration
+"protocol",
 
-### Initial Configuration
+  "meta",
 
-```markdown
-# Recommended Project Structure
-project-root/
-├── .trae/
-│   ├── rules/
-│   │   ├── project_rules.md    # Project-specific guidelines
-│   │   └── user_rules.md       # This file
-│   └── context/
-├── src/
-├── docs/
-├── tests/
-└── README.md
-```
+  "learning",
+
+  "reflection",
+
+  "knowledge-management",
+
+  "core-behavior"
+  
+]
+
+## Scope
+
+globs: ["*"] # This core protocol is always active and applies to all Trae IDE operations
 
 ---
 
-## 🧠 Maximizing AI-Assisted Development
+## Core Protocol: Continuous Improvement
 
-### Context Management
+**Objective:** Ensure Trae IDE proactively learns from tasks, captures knowledge in a structured way, **distills fundamental insights,** refines understanding, and improves efficiency and reliability. This protocol maintains two key files: `memory-bank/raw_reflection_log.md` for initial detailed logging, and `memory-bank/consolidated_learnings.md` for pruned, actionable, long-term knowledge. This is vital for optimal performance and avoiding redundant effort.
 
-- **Provide Clear Intent:** Always state your goals explicitly when requesting assistance
-- **Use Descriptive Comments:** Well-commented code helps TRAE understand your intentions
-- **Maintain Documentation:** Keep README files and inline documentation current
-- **Reference Relevant Files:** Mention specific files, functions, or components when seeking help
+**Core Principle:** Continuous learning and adaptation are **mandatory**. This protocol **must be executed before task completion** for tasks with new learning, problem-solving, user feedback, or multiple steps. Trivial mechanical tasks *may* be exempt per higher-level rules; otherwise, execution is default.
 
-### Effective Prompting Strategies
+**Key Knowledge Files:**
 
-1. **Be Specific:** Instead of "fix this," say "optimize this function for better performance"
-2. **Provide Context:** Explain the business logic and requirements
-3. **Set Constraints:** Mention technology stack, performance requirements, or coding standards
-4. **Request Explanations:** Ask for reasoning behind suggested changes
-
-### Code Quality Enhancement
-
-- **Iterative Improvement:** Use TRAE for code reviews and refactoring suggestions
-- **Pattern Recognition:** Leverage TRAE's ability to identify and suggest design patterns
-- **Error Prevention:** Ask for potential edge cases and error scenarios
-- **Performance Optimization:** Request performance analysis and improvement suggestions
+* **`memory-bank/raw_reflection_log.md`**: Contains detailed, timestamped, and task-referenced raw entries from the "Task Review & Analysis" phase. This is the initial dump of all observations.
+* **`memory-bank/consolidated_learnings.md`**: Contains curated, summarized, and actionable insights derived from `raw_reflection_log.md`. This is the primary, refined knowledge base for long-term use. It should be kept concise and highly relevant.
 
 ---
 
-## 🛠️ Development Workflow Optimization
+## 1. Mandatory Pre-Completion Reflection & Raw Knowledge Capture
 
-### Project Planning
+Before signaling task completion, Trae IDE **must** perform the following internal steps:
 
-- **Feature Breakdown:** Use TRAE to help decompose complex features into manageable tasks
-- **Architecture Design:** Collaborate on system design and component relationships
-- **Technology Selection:** Get recommendations for libraries, frameworks, and tools
-- **Risk Assessment:** Identify potential technical challenges early
+### 1.1. Task Review & Analysis
 
-### Implementation Best Practices
+* Review the completed task (conversation, logs, artifacts, code changes).
+* **Identify Learnings:** What new information, techniques, **underlying patterns,** API behaviors, project-specific commands (e.g., test, build, run flags), environment variables, setup quirks, or successful outcomes were discovered? **What core principles can be extracted?**
+* **Identify Difficulties & Mistakes (as Learning Opportunities):** What challenges were faced? Were there any errors, misunderstandings, or inefficiencies? **How can these experiences refine future approaches (resilience & adaptation)?** Did user feedback indicate a misstep?
+* **Identify Successes:** What went particularly well? What strategies or tools were notably effective? **What were the key contributing factors?**
 
-- **Incremental Development:** Build features step-by-step with TRAE's guidance
-- **Test-Driven Development:** Use TRAE to generate test cases and scenarios
-- **Code Reviews:** Leverage TRAE for pre-commit code analysis
-- **Documentation Generation:** Automate documentation creation and updates
+### 1.2. Logging to `memory-bank/raw_reflection_log.md`
 
-### Debugging and Troubleshooting
+* Based on Task Review & Analysis (1.1), create a timestamped, task-referenced entry in `memory-bank/raw_reflection_log.md` detailing all learnings, difficulties (and their resolutions/learnings), and successes (and contributing factors).
+* This file serves as the initial, detailed record. Its entries are candidates for later consolidation.
+* *Example Entry in `memory-bank/raw_reflection_log.md`:*
 
-- **Error Analysis:** Provide complete error messages and stack traces
-- **Environment Details:** Share relevant system and dependency information
-- **Reproduction Steps:** Clearly describe how to reproduce issues
-- **Expected vs Actual:** Explain what should happen versus what actually occurs
+    ```markdown
+    ---
+    Date: {{CURRENT_DATE_YYYY_MM_DD}}
+    TaskRef: "Implement JWT refresh logic for Project Alpha"
 
----
 
-## 📁 File and Project Management
+    Learnings:
+    - Discovered `jose` library's `createRemoteJWKSet` is highly effective for dynamic key fetching for Project Alpha's auth.
+    - Confirmed that a 401 error with `X-Reason: token-signature-invalid` from the auth provider requires re-fetching JWKS.
+    - Project Alpha's integration tests: `cd services/auth && poetry run pytest -m integration --maxfail=1`
+    - Required ENV for local testing of Project Alpha auth: `AUTH_API_KEY="test_key_alpha"`
 
-### Naming Conventions
 
-- **Files:** Use kebab-case for files (`user-profile.component.ts`)
-- **Directories:** Use kebab-case for folders (`user-management/`)
-- **Components:** Use PascalCase for React components (`UserProfile.tsx`)
-- **Variables:** Use camelCase for variables and functions (`getUserProfile`)
+    Difficulties:
+    - Initial confusion about JWKS caching led to intermittent validation failures. Resolved by implementing a 5-minute cache.
 
-### Code Organization
 
-- **Single Responsibility:** Each file should have a clear, single purpose
-- **Logical Grouping:** Group related functionality together
-- **Import Organization:** Keep imports organized and remove unused ones
-- **Export Consistency:** Use consistent export patterns throughout the project
+    Successes:
+    - The 5-minute JWKS cache with explicit bust mechanism proved effective.
 
-### Documentation Standards
 
-- **README Files:** Maintain comprehensive project documentation
-- **Inline Comments:** Explain complex business logic and algorithms
-- **API Documentation:** Document all public interfaces and functions
-- **Change Logs:** Keep track of significant changes and decisions
+    Improvements_Identified_For_Consolidation:
+    - General pattern: JWKS caching strategy (5-min cache, explicit bust).
+    - Project Alpha: Specific commands and ENV vars.
+    ---
+    ```
 
 ---
 
-## 🔧 Configuration and Customization
+## 2. Knowledge Consolidation & Refinement Process (Periodic)
 
-### TRAE IDE Settings
+This outlines refining knowledge from `memory-bank/raw_reflection_log.md` into `memory-bank/consolidated_learnings.md`. This occurs periodically or when `raw_reflection_log.md` grows significantly, not necessarily after each task.
 
-- **Theme Preferences:** Choose themes that enhance readability and reduce eye strain
-- **Font Configuration:** Use monospace fonts optimized for coding
-- **Keyboard Shortcuts:** Learn and customize shortcuts for frequently used actions
-- **Extension Management:** Install relevant extensions for your technology stack
+### 2.1. Review and Identify for Consolidation
 
-### Project-Specific Rules
+* Periodically, or when prompted by the user or significant new raw entries, review `memory-bank/raw_reflection_log.md`.
+* Identify entries/parts representing durable, actionable, or broadly applicable knowledge (e.g., reusable patterns, critical configurations, effective strategies, resolved errors).
 
- Create `.trae/rules/project_rules.md` for project-specific guidelines:
+### 2.2. Synthesize and Transfer to `memory-bank/consolidated_learnings.md`
 
-```markdown
-# Project-Specific Rules
+* For identified insights:
+  * Concisely synthesize, summarize, and **distill into generalizable principles or actionable patterns.**
+  * Add refined knowledge to `memory-bank/consolidated_learnings.md`, organizing logically (by topic, project, tech) for easy retrieval.
+  * Ensure `consolidated_learnings.md` content is actionable, **generalizable,** and non-redundant.
+* *Example Entry in `memory-bank/consolidated_learnings.md` (derived from above raw log example):*
 
-## Technology Stack
-- Framework: [Your Framework]
-- Language: [Your Language]
-- Database: [Your Database]
+    ```markdown
+    ## JWT Handling & JWKS
+    **Pattern: JWKS Caching Strategy**
+    - For systems using JWKS for token validation, implement a short-lived cache (e.g., 5 minutes) for fetched JWKS.
+    - Include an explicit cache-bust mechanism if immediate key rotation needs to be handled.
+    - *Rationale:* Balances performance by reducing frequent JWKS re-fetching against timely key updates. Mitigates intermittent validation failures due to stale keys.
 
-## Coding Standards
-- [Your specific coding standards]
 
-## Architecture Patterns
-- [Your architectural decisions]
-```
+    ## Project Alpha - Specifics
+    **Auth Module:**
+    - **Integration Tests:** `cd services/auth && poetry run pytest -m integration --maxfail=1`
+    - **Local Testing ENV:** `AUTH_API_KEY="test_key_alpha"`
+    ```
 
----
+### 2.3. Prune `memory-bank/raw_reflection_log.md`
 
-## 🎨 UI/UX Development Guidelines
+* **Crucially, once information has been successfully transferred and consolidated into `memory-bank/consolidated_learnings.md`, the corresponding original entries or processed parts **must be removed** from `memory-bank/raw_reflection_log.md`.**
+* This keeps `raw_reflection_log.md` focused on recent, unprocessed reflections and prevents it from growing indefinitely with redundant information.
 
-### Design Principles
+### 2.4. Proposing Trae IDE Rule Enhancements (Exceptional)
 
-- **User-Centered Design:** Always prioritize user experience and accessibility
-- **Responsive Design:** Ensure compatibility across different screen sizes
-- **Performance First:** Optimize for fast loading and smooth interactions
-- **Accessibility:** Follow WCAG guidelines for inclusive design
-
-### Component Development
-
-- **Reusability:** Create modular, reusable components
-- **Props Interface:** Define clear, typed interfaces for component props
-- **State Management:** Use appropriate state management patterns
-- **Testing:** Write comprehensive tests for UI components
+* The primary focus of this protocol is the maintenance of `raw_reflection_log.md` and `consolidated_learnings.md`.
+* If a significant, broadly applicable insight in `consolidated_learnings.md` strongly suggests modifying *another active Trae IDE rule* (e.g., core workflow, tech guidance), Trae IDE MAY propose this change after user confirmation. This is exceptional.
 
 ---
 
-## 🔒 Security and Privacy Best Practices
+## 3. Guidelines for Knowledge Content
 
-### Data Protection
+These guidelines apply to entries in `memory-bank/raw_reflection_log.md` (initial capture) and especially to `memory-bank/consolidated_learnings.md` (refined, long-term knowledge).
 
-- **Sensitive Information:** Never commit API keys, passwords, or personal data
-- **Input Validation:** Always validate and sanitize user inputs
-- **Authentication:** Implement robust authentication and authorization
-- **HTTPS:** Use secure connections for all external communications
-
-### Code Security
-
-- **Dependency Management:** Regularly update dependencies and check for vulnerabilities
-- **Error Handling:** Implement proper error handling without exposing sensitive information
-- **Logging:** Log appropriately without including sensitive data
-- **Code Reviews:** Use TRAE to identify potential security issues
-
----
-
-## 🚀 Performance Optimization
-
-### Code Performance
-
-- **Algorithm Efficiency:** Choose appropriate algorithms and data structures
-- **Memory Management:** Avoid memory leaks and optimize memory usage
-- **Async Operations:** Use asynchronous patterns for I/O operations
-- **Caching Strategies:** Implement appropriate caching mechanisms
-
-### Build Optimization
-
-- **Bundle Size:** Monitor and optimize bundle sizes
-- **Tree Shaking:** Remove unused code from production builds
-- **Code Splitting:** Implement code splitting for better loading performance
-- **Asset Optimization:** Optimize images, fonts, and other assets
-
----
-
-## 🧪 Testing and Quality Assurance
-
-### Testing Strategy
-
-- **Unit Tests:** Test individual functions and components
-- **Integration Tests:** Test component interactions and API integrations
-- **E2E Tests:** Test complete user workflows
-- **Performance Tests:** Monitor performance metrics and regressions
-
-### Quality Metrics
-
-- **Code Coverage:** Maintain high test coverage (aim for 80%+)
-- **Code Quality:** Use linting tools and maintain consistent code style
-- **Performance Monitoring:** Track key performance indicators
-- **User Feedback:** Collect and act on user feedback
-
----
-
-## 🤝 Collaboration and Communication
-
-### Team Coordination
-
-- **Clear Communication:** Use descriptive commit messages and PR descriptions
-- **Code Reviews:** Participate actively in code review processes
-- **Documentation Sharing:** Keep team documentation up-to-date
-- **Knowledge Sharing:** Share learnings and best practices with the team
-
-### Version Control
-
-- **Branching Strategy:** Use consistent branching strategies (Git Flow, GitHub Flow)
-- **Commit Messages:** Write clear, descriptive commit messages
-- **Pull Requests:** Create focused, reviewable pull requests
-- **Conflict Resolution:** Handle merge conflicts promptly and carefully
-
----
-
-## 📈 Continuous Improvement
-
-### Learning and Growth
-
-- **Stay Updated:** Keep up with technology trends and best practices
-- **Experiment:** Try new tools and techniques in safe environments
-- **Reflect:** Regularly review and improve your development processes
-- **Share Knowledge:** Contribute to team knowledge and documentation
-
-### Process Optimization
-
-- **Automation:** Automate repetitive tasks and processes
-- **Tooling:** Continuously evaluate and improve development tools
-- **Feedback Loops:** Establish feedback mechanisms for continuous improvement
-- **Metrics:** Track and analyze development metrics
-
----
-
-## 🎯 Advanced TRAE IDE Features
-
-### Context-Aware Assistance
-
-- **Codebase Understanding:** TRAE learns your project structure and patterns
-- **Intelligent Suggestions:** Leverage context-aware code suggestions
-- **Pattern Recognition:** Use TRAE to identify and apply design patterns
-- **Refactoring Support:** Get assistance with large-scale code refactoring
-
-### Multi-Language Support
-
-- **Language Switching:** TRAE adapts to different programming languages
-- **Cross-Language Integration:** Get help with polyglot development
-- **Framework Expertise:** Leverage framework-specific knowledge
-- **Best Practices:** Get language and framework-specific best practices
-
-### Integration Capabilities
-
-- **Tool Integration:** Connect with your existing development tools
-- **API Integration:** Get assistance with API design and implementation
-- **Database Integration:** Optimize database queries and schema design
-- **Deployment Support:** Get help with deployment and DevOps practices
-
----
-
-## 🔍 Troubleshooting Common Issues
-
-### Performance Issues
-
-- **Slow Response:** Check network connectivity and system resources
-- **Memory Usage:** Monitor memory consumption and optimize if necessary
-- **Large Codebases:** Break down large requests into smaller, focused queries
-
-### Context Issues
-
-- **Missing Context:** Ensure relevant files are open and accessible
-- **Outdated Information:** Refresh context by reopening files or restarting TRAE
-- **Scope Clarity:** Be specific about the scope of your requests
-
-### Integration Problems
-
-- **Tool Conflicts:** Check for conflicts with other development tools
-- **Permission Issues:** Ensure TRAE has necessary file and system permissions
-- **Configuration Errors:** Verify TRAE configuration and settings
-
----
-
-## 📚 Resources and References
-
-### Documentation
-
-- **Official Documentation:** Refer to TRAE IDE official documentation
-- **Community Resources:** Engage with the TRAE IDE community
-- **Best Practices:** Follow established development best practices
-- **Technology Documentation:** Reference relevant technology documentation
-
-### Learning Resources
-
-- **Tutorials:** Follow step-by-step tutorials for new technologies
-- **Examples:** Study well-implemented example projects
-- **Courses:** Take relevant online courses and training
-- **Books:** Read authoritative books on software development
-
----
-
-## 🎉 Conclusion
-
-TRAE IDE is a powerful tool that becomes more effective with proper usage and configuration. By following these guidelines, you'll maximize your productivity, improve code quality, and create better software solutions.
-
-**Remember:** TRAE IDE learns from your patterns and preferences. The more you use it effectively, the better it becomes at assisting your specific development needs.
-
----
-
-*Last Updated: [Current Date]*
-*Version: 2.0*
-*For questions or suggestions, please refer to the TRAE IDE documentation or community resources.*
+* **Prioritize High-Value Insights:** Focus on lessons that significantly impact future performance, **lead to more robust or generalizable understanding,** or detail critical errors and their resolutions, major time-saving discoveries, fundamental shifts in understanding, and essential project-specific configurations.
+* **Be Concise & Actionable (especially for `consolidated_learnings.md`):** Information should be clear, to the point, and useful when revisited. What can be *done* differently or leveraged next time?
+* **Strive for Clarity and Future Usability:** Document insights in a way that is clear and easily understandable for future review, facilitating effective knowledge retrieval and application (akin to self-explainability).
+* **Document Persistently, Refine & Prune Continuously:** Capture raw insights immediately. Systematically refine, consolidate, and prune this knowledge as per Section 2.
+* **Organize for Retrieval:** Structure `consolidated_learnings.md` logically. Use clear headings and Markdown formatting.
+* **Avoid Low-Utility Information in `consolidated_learnings.md`:** This file should not contain trivial statements. Raw, verbose thoughts belong in `raw_reflection_log.md` before pruning.
+* **Support Continuous Improvement:** The ultimate goal is to avoid repeating mistakes, accelerate future tasks, and make Trae IDE's operations more robust and reliable. Frame all knowledge with this in mind.
+* **Manage Information Density:** Actively work to keep `consolidated_learnings.md` dense with high-value information and free of outdated or overly verbose content. The pruning of `raw_reflection_log.md` is key to this.
+"""
