@@ -4,6 +4,7 @@
   import type { StoryBibleProps } from '../../types/storyBible';
   
   import BraindumpEditor from './components/BraindumpEditor.svelte';
+  import StyleExamplesManager from './components/StyleExamplesManager.svelte';
   import CharactersManager from './components/CharactersManager.svelte';
   import WorldbuildingManager from './components/WorldbuildingManager.svelte';
   import OutlineManager from './components/OutlineManager.svelte';
@@ -18,6 +19,7 @@
   
   const tabs = [
     { id: 'braindump', label: 'Braindump', icon: '📝' },
+    { id: 'style-examples', label: 'Style Examples', icon: '✍️' },
     { id: 'characters', label: 'Characters', icon: '👥' },
     { id: 'worldbuilding', label: 'World Building', icon: '🌍' },
     { id: 'outline', label: 'Outline', icon: '📋' },
@@ -97,6 +99,13 @@
           globalPov={state.storyBible?.global_pov || ''}
           globalTense={state.storyBible?.global_tense || ''}
           globalCharacterPovIds={state.storyBible?.global_character_pov_ids || ''}
+        />
+      {/if}
+      
+      <!-- Style Examples Tab -->
+      {#if state.activeTab === 'style-examples'}
+        <StyleExamplesManager 
+          {projectId}
         />
       {/if}
       

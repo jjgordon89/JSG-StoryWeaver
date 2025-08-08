@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
 import { Button } from '../../../../components/ui/Button';
 import BraindumpEditor from './BraindumpEditor';
+import StyleExamplesManager from './StyleExamplesManager';
 import CharactersManager from './CharactersManager';
 import WorldbuildingManager from './WorldbuildingManager';
 import OutlineManager from './OutlineManager';
@@ -72,10 +73,14 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="flex-1 flex flex-col">
         <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="braindump" className="flex items-center gap-2">
               <span>🧠</span>
               Braindump
+            </TabsTrigger>
+            <TabsTrigger value="style-examples" className="flex items-center gap-2">
+              <span>✍️</span>
+              Style Examples
             </TabsTrigger>
             <TabsTrigger value="characters" className="flex items-center gap-2">
               <span>👥</span>
@@ -100,6 +105,10 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
         <div className="flex-1 overflow-hidden">
           <TabsContent value="braindump" className="h-full m-0">
             <BraindumpEditor projectId={projectId} />
+          </TabsContent>
+          
+          <TabsContent value="style-examples" className="h-full m-0">
+            <StyleExamplesManager projectId={projectId} />
           </TabsContent>
           
           <TabsContent value="characters" className="h-full m-0">
