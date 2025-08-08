@@ -89,7 +89,7 @@ pub async fn get_character(id: String) -> CommandResponse<Option<Character>> {
         
         let character = sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE id = ?")
             .bind(&id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get character: {}", e)))?;
         
@@ -108,7 +108,7 @@ pub async fn update_character(request: UpdateCharacterRequest) -> CommandRespons
         // Get existing character
         let mut character = sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE id = ?")
             .bind(&request.id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get character: {}", e)))?
             .ok_or_else(|| crate::error::StoryWeaverError::Internal { message: format!("Character not found: {}", request.id) })?;

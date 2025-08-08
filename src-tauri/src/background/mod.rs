@@ -424,16 +424,16 @@ pub trait TaskProcessor: Send + Sync {
 /// Background task manager
 pub struct BackgroundTaskManager {
     task_queue: Arc<TaskQueue>,
-    processors: RwLock<Vec<Arc<dyn TaskProcessor>>>,
-    running: RwLock<bool>,
+    processors: Arc<RwLock<Vec<Arc<dyn TaskProcessor>>>>,
+    running: Arc<RwLock<bool>>,
 }
 
 impl BackgroundTaskManager {
     pub fn new(max_concurrent_tasks: usize, max_history_size: usize) -> Self {
         Self {
             task_queue: Arc::new(TaskQueue::new(max_concurrent_tasks, max_history_size)),
-            processors: RwLock::new(Vec::new()),
-            running: RwLock::new(false),
+            processors: Arc::new(RwLock::new(Vec::new())),
+            running: Arc::new(RwLock::new(false)),
         }
     }
 
@@ -460,9 +460,9 @@ impl BackgroundTaskManager {
             while *running_flag.read().await {
                 // Process next task if available
                 if let Some(task) = task_queue.get_next_task().await {
-                    let task_type = {
+                    let (task_type, task_id) = {
                         let task_lock = task.lock().await;
-                        task_lock.task_type.clone()
+                        (task_lock.task_type.clone(), task_lock.id.clone())
                     };
                     
                     let processors_read = processors.read().await;
@@ -477,11 +477,6 @@ impl BackgroundTaskManager {
                                 eprintln!("Error marking task as running: {}", e);
                                 continue;
                             }
-                            
-                            let task_id = {
-                                let task_lock = task.lock().await;
-                                task_lock.id.clone()
-                            };
                             
                             let processor_clone = Arc::clone(processor);
                             let task_queue_clone = Arc::clone(&task_queue);
@@ -506,10 +501,6 @@ impl BackgroundTaskManager {
                     }
                     
                     if !processor_found {
-                        let task_id = {
-                            let task_lock = task.lock().await;
-                            task_lock.id.clone()
-                        };
                         
                         if let Err(e) = task_queue.complete_task(&task_id, false, Some("No processor found for task type".to_string())).await {
                             eprintln!("Error completing task: {}", e);

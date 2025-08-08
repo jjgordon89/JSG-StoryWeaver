@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Download, Users, Plus, Trash2 } from 'lucide-react';
 import type { CharacterTrait, CharactersManagerProps } from '../../../../types/storyBible';
 import useStoryBible from '../../hooks/useStoryBible';
 
@@ -60,6 +60,41 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   const [traitTypeFilter, setTraitTypeFilter] = useState<string>('');
   const [visibilityFilter, setVisibilityFilter] = useState<string>('');
   const [isGeneratingTraits, setIsGeneratingTraits] = useState(false);
+  
+  // Relationship management state
+  const [showRelationshipView, setShowRelationshipView] = useState(false);
+  const [showCreateRelationshipModal, setShowCreateRelationshipModal] = useState(false);
+  const [relationships, setRelationships] = useState<Array<{
+    id: string;
+    fromCharacterId: string;
+    toCharacterId: string;
+    relationshipType: string;
+    description: string;
+    strength: number; // 1-10 scale
+    isPublic: boolean;
+  }>>([]);
+  
+  const [createRelationshipForm, setCreateRelationshipForm] = useState({
+    fromCharacterId: '',
+    toCharacterId: '',
+    relationshipType: '',
+    description: '',
+    strength: 5,
+    isPublic: true
+  });
+  
+  const RELATIONSHIP_TYPES = [
+    { value: 'family', label: 'Family' },
+    { value: 'romantic', label: 'Romantic' },
+    { value: 'friend', label: 'Friend' },
+    { value: 'enemy', label: 'Enemy' },
+    { value: 'ally', label: 'Ally' },
+    { value: 'mentor', label: 'Mentor' },
+    { value: 'rival', label: 'Rival' },
+    { value: 'colleague', label: 'Colleague' },
+    { value: 'acquaintance', label: 'Acquaintance' },
+    { value: 'other', label: 'Other' }
+  ];
   
   const [createForm, setCreateForm] = useState<CreateTraitForm>({
     traitType: '',
@@ -204,6 +239,41 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     }
   };
 
+  const handleExportCSV = () => {
+    if (!selectedCharacter) return;
+    
+    const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
+    if (!selectedCharacterData) return;
+    
+    const characterTraits = traits.filter(t => t.character_id === selectedCharacter);
+    
+    // Create CSV content
+    const headers = ['Character Name', 'Trait Type', 'Content', 'Visibility', 'Series Shared'];
+    const rows = characterTraits.map(trait => [
+      selectedCharacterData.name,
+      getTraitTypeLabel(trait.trait_type),
+      trait.content.replace(/"/g, '""'), // Escape quotes
+      getVisibilityLabel(trait.visibility),
+      trait.series_shared ? 'Yes' : 'No'
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${selectedCharacterData.name}_traits.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getTraitTypeLabel = (value: string): string => {
     return TRAIT_TYPE_OPTIONS.find(option => option.value === value)?.label || value;
   };
@@ -212,18 +282,89 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     return VISIBILITY_OPTIONS.find(option => option.value === value)?.label || value;
   };
 
+  // Relationship management functions
+  const handleCreateRelationship = async () => {
+    if (!createRelationshipForm.fromCharacterId || !createRelationshipForm.toCharacterId) return;
+    
+    const newRelationship = {
+      id: Date.now().toString(),
+      ...createRelationshipForm
+    };
+    
+    setRelationships(prev => [...prev, newRelationship]);
+    setShowCreateRelationshipModal(false);
+    setCreateRelationshipForm({
+      fromCharacterId: '',
+      toCharacterId: '',
+      relationshipType: '',
+      description: '',
+      strength: 5,
+      isPublic: true
+    });
+  };
+
+  const handleDeleteRelationship = (relationshipId: string) => {
+    setRelationships(prev => prev.filter(r => r.id !== relationshipId));
+  };
+
+  const getCharacterName = (characterId: string): string => {
+    return characters.find(c => c.id === characterId)?.name || 'Unknown Character';
+  };
+
+  const getRelationshipTypeLabel = (value: string): string => {
+    return RELATIONSHIP_TYPES.find(type => type.value === value)?.label || value;
+  };
+
+  const getStrengthLabel = (strength: number): string => {
+    if (strength <= 2) return 'Weak';
+    if (strength <= 4) return 'Mild';
+    if (strength <= 6) return 'Moderate';
+    if (strength <= 8) return 'Strong';
+    return 'Very Strong';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Characters Manager</h2>
-        <Button 
-          onClick={() => setShowCreateModal(true)}
-          variant="primary"
-          disabled={!selectedCharacter}
-        >
-          Add Trait
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={() => setShowRelationshipView(!showRelationshipView)}
+            variant={showRelationshipView ? "default" : "outline"}
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            {showRelationshipView ? 'View Traits' : 'View Relationships'}
+          </Button>
+          <Button 
+            onClick={handleExportCSV}
+            variant="outline"
+            disabled={!selectedCharacter || traits.filter(t => t.character_id === selectedCharacter).length === 0}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          {!showRelationshipView ? (
+            <Button 
+              onClick={() => setShowCreateModal(true)}
+              variant="primary"
+              disabled={!selectedCharacter}
+            >
+              Add Trait
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => setShowCreateRelationshipModal(true)}
+              variant="primary"
+              disabled={characters.length < 2}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Relationship
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Character Selection */}
@@ -297,11 +438,12 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
             </CardContent>
           </Card>
 
-          {/* Character Traits */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Character Traits</CardTitle>
-            </CardHeader>
+          {/* Character Traits or Relationships */}
+          {!showRelationshipView ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Character Traits</CardTitle>
+              </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-gray-500">
@@ -362,6 +504,70 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
               )}
             </CardContent>
           </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Character Relationships</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {relationships.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No relationships defined. Click "Add Relationship" to get started.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {relationships.map(relationship => (
+                      <Card key={relationship.id} className="border border-gray-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-medium">
+                                  {getCharacterName(relationship.fromCharacterId)}
+                                </span>
+                                <span className="text-gray-500">→</span>
+                                <span className="font-medium">
+                                  {getCharacterName(relationship.toCharacterId)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                  {getRelationshipTypeLabel(relationship.relationshipType)}
+                                </span>
+                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                                  {getStrengthLabel(relationship.strength)}
+                                </span>
+                                <span className={`px-2 py-1 rounded ${
+                                  relationship.isPublic 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {relationship.isPublic ? 'Public' : 'Private'}
+                                </span>
+                              </div>
+                              {relationship.description && (
+                                <p className="text-sm text-gray-700">
+                                  {relationship.description}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteRelationship(relationship.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -572,6 +778,143 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                 disabled={!editForm.traitType || !editForm.content}
               >
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Relationship Modal */}
+      {showCreateRelationshipModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Create Character Relationship</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  From Character
+                </label>
+                <Select 
+                  value={createRelationshipForm.fromCharacterId} 
+                  onValueChange={(value) => setCreateRelationshipForm(prev => ({ ...prev, fromCharacterId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select character" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {characters.map(character => (
+                      <SelectItem key={character.id} value={character.id}>
+                        {character.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  To Character
+                </label>
+                <Select 
+                  value={createRelationshipForm.toCharacterId} 
+                  onValueChange={(value) => setCreateRelationshipForm(prev => ({ ...prev, toCharacterId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select character" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {characters
+                      .filter(c => c.id !== createRelationshipForm.fromCharacterId)
+                      .map(character => (
+                        <SelectItem key={character.id} value={character.id}>
+                          {character.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Relationship Type
+                </label>
+                <Select 
+                  value={createRelationshipForm.relationshipType} 
+                  onValueChange={(value) => setCreateRelationshipForm(prev => ({ ...prev, relationshipType: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select relationship type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIP_TYPES.map(type => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <Textarea
+                  value={createRelationshipForm.description}
+                  onChange={(e) => setCreateRelationshipForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe the relationship..."
+                  rows={3}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Relationship Strength: {createRelationshipForm.strength}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={createRelationshipForm.strength}
+                  onChange={(e) => setCreateRelationshipForm(prev => ({ ...prev, strength: parseInt(e.target.value) }))}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Weak</span>
+                  <span>Strong</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="createRelationshipPublic"
+                  checked={createRelationshipForm.isPublic}
+                  onChange={(e) => setCreateRelationshipForm(prev => ({ ...prev, isPublic: e.target.checked }))}
+                  className="mr-2"
+                />
+                <label htmlFor="createRelationshipPublic" className="text-sm text-gray-700">
+                  Public relationship
+                </label>
+              </div>
+            </div>
+            
+            <div className="flex gap-2 mt-6">
+              <Button 
+                onClick={() => setShowCreateRelationshipModal(false)} 
+                variant="outline" 
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateRelationship} 
+                variant="primary" 
+                className="flex-1"
+                disabled={!createRelationshipForm.fromCharacterId || !createRelationshipForm.toCharacterId || !createRelationshipForm.relationshipType}
+              >
+                Create Relationship
               </Button>
             </div>
           </div>

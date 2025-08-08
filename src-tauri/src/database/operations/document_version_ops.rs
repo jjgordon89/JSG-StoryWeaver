@@ -30,7 +30,7 @@ impl DocumentVersionOps {
         .bind(version.created_at)
         .bind(&version.created_by)
         .bind(&version.comment)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create document version: {}", e)))?;
         
@@ -41,7 +41,7 @@ impl DocumentVersionOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<DocumentVersion>> {
         let version = sqlx::query_as::<_, DocumentVersion>("SELECT * FROM document_versions WHERE id = ?")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get document version: {}", e)))?;
         
@@ -54,7 +54,7 @@ impl DocumentVersionOps {
             "SELECT * FROM document_versions WHERE document_id = ? ORDER BY version_number DESC"
         )
         .bind(document_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get document versions: {}", e)))?;
         
@@ -67,7 +67,7 @@ impl DocumentVersionOps {
             "SELECT * FROM document_versions WHERE document_id = ? ORDER BY version_number DESC LIMIT 1"
         )
         .bind(document_id)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get latest document version: {}", e)))?;
         
@@ -80,7 +80,7 @@ impl DocumentVersionOps {
             "SELECT MAX(version_number) FROM document_versions WHERE document_id = ?"
         )
         .bind(document_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max version number: {}", e)))?;
         
@@ -99,7 +99,7 @@ impl DocumentVersionOps {
             "SELECT content, word_count FROM documents WHERE id = ?",
             document_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get document: {}", e)))?
         .ok_or_else(|| StoryWeaverError::DocumentNotFound { id: document_id.to_string() })?;
@@ -126,7 +126,7 @@ impl DocumentVersionOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM document_versions WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete document version: {}", e)))?;
         
@@ -137,7 +137,7 @@ impl DocumentVersionOps {
     pub async fn delete_all_versions(pool: &Pool<Sqlite>, document_id: &str) -> Result<()> {
         sqlx::query("DELETE FROM document_versions WHERE document_id = ?")
             .bind(document_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete document versions: {}", e)))?;
         
@@ -202,7 +202,7 @@ impl DocumentVersionOps {
             "#,
             document_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get version history: {}", e)))?;
         

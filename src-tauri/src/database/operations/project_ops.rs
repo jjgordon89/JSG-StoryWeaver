@@ -29,7 +29,7 @@ impl super::ProjectOps {
         .bind(project.created_at)
         .bind(project.updated_at)
         .bind(&project.settings)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create project: {}", e)))?;
         
@@ -40,7 +40,7 @@ impl super::ProjectOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<Project>> {
         let project = sqlx::query_as::<_, Project>("SELECT * FROM projects WHERE id = ?")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get project: {}", e)))?;
         
@@ -52,7 +52,7 @@ impl super::ProjectOps {
         let projects = sqlx::query_as::<_, Project>(
             "SELECT * FROM projects ORDER BY updated_at DESC"
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get projects: {}", e)))?;
         
@@ -77,7 +77,7 @@ impl super::ProjectOps {
         .bind(Utc::now())
         .bind(&project.settings)
         .bind(&project.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update project: {}", e)))?;
         
@@ -88,7 +88,7 @@ impl super::ProjectOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM projects WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete project: {}", e)))?;
         
@@ -107,7 +107,7 @@ impl super::ProjectOps {
         .bind(project_id)
         .bind(Utc::now())
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update word count: {}", e)))?;
         

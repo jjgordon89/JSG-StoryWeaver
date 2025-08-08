@@ -308,6 +308,7 @@ export interface UseStoryBibleReturn {
   generateOutline: (request: GenerateOutlineRequest) => Promise<AIGenerationResponse | null>;
   generateScenes: (request: GenerateScenesRequest) => Promise<AIGenerationResponse | null>;
   generateWorldBuilding: (request: GenerateWorldBuildingRequest) => Promise<AIGenerationResponse | null>;
+  generateSceneContent: (outlineId: string, sceneTitle: string, sceneSummary: string, customPrompt?: string, creativity?: number) => Promise<AIGenerationResponse | null>;
   
   // Utility
   clearError: () => void;

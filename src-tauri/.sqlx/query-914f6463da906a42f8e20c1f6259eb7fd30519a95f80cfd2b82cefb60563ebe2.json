@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM background_tasks \n            WHERE status IN ('completed', 'failed', 'cancelled') \n            AND completed_at < datetime('now', ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "914f6463da906a42f8e20c1f6259eb7fd30519a95f80cfd2b82cefb60563ebe2"
+}

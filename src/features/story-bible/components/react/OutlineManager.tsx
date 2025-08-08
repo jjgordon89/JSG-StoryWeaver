@@ -4,7 +4,7 @@ import { Card } from '../../../../components/ui/Card';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select } from '../../../../components/ui/select';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Download } from 'lucide-react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { Outline, CreateOutlineRequest, UpdateOutlineRequest } from '../../../../types/storyBible';
 
@@ -254,6 +254,56 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
     });
   };
 
+  // CSV Export function
+  const exportOutlinesToCSV = () => {
+    if (outlines.length === 0) {
+      alert('No outlines to export');
+      return;
+    }
+
+    const headers = [
+      'Title',
+      'Type',
+      'Act Number',
+      'Chapter Number', 
+      'Scene Number',
+      'Character POV',
+      'Visibility',
+      'Series Shared',
+      'Content',
+      'Created Date',
+      'Updated Date'
+    ];
+
+    const csvData = outlines.map(outline => [
+      outline.title,
+      getOutlineTypeLabel(outline.outline_type),
+      outline.act_number || '',
+      outline.chapter_number || '',
+      outline.scene_number || '',
+      outline.character_pov ? getCharacterName(outline.character_pov) : '',
+      getVisibilityLabel(outline.visibility),
+      outline.series_shared ? 'Yes' : 'No',
+      outline.content.replace(/"/g, '""'), // Escape quotes
+      new Date(outline.created_at).toLocaleDateString(),
+      new Date(outline.updated_at).toLocaleDateString()
+    ]);
+
+    const csvContent = [headers, ...csvData]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `outlines_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Helper functions
   const getOutlineTypeLabel = (outlineType: string): string => {
     return outlineTypeOptions.find(opt => opt.value === outlineType)?.label || outlineType;
@@ -304,7 +354,11 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
           </p>
         </div>
         
-        <div className="header-actions">
+        <div className="header-actions flex gap-2">
+          <Button variant="outline" onClick={exportOutlinesToCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
           <Button onClick={openCreateModal}>
             <span className="mr-2">➕</span>
             Add Outline

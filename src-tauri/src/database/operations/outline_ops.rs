@@ -32,7 +32,7 @@ impl OutlineOps {
         .bind(&outline.character_pov_ids)
         .bind(outline.created_at)
         .bind(outline.updated_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create outline: {}", e)))?;
         
@@ -51,7 +51,7 @@ impl OutlineOps {
             "#,
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outlines: {}", e)))?;
         
@@ -69,7 +69,7 @@ impl OutlineOps {
             "#,
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outline: {}", e)))?;
         
@@ -88,7 +88,7 @@ impl OutlineOps {
         )
         .bind(project_id)
         .bind(chapter_number)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outline by chapter: {}", e)))?;
         
@@ -116,7 +116,7 @@ impl OutlineOps {
         .bind(&outline.character_pov_ids)
         .bind(outline.updated_at)
         .bind(&outline.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update outline: {}", e)))?;
         
@@ -136,7 +136,7 @@ impl OutlineOps {
         .bind(character_pov_ids)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update outline POV settings: {}", e)))?;
         
@@ -148,20 +148,20 @@ impl OutlineOps {
         // First delete associated acts and scenes
         sqlx::query("DELETE FROM scenes WHERE outline_id IN (SELECT id FROM outline_acts WHERE outline_id = ?)")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete outline scenes: {}", e)))?;
         
         sqlx::query("DELETE FROM outline_acts WHERE outline_id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete outline acts: {}", e)))?;
         
         // Then delete the outline
         sqlx::query("DELETE FROM outlines WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete outline: {}", e)))?;
         
@@ -181,7 +181,7 @@ impl OutlineOps {
         )
         .bind(project_id)
         .bind(format!("%{}%", character_id))
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outlines by character POV: {}", e)))?;
         
@@ -204,7 +204,7 @@ impl OutlineOps {
         .bind(project_id)
         .bind(&search_query)
         .bind(&search_query)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to search outlines: {}", e)))?;
         
@@ -217,7 +217,7 @@ impl OutlineOps {
             "SELECT COUNT(*) FROM outlines WHERE project_id = ?"
         )
         .bind(project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get chapter count: {}", e)))?;
         
@@ -230,7 +230,7 @@ impl OutlineOps {
             "SELECT MAX(chapter_number) FROM outlines WHERE project_id = ?"
         )
         .bind(project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max chapter number: {}", e)))?;
         
@@ -247,7 +247,7 @@ impl OutlineOps {
             .bind(Utc::now())
             .bind(&outline_id)
             .bind(project_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to reorder chapter: {}", e)))?;
         }
@@ -281,7 +281,7 @@ impl OutlineOps {
             .bind(&outline.character_pov_ids)
             .bind(outline.created_at)
             .bind(outline.updated_at)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create outline: {}", e)))?;
             

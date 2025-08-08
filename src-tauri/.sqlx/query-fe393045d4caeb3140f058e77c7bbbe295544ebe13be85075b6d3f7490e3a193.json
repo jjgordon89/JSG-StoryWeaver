@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, filename\n            FROM backups\n            WHERE is_auto = 1\n            ORDER BY created_at DESC\n            LIMIT -1 OFFSET ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "filename",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "fe393045d4caeb3140f058e77c7bbbe295544ebe13be85075b6d3f7490e3a193"
+}

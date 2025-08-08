@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { storyBibleStore, storyBibleActions, filteredCharacterTraits } from '../../../stores/storyBibleStore';
-  import type { CharacterTrait, CreateCharacterTraitRequest, UpdateCharacterTraitRequest } from '../../../types/storyBible';
+  import type { CharacterTrait, CreateCharacterTraitRequest, UpdateCharacterTraitRequest, GenerateCharacterTraitsRequest } from '../../../types/storyBible';
+  import type { CharacterTemplate } from '../../../lib/types/templates';
+  import { TemplateService } from '../../../lib/types/templates';
   
   import Button from '../../../components/ui/Button.svelte';
   import Input from '../../../components/ui/Input.svelte';
@@ -11,6 +13,8 @@
   import Modal from '../../../components/ui/Modal.svelte';
   import LoadingSpinner from '../../../components/ui/LoadingSpinner.svelte';
   import ErrorMessage from '../../../components/ui/ErrorMessage.svelte';
+  import TemplateSelector from '../../../lib/components/templates/TemplateSelector.svelte';
+  import TemplateApplicationDialog from '../../../lib/components/templates/TemplateApplicationDialog.svelte';
   
   export let projectId: string;
   export let seriesId: string | undefined = undefined;
@@ -23,6 +27,15 @@
   let showCreateModal = false;
   let showEditModal = false;
   let editingTrait: CharacterTrait | null = null;
+  let isGeneratingTraits = false;
+  let showTemplateSelector = false;
+  let showTemplateDialog = false;
+  
+  // Template state
+  let characterTemplates: CharacterTemplate[] = [];
+  let selectedTemplate: CharacterTemplate | null = null;
+  let availableArchetypes: string[] = [];
+  let isLoadingTemplates = false;
   
   // Form state
   let createForm = {
@@ -78,7 +91,62 @@
     if (characterId) {
       loadCharacterTraits(characterId);
     }
+    loadAvailableArchetypes();
   });
+  
+  async function loadAvailableArchetypes() {
+    try {
+      availableArchetypes = await TemplateService.getCharacterArchetypes();
+    } catch (error) {
+      console.error('Failed to load character archetypes:', error);
+    }
+  }
+  
+  async function loadCharacterTemplates(archetype: string) {
+    isLoadingTemplates = true;
+    try {
+      characterTemplates = await TemplateService.getCharacterTemplates(archetype);
+    } catch (error) {
+      console.error('Failed to load character templates:', error);
+    } finally {
+      isLoadingTemplates = false;
+    }
+  }
+  
+  function openTemplateSelector() {
+    showTemplateSelector = true;
+  }
+  
+  function handleTemplateSelected(event: CustomEvent<{ template: CharacterTemplate }>) {
+    selectedTemplate = event.detail.template;
+    showTemplateSelector = false;
+    showTemplateDialog = true;
+  }
+  
+  async function handleTemplateApplied(event: CustomEvent<{ name: string; description: string; overrides: Record<string, any> }>) {
+    if (!selectedTemplate || !characterId) return;
+    
+    try {
+      const { name, description, overrides } = event.detail;
+      
+      // Apply the template to create multiple traits
+      await TemplateService.applyCharacterTemplate({
+        template_id: selectedTemplate.id,
+        character_id: characterId,
+        character_name: name,
+        character_description: description,
+        trait_overrides: overrides
+      });
+      
+      // Reload character traits to show the new ones
+      await loadCharacterTraits(characterId);
+      
+      showTemplateDialog = false;
+      selectedTemplate = null;
+    } catch (error) {
+      console.error('Failed to apply character template:', error);
+    }
+  }
   
   async function loadCharacterTraits(charId: string) {
     await storyBibleActions.loadCharacterTraits(charId);
@@ -175,6 +243,44 @@
   function getVisibilityLabel(visibility: string): string {
     return visibilityOptions.find(opt => opt.value === visibility)?.label || visibility;
   }
+  
+  async function generateCharacterTraits() {
+    if (!projectId || !createForm.character_id || !createForm.trait_type) return;
+    
+    isGeneratingTraits = true;
+    
+    try {
+      // Get character name from available characters
+      const character = availableCharacters.find(c => c.id === createForm.character_id);
+      const characterName = character?.name || 'Character';
+      
+      // Get existing traits for context
+      const existingTraits = traits.map(t => `${t.trait_type}: ${t.content}`);
+      
+      const request: GenerateCharacterTraitsRequest = {
+        character_id: createForm.character_id,
+        character_name: characterName,
+        story_context: 'Character trait generation for story bible',
+        existing_traits: existingTraits,
+        trait_count: 1,
+        creativity: 0.7
+      };
+      
+      const response = await storyBibleActions.generateCharacterTraits(request);
+      
+      if (response && response.generated_content) {
+        // The response contains an array of traits, take the first one
+        const generatedTraits = response.generated_content.split('\n').filter(t => t.trim());
+        if (generatedTraits.length > 0) {
+          createForm.content = generatedTraits[0].trim();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate character traits:', error);
+    } finally {
+      isGeneratingTraits = false;
+    }
+  }
 </script>
 
 <div class="characters-manager">
@@ -188,6 +294,14 @@
     </div>
     
     <div class="header-actions">
+      <Button 
+        variant="outline" 
+        on:click={openTemplateSelector}
+        disabled={!characterId}
+      >
+        <span class="icon">📋</span>
+        Use Template
+      </Button>
       <Button 
         variant="primary" 
         on:click={openCreateModal}
@@ -355,13 +469,34 @@
     </div>
     
     <div class="form-group">
-      <label for="create-content">Content:</label>
+      <div class="field-header">
+        <label for="create-content">Content:</label>
+        <Button
+          variant="outline"
+          size="sm"
+          on:click={generateCharacterTraits}
+          disabled={isGeneratingTraits || !createForm.trait_type}
+          class="ai-generate-btn"
+        >
+          {#if isGeneratingTraits}
+            <span class="loading-spinner"></span>
+            Generating...
+          {:else}
+            ✨ Generate with AI
+          {/if}
+        </Button>
+      </div>
       <TextArea
         id="create-content"
         bind:value={createForm.content}
         placeholder="Describe this character trait..."
         rows={4}
       />
+      {#if !createForm.trait_type}
+        <p class="hint-text">
+          💡 Select a trait type to enable AI generation
+        </p>
+      {/if}
     </div>
     
     <div class="form-row">
@@ -688,6 +823,42 @@
     cursor: pointer;
   }
   
+  .field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+  
+  :global(.ai-generate-btn) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .hint-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    font-style: italic;
+  }
+  
   .modal-actions {
     display: flex;
     gap: 0.75rem;
@@ -723,3 +894,34 @@
     }
   }
 </style>
+
+<!-- Template Selector Modal -->
+<Modal bind:show={showTemplateSelector} title="Select Character Template" on:close={() => showTemplateSelector = false}>
+  <TemplateSelector
+    templates={characterTemplates}
+    type="character"
+    loading={isLoadingTemplates}
+    on:templateSelected={handleTemplateSelected}
+    on:loadTemplates={(e) => loadCharacterTemplates(e.detail.archetype)}
+  />
+  
+  <div slot="footer" class="modal-actions">
+    <Button variant="secondary" on:click={() => showTemplateSelector = false}>
+      Cancel
+    </Button>
+  </div>
+</Modal>
+
+<!-- Template Application Dialog -->
+{#if selectedTemplate}
+  <TemplateApplicationDialog
+    bind:show={showTemplateDialog}
+    template={selectedTemplate}
+    type="character"
+    on:apply={handleTemplateApplied}
+    on:close={() => {
+      showTemplateDialog = false;
+      selectedTemplate = null;
+    }}
+  />
+{/if}

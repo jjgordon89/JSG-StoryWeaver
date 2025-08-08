@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Download } from 'lucide-react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { WorldElement, CreateWorldElementRequest, UpdateWorldElementRequest } from '../../../../types/storyBible';
 
@@ -214,6 +214,36 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
     }
   };
 
+  const handleExportCSV = () => {
+    if (worldElements.length === 0) return;
+    
+    // Create CSV content
+    const headers = ['Name', 'Type', 'Description', 'Visibility', 'Series Shared'];
+    const rows = worldElements.map(element => [
+      element.name,
+      getElementTypeLabel(element.element_type),
+      element.description.replace(/"/g, '""'), // Escape quotes
+      getVisibilityLabel(element.visibility),
+      element.series_shared ? 'Yes' : 'No'
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'worldbuilding_elements.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSearch = async () => {
     if (searchQuery.trim()) {
       await searchWorldElements(projectId, searchQuery, seriesId);
@@ -269,10 +299,20 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
             Create and manage the world elements that shape your story's universe.
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <span className="mr-2">➕</span>
-          Add Element
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportCSV}
+            variant="outline"
+            disabled={worldElements.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button onClick={openCreateModal}>
+            <span className="mr-2">➕</span>
+            Add Element
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}

@@ -30,7 +30,7 @@ impl OutlineActOps {
         .bind(outline_act.position)
         .bind(outline_act.created_at)
         .bind(outline_act.updated_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create outline act: {}", e)))?;
         
@@ -48,7 +48,7 @@ impl OutlineActOps {
             "#,
         )
         .bind(outline_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outline acts: {}", e)))?;
         
@@ -65,7 +65,7 @@ impl OutlineActOps {
             "#,
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outline act: {}", e)))?;
         
@@ -84,7 +84,7 @@ impl OutlineActOps {
         )
         .bind(outline_id)
         .bind(act_type)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outline acts by type: {}", e)))?;
         
@@ -109,7 +109,7 @@ impl OutlineActOps {
         .bind(outline_act.position)
         .bind(outline_act.updated_at)
         .bind(&outline_act.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update outline act: {}", e)))?;
         
@@ -124,7 +124,7 @@ impl OutlineActOps {
         .bind(position)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update act position: {}", e)))?;
         
@@ -136,14 +136,14 @@ impl OutlineActOps {
         // First delete associated scenes
         sqlx::query("DELETE FROM scenes WHERE outline_id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete act scenes: {}", e)))?;
         
         // Then delete the act
         sqlx::query("DELETE FROM outline_acts WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete outline act: {}", e)))?;
         
@@ -156,7 +156,7 @@ impl OutlineActOps {
             "SELECT MAX(position) FROM outline_acts WHERE outline_id = ?"
         )
         .bind(outline_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max position: {}", e)))?;
         
@@ -170,7 +170,7 @@ impl OutlineActOps {
         )
         .bind(outline_id)
         .bind(act_type)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max act number: {}", e)))?;
         
@@ -187,7 +187,7 @@ impl OutlineActOps {
             .bind(Utc::now())
             .bind(&act_id)
             .bind(outline_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to reorder act: {}", e)))?;
         }
@@ -209,7 +209,7 @@ impl OutlineActOps {
         )
         .bind(outline_id)
         .bind(&search_query)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to search outline acts: {}", e)))?;
         
@@ -223,7 +223,7 @@ impl OutlineActOps {
         )
         .bind(outline_id)
         .bind(act_type)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get act count by type: {}", e)))?;
         
@@ -236,7 +236,7 @@ impl OutlineActOps {
             "SELECT COUNT(*) FROM outline_acts WHERE outline_id = ?"
         )
         .bind(outline_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total act count: {}", e)))?;
         
@@ -267,7 +267,7 @@ impl OutlineActOps {
             .bind(act.position)
             .bind(act.created_at)
             .bind(act.updated_at)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create outline act: {}", e)))?;
             
@@ -284,14 +284,14 @@ impl OutlineActOps {
             "DELETE FROM scenes WHERE outline_id IN (SELECT id FROM outline_acts WHERE outline_id = ?)"
         )
         .bind(outline_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete act scenes: {}", e)))?;
         
         // Then delete all acts
         sqlx::query("DELETE FROM outline_acts WHERE outline_id = ?")
             .bind(outline_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete outline acts: {}", e)))?;
         

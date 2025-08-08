@@ -1,78 +1,72 @@
 //! AI Response Card management commands
 
 use crate::models::ai_card::{AIResponseCard, CreateAICardRequest, UpdateAICardRequest, AICardFilter};
-use crate::AppState;
-use tauri::State;
+use crate::database::get_pool;
+use crate::error::Result;
 
 #[tauri::command]
 pub async fn create_ai_card(
-    state: State<'_, AppState>,
     request: CreateAICardRequest,
 ) -> Result<AIResponseCard, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
-    AIResponseCard::create(pool, request)
+    AIResponseCard::create(&pool, request)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_ai_card(
-    state: State<'_, AppState>,
     id: String,
 ) -> Result<AIResponseCard, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
-    AIResponseCard::get_by_id(pool, &id)
+    AIResponseCard::get_by_id(&pool, &id)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_ai_cards(
-    state: State<'_, AppState>,
     filter: AICardFilter,
 ) -> Result<Vec<AIResponseCard>, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
-    AIResponseCard::get_filtered(pool, filter)
+    AIResponseCard::get_filtered(&pool, filter)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn update_ai_card(
-    state: State<'_, AppState>,
     id: String,
     request: UpdateAICardRequest,
 ) -> Result<AIResponseCard, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
-    AIResponseCard::update(pool, &id, request)
+    AIResponseCard::update(&pool, &id, request)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn delete_ai_card(
-    state: State<'_, AppState>,
     id: String,
 ) -> Result<(), String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
-    AIResponseCard::delete(pool, &id)
+    AIResponseCard::delete(&pool, &id)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_ai_cards_by_project(
-    state: State<'_, AppState>,
     project_id: String,
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<Vec<AIResponseCard>, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     let filter = AICardFilter {
         project_id: Some(project_id),
@@ -84,19 +78,18 @@ pub async fn get_ai_cards_by_project(
         offset,
     };
     
-    AIResponseCard::get_filtered(pool, filter)
+    AIResponseCard::get_filtered(&pool, filter)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_ai_cards_by_document(
-    state: State<'_, AppState>,
     document_id: String,
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<Vec<AIResponseCard>, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     let filter = AICardFilter {
         project_id: None,
@@ -108,19 +101,18 @@ pub async fn get_ai_cards_by_document(
         offset,
     };
     
-    AIResponseCard::get_filtered(pool, filter)
+    AIResponseCard::get_filtered(&pool, filter)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_stacked_ai_cards(
-    state: State<'_, AppState>,
     project_id: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<Vec<AIResponseCard>, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     let filter = AICardFilter {
         project_id,
@@ -132,19 +124,18 @@ pub async fn get_stacked_ai_cards(
         offset,
     };
     
-    AIResponseCard::get_filtered(pool, filter)
+    AIResponseCard::get_filtered(&pool, filter)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn get_starred_ai_cards(
-    state: State<'_, AppState>,
     project_id: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<Vec<AIResponseCard>, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     let filter = AICardFilter {
         project_id,
@@ -156,20 +147,19 @@ pub async fn get_starred_ai_cards(
         offset,
     };
     
-    AIResponseCard::get_filtered(pool, filter)
+    AIResponseCard::get_filtered(&pool, filter)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn toggle_ai_card_stack(
-    state: State<'_, AppState>,
     id: String,
 ) -> Result<AIResponseCard, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     // Get current card to toggle its stacked state
-    let current_card = AIResponseCard::get_by_id(pool, &id)
+    let current_card = AIResponseCard::get_by_id(&pool, &id)
         .await
         .map_err(|e| e.to_string())?;
     
@@ -181,20 +171,19 @@ pub async fn toggle_ai_card_stack(
         tags: None,
     };
     
-    AIResponseCard::update(pool, &id, request)
+    AIResponseCard::update(&pool, &id, request)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn toggle_ai_card_star(
-    state: State<'_, AppState>,
     id: String,
 ) -> Result<AIResponseCard, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     // Get current card to toggle its starred state
-    let current_card = AIResponseCard::get_by_id(pool, &id)
+    let current_card = AIResponseCard::get_by_id(&pool, &id)
         .await
         .map_err(|e| e.to_string())?;
     
@@ -206,20 +195,19 @@ pub async fn toggle_ai_card_star(
         tags: None,
     };
     
-    AIResponseCard::update(pool, &id, request)
+    AIResponseCard::update(&pool, &id, request)
         .await
         .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub async fn toggle_ai_card_collapse(
-    state: State<'_, AppState>,
     id: String,
 ) -> Result<AIResponseCard, String> {
-    let pool = &state.db_pool;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     // Get current card to toggle its collapsed state
-    let current_card = AIResponseCard::get_by_id(pool, &id)
+    let current_card = AIResponseCard::get_by_id(&pool, &id)
         .await
         .map_err(|e| e.to_string())?;
     
@@ -231,7 +219,7 @@ pub async fn toggle_ai_card_collapse(
         tags: None,
     };
     
-    AIResponseCard::update(pool, &id, request)
+    AIResponseCard::update(&pool, &id, request)
         .await
         .map_err(|e| e.to_string())
 }

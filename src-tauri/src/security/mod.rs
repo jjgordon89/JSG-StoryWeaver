@@ -27,6 +27,9 @@ pub async fn init(app_handle: &AppHandle) -> Result<(), StoryWeaverError> {
     // Initialize encryption
     encryption::init(app_handle).await?;
     
+    // Initialize API key manager
+    api_keys::init(app_handle.clone()).await?;
+    
     // Initialize audit logging
     audit::init().await?;
     

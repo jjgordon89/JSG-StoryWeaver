@@ -472,6 +472,7 @@ pub struct OutlineAct {
     pub title: String,
     pub position: i32,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// Act type enumeration
@@ -591,6 +592,7 @@ impl OutlineAct {
             title,
             position,
             created_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 }
@@ -612,6 +614,37 @@ impl Scene {
             credit_estimate: None,
             is_validated: false,
             validation_issues: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
+}
+
+/// Style example model - for storing user writing style examples and AI analysis
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct StyleExample {
+    pub id: String,
+    pub project_id: String,
+    pub user_id: Option<String>,
+    pub example_text: String,
+    pub analysis_result: Option<String>, // JSON string containing AI analysis
+    pub generated_style_prompt: Option<String>, // AI-generated style prompt based on analysis
+    pub word_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl StyleExample {
+    pub fn new(project_id: String, user_id: Option<String>, example_text: String) -> Self {
+        let word_count = example_text.split_whitespace().count() as i32;
+        Self {
+            id: Uuid::new_v4().to_string(),
+            project_id,
+            user_id,
+            example_text,
+            analysis_result: None,
+            generated_style_prompt: None,
+            word_count,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

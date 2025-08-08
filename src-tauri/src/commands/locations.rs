@@ -97,7 +97,7 @@ pub async fn get_location(id: String) -> CommandResponse<Option<Location>> {
         
         let location = sqlx::query_as::<_, Location>("SELECT * FROM locations WHERE id = ?")
             .bind(&id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get location: {}", e)))?;
         
@@ -116,7 +116,7 @@ pub async fn update_location(request: UpdateLocationRequest) -> CommandResponse<
         // Get existing location
         let mut location = sqlx::query_as::<_, Location>("SELECT * FROM locations WHERE id = ?")
             .bind(&request.id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get location: {}", e)))?
             .ok_or_else(|| crate::error::StoryWeaverError::Internal { message: "Location not found".to_string() })?;
@@ -290,7 +290,7 @@ pub async fn get_location_hierarchy(location_id: String) -> CommandResponse<Loca
         // Get the main location
         let location = sqlx::query_as::<_, Location>("SELECT * FROM locations WHERE id = ?")
             .bind(&location_id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get location: {}", e)))?
             .ok_or_else(|| crate::error::StoryWeaverError::Internal { message: "Location not found".to_string() })?;

@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id, event_type, category, severity, description, \n                context_data, project_id, document_id, created_at\n            FROM audit_logs\n            WHERE \n                (? IS NULL OR category = ?) AND\n                (? IS NULL OR severity = ?)\n            ORDER BY created_at DESC\n            LIMIT ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "event_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "severity",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_data",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "project_id",
+        "ordinal": 6,
+        "type_info": "Int64"
+      },
+      {
+        "name": "document_id",
+        "ordinal": 7,
+        "type_info": "Int64"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "502ced2acfb6929cd3dce44e57fa9e0a09ae5dfb98f0a0b11ee4b79de7a5e753"
+}

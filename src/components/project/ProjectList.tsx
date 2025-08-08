@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProjectCard from './ProjectCard';
 import ProjectPreview from './ProjectPreview';
 import { invoke } from '../../utils/tauriSafe';
+import { useProjectContext } from '../../contexts/ProjectContext';
 
 interface Project {
   id: string;
@@ -20,8 +21,8 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [previewProjectId, setPreviewProjectId] = useState<string | null>(null);
@@ -47,7 +48,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
 
   // Fetch documents when a project is selected
   useEffect(() => {
-    if (!selectedProject) return;
+    if (!selectedProjectId) return;
 
     const fetchDocuments = async () => {
       setLoading(true);
@@ -68,10 +69,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
     };
 
     fetchDocuments();
-  }, [selectedProject]);
+  }, [selectedProjectId]);
 
   const handleProjectClick = (projectId: string) => {
-    setSelectedProject(projectId === selectedProject ? null : projectId);
+    setSelectedProjectId(projectId === selectedProjectId ? null : projectId);
   };
 
   const handleDocumentClick = (documentId: number) => {
@@ -90,7 +91,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
 
   const handleOpenProject = () => {
     if (previewProjectId) {
-      setSelectedProject(previewProjectId);
+      setSelectedProjectId(previewProjectId);
       setPreviewProjectId(null);
     }
   };
@@ -103,7 +104,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
           <div key={project.id} onClick={() => handleProjectClick(project.id)}>
             <ProjectCard 
               project={project} 
-              isSelected={project.id === selectedProject}
+              isSelected={project.id === selectedProjectId}
               onPreview={handlePreviewClick}
             />
           </div>
@@ -120,7 +121,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
       )}
 
       {/* Documents list for selected project */}
-      {selectedProject && (
+      {selectedProjectId && (
         <div className="mt-4 border-t pt-4">
           <h3 className="text-lg font-semibold mb-2">Documents</h3>
           {loading ? (
@@ -145,7 +146,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
             className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
             onClick={() => {
               // This would open a dialog to create a new document
-              console.log('Create new document for project', selectedProject);
+              console.log('Create new document for project', selectedProjectId);
             }}
           >
             + New Document

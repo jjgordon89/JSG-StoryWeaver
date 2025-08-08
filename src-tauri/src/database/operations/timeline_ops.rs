@@ -1,7 +1,7 @@
 use crate::database::models::*;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, Row};
 use uuid::Uuid;
 use serde_json;
 
@@ -33,7 +33,7 @@ impl super::TimelineOps {
         .bind(&event.visibility)
         .bind(event.created_at)
         .bind(event.updated_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create timeline event: {}", e)))?;
         
@@ -46,20 +46,12 @@ impl super::TimelineOps {
             "SELECT * FROM timeline_events WHERE project_id = ? ORDER BY event_date, created_at"
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get timeline events: {}", e)))?;
         
         let mut events = Vec::new();
         for row in rows {
-            let characters_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("characters_involved").as_str()
-            ).unwrap_or_default();
-            
-            let locations_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("locations_involved").as_str()
-            ).unwrap_or_default();
-            
             events.push(TimelineEvent {
                 id: row.get("id"),
                 project_id: row.get("project_id"),
@@ -68,8 +60,8 @@ impl super::TimelineOps {
                 event_date: row.get("event_date"),
                 real_date: row.get("real_date"),
                 importance: row.get("importance"),
-                characters_involved,
-                locations_involved,
+                characters_involved: row.get("characters_involved"),
+                locations_involved: row.get("locations_involved"),
                 visibility: row.get("visibility"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
@@ -85,17 +77,9 @@ impl super::TimelineOps {
             "SELECT * FROM timeline_events WHERE id = ?"
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get timeline event: {}", e)))?;
-        
-        let characters_involved: Vec<String> = serde_json::from_str(
-            row.get::<String, _>("characters_involved").as_str()
-        ).unwrap_or_default();
-        
-        let locations_involved: Vec<String> = serde_json::from_str(
-            row.get::<String, _>("locations_involved").as_str()
-        ).unwrap_or_default();
         
         Ok(TimelineEvent {
             id: row.get("id"),
@@ -105,8 +89,8 @@ impl super::TimelineOps {
             event_date: row.get("event_date"),
             real_date: row.get("real_date"),
             importance: row.get("importance"),
-            characters_involved,
-            locations_involved,
+            characters_involved: row.get("characters_involved"),
+            locations_involved: row.get("locations_involved"),
             visibility: row.get("visibility"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
@@ -134,7 +118,7 @@ impl super::TimelineOps {
         .bind(&event.visibility)
         .bind(Utc::now())
         .bind(&event.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update timeline event: {}", e)))?;
         
@@ -145,7 +129,7 @@ impl super::TimelineOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM timeline_events WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete timeline event: {}", e)))?;
         
@@ -176,6 +160,7 @@ impl super::TimelineOps {
             EventImportance::Critical => "critical",
             EventImportance::Major => "major",
             EventImportance::Minor => "minor",
+            EventImportance::Background => "background",
         };
         
         let rows = sqlx::query(
@@ -183,20 +168,12 @@ impl super::TimelineOps {
         )
         .bind(project_id)
         .bind(importance_str)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get timeline events by importance: {}", e)))?;
         
         let mut events = Vec::new();
         for row in rows {
-            let characters_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("characters_involved").as_str()
-            ).unwrap_or_default();
-            
-            let locations_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("locations_involved").as_str()
-            ).unwrap_or_default();
-            
             events.push(TimelineEvent {
                 id: row.get("id"),
                 project_id: row.get("project_id"),
@@ -205,8 +182,8 @@ impl super::TimelineOps {
                 event_date: row.get("event_date"),
                 real_date: row.get("real_date"),
                 importance: row.get("importance"),
-                characters_involved,
-                locations_involved,
+                characters_involved: row.get("characters_involved"),
+                locations_involved: row.get("locations_involved"),
                 visibility: row.get("visibility"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),

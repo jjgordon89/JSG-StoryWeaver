@@ -3,7 +3,7 @@ use sqlx::{Pool, Sqlite};
 use std::path::{Path, PathBuf};
 use chrono::{Utc, DateTime};
 use tokio::fs;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 /// Database backup manager
 pub struct BackupManager;
@@ -31,7 +31,7 @@ impl BackupManager {
         
         // Generate backup filename
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
-        let backup_filename = match backup_name {
+        let backup_filename = match &backup_name {
             Some(name) => format!("{}_{}.db", name, timestamp),
             None => format!("backup_{}.db", timestamp),
         };
@@ -76,7 +76,7 @@ impl BackupManager {
         .bind(Utc::now())
         .bind(backup_name.is_none()) // If no name provided, it's an auto backup
         .bind(backup_name)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record backup: {}", e)))?;
         
@@ -162,7 +162,7 @@ impl BackupManager {
             ORDER BY created_at DESC
             "#,
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get backups: {}", e)))?;
         
@@ -211,7 +211,7 @@ impl BackupManager {
             "SELECT filename FROM backups WHERE id = ?",
             backup_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get backup: {}", e)))?
         .ok_or_else(|| StoryWeaverError::database(format!("Backup not found: {}", backup_id)))?;
@@ -251,7 +251,7 @@ impl BackupManager {
         // Delete the backup record
         sqlx::query("DELETE FROM backups WHERE id = ?")
             .bind(backup_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete backup record: {}", e)))?;
         
@@ -267,7 +267,7 @@ impl BackupManager {
         let last_auto_backup = sqlx::query_scalar::<_, Option<DateTime<Utc>>>(
             "SELECT MAX(created_at) FROM backups WHERE is_auto = 1"
         )
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get last auto backup: {}", e)))?;
         
@@ -275,7 +275,7 @@ impl BackupManager {
         let auto_backup_interval = sqlx::query_scalar::<_, Option<String>>(
             "SELECT value FROM settings WHERE key = 'auto_backup_interval'"
         )
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get auto backup interval: {}", e)))?
         .unwrap_or_else(|| "daily".to_string());
@@ -310,7 +310,7 @@ impl BackupManager {
         let max_auto_backups = sqlx::query_scalar::<_, Option<String>>(
             "SELECT value FROM settings WHERE key = 'max_auto_backups'"
         )
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max auto backups: {}", e)))?
         .unwrap_or_else(|| "10".to_string())
@@ -328,7 +328,7 @@ impl BackupManager {
             "#,
             max_auto_backups
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get old backups: {}", e)))?;
         

@@ -3,11 +3,13 @@
 use crate::commands::CommandResponse;
 use crate::error::{StoryWeaverError, Result};
 use crate::ai::{AIProviderManager, AIContext};
-use crate::database::{get_pool, StoryBibleOps, CharacterTraitOps, WorldElementOps};
-use crate::database::models::{StoryBible, CharacterTrait, WorldElement};
+use crate::database::{get_pool};
+use crate::database::operations::{StoryBibleOps, CharacterTraitOps, WorldElementOps, StyleExampleOps};
+use crate::database::models::{StoryBible, CharacterTrait, WorldElement, StyleExample};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateSynopsisRequest {
@@ -40,6 +42,25 @@ pub struct GenerateWorldElementRequest {
     pub existing_elements: Vec<String>,
     pub custom_prompt: Option<String>,
     pub creativity: Option<f32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateStyleAnalysisRequest {
+    pub project_id: String,
+    pub style_example_id: String,
+    pub example_text: String,
+    pub custom_prompt: Option<String>,
+    pub creativity: Option<f32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StyleAnalysisResponse {
+    pub analysis_result: String,
+    pub generated_style_prompt: String,
+    pub tokens_used: u32,
+    pub cost_estimate: f64,
+    pub provider: String,
+    pub model: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,7 +140,7 @@ Synopsis:",
         })
     }
     
-    generate(request, ai_manager.inner().clone()).await.into()
+    generate(request, ai_manager.inner().clone()).await
 }
 
 /// Generate character traits for a character
@@ -191,7 +212,7 @@ Generate {} new traits (one per line):",
 pub async fn generate_world_element(
     request: GenerateWorldElementRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(request: GenerateWorldElementRequest, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -269,7 +290,7 @@ pub async fn generate_outline_from_story_bible(
     custom_prompt: Option<String>,
     creativity: Option<f32>,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(project_id: String, custom_prompt: Option<String>, creativity: Option<f32>, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -355,7 +376,7 @@ Outline:",
         })
     }
     
-    generate(project_id, custom_prompt, creativity, ai_manager.inner().clone()).await.into()
+    generate(project_id, custom_prompt, creativity, ai_manager.inner().clone()).await
 }
 
 /// Generate scene content from outline context
@@ -367,7 +388,7 @@ pub async fn generate_scene_content(
     custom_prompt: Option<String>,
     creativity: Option<f32>,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(
         outline_id: String,
         scene_title: String,
@@ -411,5 +432,101 @@ Write the full scene content:",
         })
     }
     
-    generate(outline_id, scene_title, scene_summary, custom_prompt, creativity, ai_manager.inner().clone()).await.into()
+    generate(outline_id, scene_title, scene_summary, custom_prompt, creativity, ai_manager.inner().clone()).await
+}
+
+/// Analyze writing style from example text and generate style prompt
+#[tauri::command]
+pub async fn analyze_style_example(
+    request: GenerateStyleAnalysisRequest,
+    ai_manager: State<'_, Arc<AIProviderManager>>,
+) -> Result<StyleAnalysisResponse> {
+    async fn analyze(request: GenerateStyleAnalysisRequest, ai_manager: Arc<AIProviderManager>) -> Result<StyleAnalysisResponse> {
+        let pool = get_pool()?;
+        
+        // Build AI context for style analysis
+        let context = AIContext {
+            story_context: Some(format!("Analyzing writing style for project: {}", request.project_id)),
+            creativity_level: request.creativity,
+            feature_type: Some("style_analysis".to_string()),
+            ..Default::default()
+        };
+        
+        let base_prompt = format!(
+            "Analyze the following writing sample and provide a detailed style analysis. Then generate a concise style prompt that could be used to replicate this writing style.
+
+Writing Sample:
+{}
+
+Please provide:
+1. ANALYSIS: A detailed analysis of the writing style including:
+   - Sentence structure and length patterns
+   - Vocabulary choices and tone
+   - Narrative voice and perspective
+   - Pacing and rhythm
+   - Literary devices used
+   - Overall mood and atmosphere
+
+2. STYLE_PROMPT: A concise, actionable prompt (2-3 sentences) that captures the essence of this style for AI writing generation.
+
+Format your response as:
+ANALYSIS:
+[Your detailed analysis here]
+
+STYLE_PROMPT:
+[Your concise style prompt here]",
+            request.example_text
+        );
+        
+        let prompt = request.custom_prompt.unwrap_or(base_prompt);
+        
+        // Generate style analysis
+        let response = ai_manager.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        
+        // Parse the response to extract analysis and style prompt
+        let content = response.text;
+        let (analysis_result, generated_style_prompt) = if let Some(analysis_start) = content.find("ANALYSIS:") {
+            if let Some(prompt_start) = content.find("STYLE_PROMPT:") {
+                let analysis = content[analysis_start + 9..prompt_start].trim().to_string();
+                let style_prompt = content[prompt_start + 13..].trim().to_string();
+                (analysis, style_prompt)
+            } else {
+                // Fallback if format is not followed
+                let parts: Vec<&str> = content.splitn(2, "\n\n").collect();
+                if parts.len() >= 2 {
+                    (parts[0].to_string(), parts[1].to_string())
+                } else {
+                    (content.clone(), "Write in a similar style to the analyzed example.".to_string())
+                }
+            }
+        } else {
+            // Fallback if format is not followed
+            let parts: Vec<&str> = content.splitn(2, "\n\n").collect();
+            if parts.len() >= 2 {
+                (parts[0].to_string(), parts[1].to_string())
+            } else {
+                (content.clone(), "Write in a similar style to the analyzed example.".to_string())
+            }
+        };
+        
+        // Update the style example in the database with the analysis results
+        StyleExampleOps::update_analysis(
+            &pool,
+            &request.style_example_id,
+            Some(analysis_result.clone()),
+            Some(generated_style_prompt.clone())
+        ).await?;
+        
+        Ok(StyleAnalysisResponse {
+            analysis_result,
+            generated_style_prompt,
+            tokens_used: response.tokens_used,
+            cost_estimate: response.cost_estimate,
+            provider: response.provider,
+            model: response.model,
+        })
+    }
+    
+    analyze(request, ai_manager.inner().clone()).await
 }

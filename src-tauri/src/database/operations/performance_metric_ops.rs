@@ -37,7 +37,7 @@ impl PerformanceMetricOps {
         .bind(&metric.context_data)
         .bind(&metric.component.to_string())
         .bind(metric.recorded_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record performance metric: {}", e)))?;
         
@@ -58,7 +58,7 @@ impl PerformanceMetricOps {
         )
         .bind(metric_name)
         .bind(limit)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get metrics by name: {}", e)))?;
         
@@ -79,7 +79,7 @@ impl PerformanceMetricOps {
         )
         .bind(component.to_string())
         .bind(limit)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get metrics by component: {}", e)))?;
         
@@ -105,7 +105,7 @@ impl PerformanceMetricOps {
         .bind(start_time)
         .bind(end_time)
         .bind(limit)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get metrics in timerange: {}", e)))?;
         
@@ -118,7 +118,7 @@ impl PerformanceMetricOps {
         
         // Get total metrics count
         let total_metrics_count: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM performance_metrics")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count metrics: {}", e)))?;
         
@@ -130,7 +130,7 @@ impl PerformanceMetricOps {
             GROUP BY component
             "#,
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get metrics by component: {}", e)))?;
         
@@ -158,12 +158,12 @@ impl PerformanceMetricOps {
         
         // Get bottleneck counts
         let active_bottlenecks: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM performance_bottlenecks WHERE resolved = 0")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count active bottlenecks: {}", e)))?;
         
         let resolved_bottlenecks: i32 = sqlx::query_scalar("SELECT COUNT(*) FROM performance_bottlenecks WHERE resolved = 1")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count resolved bottlenecks: {}", e)))?;
         
@@ -175,7 +175,7 @@ impl PerformanceMetricOps {
             FROM query_performance
             "#,
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get query stats: {}", e)))?;
         
@@ -197,7 +197,7 @@ impl PerformanceMetricOps {
             LIMIT 10
             "#,
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get memory snapshots: {}", e)))?;
         
@@ -246,7 +246,7 @@ impl PerformanceMetricOps {
         .bind(&bottleneck.severity.to_string())
         .bind(bottleneck.detected_at)
         .bind(bottleneck.resolved)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record performance bottleneck: {}", e)))?;
         
@@ -268,7 +268,7 @@ impl PerformanceMetricOps {
         .bind(now)
         .bind(resolution_notes)
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to resolve bottleneck: {}", e)))?;
         
@@ -299,7 +299,7 @@ impl PerformanceMetricOps {
         .bind(snapshot.peak_memory_mb)
         .bind(&snapshot.component_breakdown)
         .bind(snapshot.recorded_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record memory snapshot: {}", e)))?;
         
@@ -347,7 +347,7 @@ impl PerformanceMetricOps {
         .bind(query_perf.is_slow)
         .bind(&query_perf.query_plan)
         .bind(query_perf.recorded_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record query performance: {}", e)))?;
         
@@ -359,7 +359,7 @@ impl PerformanceMetricOps {
         let pool = get_pool()?;
         
         let threshold_str: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = 'slow_query_threshold_ms'")
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get slow query threshold: {}", e)))?;
         
@@ -377,7 +377,7 @@ impl PerformanceMetricOps {
         
         // Get retention period from settings
         let retention_days: i64 = match sqlx::query_scalar::<_, Option<String>>("SELECT value FROM settings WHERE key = 'perf_metrics_retention_days'")
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get retention period: {}", e)))? {
                 Some(val) => val.parse().unwrap_or(30),
@@ -392,7 +392,7 @@ impl PerformanceMetricOps {
             "#,
         )
         .bind(format!("-{}", retention_days))
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to clean up old metrics: {}", e)))?;
         
@@ -404,7 +404,7 @@ impl PerformanceMetricOps {
             "#,
         )
         .bind(format!("-{}", retention_days))
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to clean up old query performance records: {}", e)))?;
         
@@ -416,7 +416,7 @@ impl PerformanceMetricOps {
             "#,
         )
         .bind(format!("-{}", retention_days / 2)) // Keep for half the time
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to clean up old memory snapshots: {}", e)))?;
         

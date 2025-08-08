@@ -1,7 +1,7 @@
 use crate::database::models::*;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, Row};
 use uuid::Uuid;
 use serde_json;
 
@@ -32,7 +32,7 @@ impl super::PlotThreadOps {
         .bind(&plot_thread.visibility)
         .bind(plot_thread.created_at)
         .bind(plot_thread.updated_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create plot thread: {}", e)))?;
         
@@ -45,20 +45,12 @@ impl super::PlotThreadOps {
             "SELECT * FROM plot_threads WHERE project_id = ? ORDER BY priority DESC, name"
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plot threads: {}", e)))?;
         
         let mut plot_threads = Vec::new();
         for row in rows {
-            let characters_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("characters_involved").as_str()
-            ).unwrap_or_default();
-            
-            let documents_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("documents_involved").as_str()
-            ).unwrap_or_default();
-            
             plot_threads.push(PlotThread {
                 id: row.get("id"),
                 project_id: row.get("project_id"),
@@ -66,8 +58,8 @@ impl super::PlotThreadOps {
                 description: row.get("description"),
                 status: row.get("status"),
                 priority: row.get("priority"),
-                characters_involved,
-                documents_involved,
+                characters_involved: row.get("characters_involved"),
+                documents_involved: row.get("documents_involved"),
                 visibility: row.get("visibility"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
@@ -83,17 +75,9 @@ impl super::PlotThreadOps {
             "SELECT * FROM plot_threads WHERE id = ?"
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plot thread: {}", e)))?;
-        
-        let characters_involved: Vec<String> = serde_json::from_str(
-            row.get::<String, _>("characters_involved").as_str()
-        ).unwrap_or_default();
-        
-        let documents_involved: Vec<String> = serde_json::from_str(
-            row.get::<String, _>("documents_involved").as_str()
-        ).unwrap_or_default();
         
         Ok(PlotThread {
             id: row.get("id"),
@@ -102,8 +86,8 @@ impl super::PlotThreadOps {
             description: row.get("description"),
             status: row.get("status"),
             priority: row.get("priority"),
-            characters_involved,
-            documents_involved,
+            characters_involved: row.get("characters_involved"),
+            documents_involved: row.get("documents_involved"),
             visibility: row.get("visibility"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
@@ -130,7 +114,7 @@ impl super::PlotThreadOps {
         .bind(&plot_thread.visibility)
         .bind(Utc::now())
         .bind(&plot_thread.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update plot thread: {}", e)))?;
         
@@ -141,7 +125,7 @@ impl super::PlotThreadOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM plot_threads WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete plot thread: {}", e)))?;
         
@@ -180,20 +164,12 @@ impl super::PlotThreadOps {
         )
         .bind(project_id)
         .bind(status_str)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plot threads by status: {}", e)))?;
         
         let mut plot_threads = Vec::new();
         for row in rows {
-            let characters_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("characters_involved").as_str()
-            ).unwrap_or_default();
-            
-            let documents_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("documents_involved").as_str()
-            ).unwrap_or_default();
-            
             plot_threads.push(PlotThread {
                 id: row.get("id"),
                 project_id: row.get("project_id"),
@@ -201,8 +177,8 @@ impl super::PlotThreadOps {
                 description: row.get("description"),
                 status: row.get("status"),
                 priority: row.get("priority"),
-                characters_involved,
-                documents_involved,
+                characters_involved: row.get("characters_involved"),
+                documents_involved: row.get("documents_involved"),
                 visibility: row.get("visibility"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
@@ -225,20 +201,12 @@ impl super::PlotThreadOps {
         )
         .bind(project_id)
         .bind(priority_str)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plot threads by priority: {}", e)))?;
         
         let mut plot_threads = Vec::new();
         for row in rows {
-            let characters_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("characters_involved").as_str()
-            ).unwrap_or_default();
-            
-            let documents_involved: Vec<String> = serde_json::from_str(
-                row.get::<String, _>("documents_involved").as_str()
-            ).unwrap_or_default();
-            
             plot_threads.push(PlotThread {
                 id: row.get("id"),
                 project_id: row.get("project_id"),
@@ -246,8 +214,8 @@ impl super::PlotThreadOps {
                 description: row.get("description"),
                 status: row.get("status"),
                 priority: row.get("priority"),
-                characters_involved,
-                documents_involved,
+                characters_involved: row.get("characters_involved"),
+                documents_involved: row.get("documents_involved"),
                 visibility: row.get("visibility"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
@@ -272,7 +240,7 @@ impl super::PlotThreadOps {
         .bind(status_str)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update plot thread status: {}", e)))?;
         

@@ -30,7 +30,7 @@ impl DeletedItemOps {
         .bind(&deleted_item.deletion_reason)
         .bind(deleted_item.deleted_at)
         .bind(deleted_item.can_restore)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create deleted item: {}", e)))?;
         
@@ -41,7 +41,7 @@ impl DeletedItemOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<DeletedItem>> {
         let deleted_item = sqlx::query_as::<_, DeletedItem>("SELECT * FROM deleted_items WHERE id = ?")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get deleted item: {}", e)))?;
         
@@ -53,7 +53,7 @@ impl DeletedItemOps {
         let deleted_items = sqlx::query_as::<_, DeletedItem>(
             "SELECT * FROM deleted_items ORDER BY deleted_at DESC"
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get deleted items: {}", e)))?;
         
@@ -66,7 +66,7 @@ impl DeletedItemOps {
             "SELECT * FROM deleted_items WHERE item_type = ? ORDER BY deleted_at DESC"
         )
         .bind(item_type)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get deleted items by type: {}", e)))?;
         
@@ -79,7 +79,7 @@ impl DeletedItemOps {
             "SELECT * FROM deleted_items WHERE parent_id = ? ORDER BY deleted_at DESC"
         )
         .bind(parent_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get deleted items by parent: {}", e)))?;
         
@@ -100,7 +100,7 @@ impl DeletedItemOps {
         .bind(&deleted_item.deletion_reason)
         .bind(deleted_item.can_restore)
         .bind(&deleted_item.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update deleted item: {}", e)))?;
         
@@ -111,7 +111,7 @@ impl DeletedItemOps {
     pub async fn permanently_delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM deleted_items WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to permanently delete item: {}", e)))?;
         
@@ -121,7 +121,7 @@ impl DeletedItemOps {
     /// Empty trash (delete all deleted items)
     pub async fn empty_trash(pool: &Pool<Sqlite>) -> Result<()> {
         sqlx::query("DELETE FROM deleted_items")
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to empty trash: {}", e)))?;
         

@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import ProjectList from '../../components/project/ProjectList';
 import StoryBible from '../story-bible/components/react/StoryBible';
 import { Book, FileText } from 'lucide-react';
+import { useProjectContext } from '../../contexts/ProjectContext';
 
 interface ProjectViewProps {
   onDocumentSelect?: (documentId: number) => void;
 }
 
 const ProjectView: React.FC<ProjectViewProps> = ({ onDocumentSelect }) => {
+  const { selectedProjectId } = useProjectContext();
   const [activeTab, setActiveTab] = useState<'projects' | 'story-bible'>('projects');
 
   return (
@@ -47,7 +49,17 @@ const ProjectView: React.FC<ProjectViewProps> = ({ onDocumentSelect }) => {
           </div>
         ) : (
           <div className="h-full">
-            <StoryBible />
+            {selectedProjectId ? (
+              <StoryBible projectId={selectedProjectId} />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                <div className="text-center">
+                  <Book className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No Project Selected</p>
+                  <p className="text-sm">Please select a project from the Projects tab to access the Story Bible.</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

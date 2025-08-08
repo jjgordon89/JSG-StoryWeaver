@@ -38,7 +38,7 @@ impl SceneOps {
         .bind(&scene.validation_issues)
         .bind(scene.created_at)
         .bind(scene.updated_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create scene: {}", e)))?;
         
@@ -58,7 +58,7 @@ impl SceneOps {
             "#,
         )
         .bind(outline_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get scenes: {}", e)))?;
         
@@ -77,7 +77,7 @@ impl SceneOps {
             "#,
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get scene: {}", e)))?;
         
@@ -97,7 +97,7 @@ impl SceneOps {
         )
         .bind(outline_id)
         .bind(scene_number)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get scene by number: {}", e)))?;
         
@@ -131,7 +131,7 @@ impl SceneOps {
         .bind(&scene.validation_issues)
         .bind(scene.updated_at)
         .bind(&scene.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update scene: {}", e)))?;
         
@@ -148,7 +148,7 @@ impl SceneOps {
         .bind(character_pov_ids)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update scene POV settings: {}", e)))?;
         
@@ -164,7 +164,7 @@ impl SceneOps {
         .bind(validation_issues)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update scene validation: {}", e)))?;
         
@@ -180,7 +180,7 @@ impl SceneOps {
         .bind(credit_estimate)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update scene estimates: {}", e)))?;
         
@@ -191,7 +191,7 @@ impl SceneOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM scenes WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete scene: {}", e)))?;
         
@@ -212,7 +212,7 @@ impl SceneOps {
         )
         .bind(outline_id)
         .bind(format!("%{}%", character_id))
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get scenes by character POV: {}", e)))?;
         
@@ -232,7 +232,7 @@ impl SceneOps {
             "#,
         )
         .bind(outline_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get validated scenes: {}", e)))?;
         
@@ -252,7 +252,7 @@ impl SceneOps {
             "#,
         )
         .bind(outline_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get unvalidated scenes: {}", e)))?;
         
@@ -276,7 +276,7 @@ impl SceneOps {
         .bind(outline_id)
         .bind(&search_query)
         .bind(&search_query)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to search scenes: {}", e)))?;
         
@@ -289,7 +289,7 @@ impl SceneOps {
             "SELECT COUNT(*) FROM scenes WHERE outline_id = ?"
         )
         .bind(outline_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get scene count: {}", e)))?;
         
@@ -302,7 +302,7 @@ impl SceneOps {
             "SELECT MAX(scene_number) FROM scenes WHERE outline_id = ?"
         )
         .bind(outline_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max scene number: {}", e)))?;
         
@@ -319,7 +319,7 @@ impl SceneOps {
             .bind(Utc::now())
             .bind(&scene_id)
             .bind(outline_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to reorder scene: {}", e)))?;
         }
@@ -333,7 +333,7 @@ impl SceneOps {
             "SELECT SUM(word_count_estimate) FROM scenes WHERE outline_id = ?"
         )
         .bind(outline_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total word count estimate: {}", e)))?;
         
@@ -346,7 +346,7 @@ impl SceneOps {
             "SELECT SUM(credit_estimate) FROM scenes WHERE outline_id = ?"
         )
         .bind(outline_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total credit estimate: {}", e)))?;
         
@@ -385,7 +385,7 @@ impl SceneOps {
             .bind(&scene.validation_issues)
             .bind(scene.created_at)
             .bind(scene.updated_at)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create scene: {}", e)))?;
             
@@ -399,7 +399,7 @@ impl SceneOps {
     pub async fn delete_by_outline(pool: &Pool<Sqlite>, outline_id: &str) -> Result<()> {
         sqlx::query("DELETE FROM scenes WHERE outline_id = ?")
             .bind(outline_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete scenes by outline: {}", e)))?;
         

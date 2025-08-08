@@ -28,7 +28,7 @@ pub struct UpdateProjectRequest {
 
 /// Create a new project
 #[tauri::command]
-pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Project> {
+pub async fn create_project(request: CreateProjectRequest) -> Result<Project> {
     async fn create(request: CreateProjectRequest) -> Result<Project> {
         let pool = get_pool()?;
         
@@ -44,34 +44,34 @@ pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Pr
         ProjectOps::create(&pool, project).await
     }
     
-    create(request).await.into()
+    create(request).await
 }
 
 /// Get all projects
 #[tauri::command]
-pub async fn get_projects() -> CommandResponse<Vec<Project>> {
+pub async fn get_projects() -> Result<Vec<Project>> {
     async fn get_all() -> Result<Vec<Project>> {
         let pool = get_pool()?;
         ProjectOps::get_all(pool).await
     }
     
-    get_all().await.into()
+    get_all().await
 }
 
 /// Get a project by ID
 #[tauri::command]
-pub async fn get_project(id: String) -> CommandResponse<Option<Project>> {
+pub async fn get_project(id: String) -> Result<Option<Project>> {
     async fn get(id: String) -> Result<Option<Project>> {
         let pool = get_pool()?;
         ProjectOps::get_by_id(&pool, &id).await
     }
     
-    get(id).await.into()
+    get(id).await
 }
 
 /// Update a project
 #[tauri::command]
-pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()> {
+pub async fn update_project(request: UpdateProjectRequest) -> Result<()> {
     async fn update(request: UpdateProjectRequest) -> Result<()> {
         let pool = get_pool()?;
         
@@ -103,29 +103,29 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
         ProjectOps::update(&pool, &project).await
     }
     
-    update(request).await.into()
+    update(request).await
 }
 
 /// Delete a project
 #[tauri::command]
-pub async fn delete_project(id: String) -> CommandResponse<()> {
+pub async fn delete_project(id: String) -> Result<()> {
     async fn delete(id: String) -> Result<()> {
         let pool = get_pool()?;
         ProjectOps::delete(&pool, &id).await
     }
     
-    delete(id).await.into()
+    delete(id).await
 }
 
 /// Update project word count
 #[tauri::command]
-pub async fn update_project_word_count(project_id: String) -> CommandResponse<()> {
+pub async fn update_project_word_count(project_id: String) -> Result<()> {
     async fn update_count(project_id: String) -> Result<()> {
         let pool = get_pool()?;
         ProjectOps::update_word_count(&pool, &project_id).await
     }
     
-    update_count(project_id).await.into()
+    update_count(project_id).await
 }
 
 /// Project summary for dashboard
@@ -148,7 +148,7 @@ pub struct RecentActivity {
 
 /// Get project summary with statistics
 #[tauri::command]
-pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectSummary> {
+pub async fn get_project_summary(project_id: String) -> Result<ProjectSummary> {
     async fn get_summary(project_id: String) -> Result<ProjectSummary> {
         let pool = get_pool()?;
         
@@ -162,7 +162,7 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
             "SELECT COUNT(*) FROM documents WHERE project_id = ?"
         )
         .bind(&project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to count documents: {}", e)))? as i32;
         
@@ -170,7 +170,7 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
             "SELECT COUNT(*) FROM characters WHERE project_id = ?"
         )
         .bind(&project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to count characters: {}", e)))? as i32;
         
@@ -178,7 +178,7 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
             "SELECT COUNT(*) FROM locations WHERE project_id = ?"
         )
         .bind(&project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to count locations: {}", e)))? as i32;
         
@@ -200,5 +200,5 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
         })
     }
     
-    get_summary(project_id).await.into()
+    get_summary(project_id).await
 }

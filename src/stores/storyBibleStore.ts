@@ -619,6 +619,31 @@ export const storyBibleActions = {
     }
   },
 
+  async generateSceneContent(outlineId: string, sceneTitle: string, sceneSummary: string, customPrompt?: string, creativity?: number): Promise<AIGenerationResponse | null> {
+    storyBibleStore.update(state => ({ ...state, isLoadingScenes: true, scenesError: null }));
+    
+    try {
+      const response = await invoke('generate_scene_content', { 
+        outlineId, 
+        sceneTitle, 
+        sceneSummary, 
+        customPrompt, 
+        creativity 
+      });
+      
+      if (response.success) {
+        storyBibleStore.update(state => ({ ...state, isLoadingScenes: false, scenesError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'scenesError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'scenesError');
+      return null;
+    }
+  },
+
   // UI Actions
   setActiveTab(tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes'): void {
     storyBibleStore.update(state => ({ ...state, activeTab: tab }));

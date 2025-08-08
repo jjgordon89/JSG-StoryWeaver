@@ -33,7 +33,7 @@ impl WorldElementOps {
         .bind(&world_element.original_project_id)
         .bind(world_element.created_at)
         .bind(world_element.updated_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create world element: {}", e)))?;
         
@@ -52,7 +52,7 @@ impl WorldElementOps {
             "#,
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get world elements: {}", e)))?;
         
@@ -71,7 +71,7 @@ impl WorldElementOps {
             "#,
         )
         .bind(series_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get series world elements: {}", e)))?;
         
@@ -90,7 +90,7 @@ impl WorldElementOps {
             "#,
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get visible world elements: {}", e)))?;
         
@@ -110,7 +110,7 @@ impl WorldElementOps {
         )
         .bind(project_id)
         .bind(element_type)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get world elements by type: {}", e)))?;
         
@@ -128,7 +128,7 @@ impl WorldElementOps {
             "#,
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get world element: {}", e)))?;
         
@@ -155,7 +155,7 @@ impl WorldElementOps {
         .bind(world_element.is_visible)
         .bind(world_element.updated_at)
         .bind(&world_element.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update world element: {}", e)))?;
         
@@ -173,7 +173,7 @@ impl WorldElementOps {
         .bind(is_visible)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update world element visibility: {}", e)))?;
         
@@ -188,7 +188,7 @@ impl WorldElementOps {
             "#,
         )
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete world element: {}", e)))?;
         
@@ -206,7 +206,7 @@ impl WorldElementOps {
         .bind(series_id)
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to share world element to series: {}", e)))?;
         
@@ -223,7 +223,7 @@ impl WorldElementOps {
         )
         .bind(Utc::now())
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to unshare world element from series: {}", e)))?;
         
@@ -246,7 +246,7 @@ impl WorldElementOps {
         .bind(project_id)
         .bind(&search_query)
         .bind(&search_query)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to search world elements: {}", e)))?;
         
@@ -280,7 +280,7 @@ impl WorldElementOps {
             .bind(&element.original_project_id)
             .bind(element.created_at)
             .bind(element.updated_at)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create world element: {}", e)))?;
             

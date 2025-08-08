@@ -20,7 +20,7 @@ pub async fn create_performance_metrics_table(pool: &Pool<Sqlite>) -> Result<()>
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create performance_metrics table: {}", e)))?;
     
@@ -41,7 +41,7 @@ pub async fn create_performance_metrics_table(pool: &Pool<Sqlite>) -> Result<()>
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create performance_bottlenecks table: {}", e)))?;
     
@@ -58,7 +58,7 @@ pub async fn create_performance_metrics_table(pool: &Pool<Sqlite>) -> Result<()>
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create memory_snapshots table: {}", e)))?;
     
@@ -78,7 +78,7 @@ pub async fn create_performance_metrics_table(pool: &Pool<Sqlite>) -> Result<()>
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create query_performance table: {}", e)))?;
     
@@ -98,7 +98,7 @@ pub async fn create_performance_metrics_table(pool: &Pool<Sqlite>) -> Result<()>
     
     for index_sql in indexes {
         sqlx::query(index_sql)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
     }
@@ -120,7 +120,7 @@ pub async fn create_performance_metrics_table(pool: &Pool<Sqlite>) -> Result<()>
         )
         .bind(key)
         .bind(value)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to insert performance setting: {}", e)))?;
     }

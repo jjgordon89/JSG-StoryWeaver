@@ -85,7 +85,7 @@ impl AIResponseCard {
         .bind(&request.tags)
         .bind(&now)
         .bind(&now)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create AI card: {}", e)))?;
         
@@ -98,7 +98,7 @@ impl AIResponseCard {
             "SELECT * FROM ai_response_cards WHERE id = ?"
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI card: {}", e)))?;
         
@@ -151,7 +151,7 @@ impl AIResponseCard {
         }
         
         let rows = sql_query
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get AI cards: {}", e)))?;
         
@@ -187,7 +187,8 @@ impl AIResponseCard {
         
         if let Some(stack_position) = request.stack_position {
             updates.push("stack_position = ?");
-            bindings.push(&stack_position.to_string());
+            let stack_position_str = stack_position.to_string();
+            bindings.push(&stack_position_str);
         }
         
         if let Some(tags) = &request.tags {
@@ -214,7 +215,7 @@ impl AIResponseCard {
         }
         
         sql_query
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update AI card: {}", e)))?;
         
@@ -225,7 +226,7 @@ impl AIResponseCard {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM ai_response_cards WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete AI card: {}", e)))?;
         

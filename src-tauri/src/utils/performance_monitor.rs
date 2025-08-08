@@ -300,7 +300,7 @@ impl PerformanceContext {
         let pool = crate::database::get_pool()?;
         
         let monitoring_enabled: Option<String> = sqlx::query_scalar("SELECT value FROM settings WHERE key = 'performance_monitoring_enabled'")
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get monitoring setting: {}", e)))?;
         

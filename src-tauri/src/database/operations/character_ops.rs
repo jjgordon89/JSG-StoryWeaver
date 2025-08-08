@@ -35,7 +35,7 @@ impl super::CharacterOps {
         .bind(character.created_at)
         .bind(character.updated_at)
         .bind(&character.metadata)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create character: {}", e)))?;
         
@@ -48,7 +48,7 @@ impl super::CharacterOps {
             "SELECT * FROM characters WHERE project_id = ? ORDER BY name"
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get characters: {}", e)))?;
         
@@ -78,7 +78,7 @@ impl super::CharacterOps {
         .bind(Utc::now())
         .bind(&character.metadata)
         .bind(&character.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update character: {}", e)))?;
         
@@ -89,7 +89,7 @@ impl super::CharacterOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM characters WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete character: {}", e)))?;
         

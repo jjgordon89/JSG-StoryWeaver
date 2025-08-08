@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Label } from '../../../../components/ui/label';
 import { Badge } from '../../../../components/ui/badge';
-import { Loader2, Plus, Search, Eye, Edit, Trash2, Check, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Search, Eye, Edit, Trash2, Check, Sparkles, Download } from 'lucide-react';
 
 interface ScenesManagerProps {
   projectId: string;
@@ -343,7 +343,16 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
 
     setIsGeneratingScenes(true);
     try {
-      const generatedContent = await generateScenes({
+      // Build story context from available information
+      const storyContext = [
+        createForm.purpose && `Purpose: ${createForm.purpose}`,
+        createForm.location && `Location: ${createForm.location}`,
+        createForm.mood && `Mood: ${createForm.mood}`,
+        createForm.conflict && `Conflict: ${createForm.conflict}`,
+        createForm.outcome && `Outcome: ${createForm.outcome}`
+      ].filter(Boolean).join('. ');
+
+      const response = await generateScenes({
         project_id: projectId,
         scene_type: createForm.scene_type,
         title: createForm.title,
@@ -352,19 +361,23 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
         character_pov: createForm.character_pov,
         location: createForm.location,
         mood: createForm.mood,
-        purpose: createForm.purpose
+        purpose: createForm.purpose,
+        story_context: storyContext || `A ${createForm.scene_type} scene titled "${createForm.title}"`,
+        existing_scenes: scenes.map(scene => scene.title)
       });
       
-      setCreateForm(prev => ({
-        ...prev,
-        content: generatedContent
-      }));
+      if (response?.generated_content) {
+        setCreateForm(prev => ({
+          ...prev,
+          content: response.generated_content
+        }));
+      }
     } catch (error) {
       console.error('Failed to generate scene content:', error);
     } finally {
       setIsGeneratingScenes(false);
     }
-  }, [createForm, projectId, generateScenes]);
+  }, [createForm, projectId, generateScenes, scenes]);
 
   const handleValidateScene = useCallback(async (sceneId: string) => {
     await validateScene(sceneId);
@@ -377,6 +390,52 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
       await loadScenes(projectId, seriesId);
     }
   }, [searchQuery, projectId, seriesId, searchScenes, loadScenes]);
+
+  const handleExportCSV = useCallback(() => {
+    if (scenes.length === 0) return;
+    
+    // Create CSV content
+    const headers = [
+      'Title', 'Type', 'Chapter', 'Scene Number', 'Character POV', 
+      'Location', 'Time of Day', 'Mood', 'Status', 'Word Count Target',
+      'Purpose', 'Conflict', 'Outcome', 'Visibility', 'Series Shared', 'Content'
+    ];
+    
+    const rows = scenes.map(scene => [
+      scene.title,
+      getSceneTypeLabel(scene.scene_type),
+      scene.chapter_number || '',
+      scene.scene_number || '',
+      scene.character_pov ? getCharacterName(scene.character_pov) : '',
+      scene.location || '',
+      getTimeOfDayLabel(scene.time_of_day || ''),
+      getMoodLabel(scene.mood || ''),
+      getStatusLabel(scene.status),
+      scene.word_count_target || '',
+      scene.purpose || '',
+      scene.conflict || '',
+      scene.outcome || '',
+      getVisibilityLabel(scene.visibility),
+      scene.series_shared ? 'Yes' : 'No',
+      scene.content.replace(/"/g, '""') // Escape quotes
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `scenes_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [scenes]);
 
   const handleFilterChange = useCallback((filterType: string, value: any) => {
     setSceneFilter({
@@ -403,10 +462,20 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             Plan and track individual scenes with detailed breakdowns, character POVs, and story progression.
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Scene
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportCSV}
+            variant="outline"
+            disabled={scenes.length === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+          <Button onClick={openCreateModal}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Scene
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}

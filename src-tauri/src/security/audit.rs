@@ -6,7 +6,7 @@
 use crate::error::StoryWeaverError;
 use crate::database::get_pool;
 use sqlx::{Pool, Sqlite};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDateTime};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -85,6 +85,9 @@ impl AuditLogger {
 
     /// Log an audit event
     pub async fn log_event(&self, event: AuditEvent) -> Result<i64, StoryWeaverError> {
+        let category_str = event.category.to_string();
+        let severity_str = event.severity.to_string();
+        
         let event_id = sqlx::query!(
             r#"
             INSERT INTO audit_logs (
@@ -95,8 +98,8 @@ impl AuditLogger {
             RETURNING id
             "#,
             event.event_type,
-            event.category.to_string(),
-            event.severity.to_string(),
+            category_str,
+            severity_str,
             event.description,
             event.context_data,
             event.project_id,
@@ -166,7 +169,7 @@ impl AuditLogger {
                 };
 
                 AuditEvent {
-                    id: Some(row.id),
+                    id: row.id,
                     event_type: row.event_type,
                     category,
                     severity,
@@ -174,7 +177,7 @@ impl AuditLogger {
                     context_data: row.context_data,
                     project_id: row.project_id,
                     document_id: row.document_id,
-                    created_at: row.created_at,
+                    created_at: row.created_at.map(|dt| DateTime::<Utc>::from_utc(dt, Utc)),
                 }
             })
             .collect();

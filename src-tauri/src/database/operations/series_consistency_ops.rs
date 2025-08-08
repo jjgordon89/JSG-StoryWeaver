@@ -76,8 +76,7 @@ impl SeriesConsistencyOps {
         // Get series information
         let series = crate::database::operations::series_ops::SeriesOps::get_by_id(pool, series_id)
             .await?
-            .ok_or_else(|| StoryWeaverError::NotFound {
-                resource: "Series".to_string(),
+            .ok_or_else(|| StoryWeaverError::SeriesNotFound {
                 id: series_id.to_string(),
             })?;
 
@@ -125,16 +124,16 @@ impl SeriesConsistencyOps {
                  WHERE c.project_id = ? AND ct.series_shared = true"
             )
             .bind(&project.id)
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get character traits: {}", e)))?;
             
             // Group traits by character name
             let mut project_characters: HashMap<String, Vec<CharacterTrait>> = HashMap::new();
-            for trait in traits {
+            for character_trait in traits {
                 // Extract character name from trait content or use a placeholder
-                let character_name = Self::extract_character_name_from_trait(&trait);
-                project_characters.entry(character_name).or_default().push(trait);
+                let character_name = Self::extract_character_name_from_trait(&character_trait);
+                project_characters.entry(character_name).or_default().push(character_trait);
             }
             
             // Add to global character data
@@ -175,7 +174,7 @@ impl SeriesConsistencyOps {
                 "SELECT * FROM world_elements WHERE project_id = ? AND series_shared = true"
             )
             .bind(&project.id)
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get world elements: {}", e)))?;
             
@@ -185,8 +184,8 @@ impl SeriesConsistencyOps {
                         element_name: element.name.clone(),
                         project_id: project.id.clone(),
                         element_type: element.element_type.clone(),
-                        description: element.description.clone(),
-                        details: element.details.clone(),
+                        description: element.description.clone().unwrap_or_default(),
+                        details: element.description.clone(),
                     }
                 );
             }
@@ -213,7 +212,7 @@ impl SeriesConsistencyOps {
         
         // Collect story bible data from all projects
         for project in projects {
-            if let Ok(Some(story_bible)) = crate::database::operations::story_bible_ops::StoryBibleOps::get_by_project(pool, &project.id).await {
+            if let Ok(story_bible) = crate::database::operations::story_bible_ops::StoryBibleOps::get_by_project(pool, &project.id).await {
                 story_bibles.push((project.clone(), story_bible));
             }
         }
@@ -272,10 +271,10 @@ impl SeriesConsistencyOps {
         let mut trait_conflicts = HashMap::new();
         
         for version in versions {
-            for trait in &version.traits {
-                trait_conflicts.entry(&trait.trait_type)
+            for character_trait in &version.traits {
+                trait_conflicts.entry(&character_trait.trait_type)
                     .or_insert_with(Vec::new)
-                    .push((version.project_id.clone(), trait.content.clone()));
+                    .push((version.project_id.clone(), character_trait.content.clone()));
             }
         }
         
@@ -378,11 +377,11 @@ impl SeriesConsistencyOps {
     }
     
     /// Extract character name from trait (simplified implementation)
-    fn extract_character_name_from_trait(trait: &CharacterTrait) -> String {
+    fn extract_character_name_from_trait(character_trait: &CharacterTrait) -> String {
         // This is a simplified implementation
         // In a real scenario, you might want to maintain a character name mapping
         // or extract names from trait content using NLP
-        format!("Character_{}", trait.character_id)
+        format!("Character_{}", character_trait.character_id)
     }
     
     /// Check if a collection of strings has conflicts (different values)
@@ -447,7 +446,7 @@ impl SeriesConsistencyOps {
     ) -> Result<Vec<ConsistencyConflict>> {
         let report = Self::generate_consistency_report(pool, series_id).await?;
         Ok(report.conflicts.into_iter()
-            .filter(|c| matches!(c.severity, severity))
+            .filter(|c| matches!(&c.severity, severity))
             .collect())
     }
 }

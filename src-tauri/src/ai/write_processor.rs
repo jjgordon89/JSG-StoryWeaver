@@ -2,7 +2,7 @@
 
 use super::{AIProvider, AIContext, WritingFeature, RewriteStyle};
 use crate::database::DbPool;
-use crate::database::operations::document_ops;
+use crate::database::operations::{document_ops, DocumentOps};
 use crate::error::StoryWeaverError;
 use anyhow::{Result, Context as AnyhowContext};
 use std::sync::Arc;
@@ -198,10 +198,10 @@ impl ContextBuilder {
         context_window: usize,
         db_pool: &DbPool,
     ) -> Result<AIContext> {
-        let mut context = AIContext::new();
+        let mut context = AIContext::default();
         
         // Get document content
-        let document = document_ops::get_by_id(db_pool, &document_id.to_string())
+        let document = DocumentOps::get_by_id(db_pool, &document_id.to_string())
             .await?
             .ok_or_else(|| StoryWeaverError::database(format!("Document with id {} not found", document_id)))?;
         
@@ -252,13 +252,13 @@ impl ContextBuilder {
         document_id: Option<i32>,
         db_pool: &DbPool,
     ) -> Result<AIContext> {
-        let mut context = AIContext::new();
+        let mut context = AIContext::default();
         
         context.selected_text = Some(selected_text.to_string());
         
         // If we have a document ID, get additional context
         if let Some(doc_id) = document_id {
-            let document = document_ops::get_by_id(db_pool, &doc_id.to_string())
+            let document = DocumentOps::get_by_id(db_pool, &doc_id.to_string())
                 .await?
                 .ok_or_else(|| StoryWeaverError::database(format!("Document with id {} not found", doc_id)))?;
             

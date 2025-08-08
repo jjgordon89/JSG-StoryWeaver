@@ -13,6 +13,7 @@ pub mod characters;
 pub mod locations;
 pub mod story_bible;
 pub mod story_bible_ai;
+pub mod style_examples;
 pub mod ai_history;
 pub mod ai_writing;
 pub mod ai_cards;
@@ -30,6 +31,7 @@ pub mod performance_commands;
 pub mod security_commands;
 pub mod project_preview_commands;
 pub mod series_consistency_commands;
+pub mod templates;
 
 /// Response wrapper for Tauri commands
 #[derive(Debug, Serialize)]

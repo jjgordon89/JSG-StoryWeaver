@@ -348,6 +348,70 @@
     };
     return colors[status] || '#6c757d';
   }
+
+  // AI Generation Functions
+  async function handleGenerateSceneContent() {
+    if (!createForm.title || !createForm.purpose) {
+      return;
+    }
+
+    try {
+      const sceneSummary = buildSceneSummary(createForm);
+      const response = await storyBibleActions.generateSceneContent(
+        '', // outline_id - we'll use empty string for now
+        createForm.title,
+        sceneSummary,
+        undefined, // custom_prompt
+        0.7 // creativity
+      );
+
+      if (response?.generated_content) {
+        createForm.content = response.generated_content;
+      }
+    } catch (error) {
+      console.error('Failed to generate scene content:', error);
+    }
+  }
+
+  async function handleGenerateSceneContentEdit() {
+    if (!editForm.title || !editForm.purpose) {
+      return;
+    }
+
+    try {
+      const sceneSummary = buildSceneSummary(editForm);
+      const response = await storyBibleActions.generateSceneContent(
+        '', // outline_id - we'll use empty string for now
+        editForm.title,
+        sceneSummary,
+        undefined, // custom_prompt
+        0.7 // creativity
+      );
+
+      if (response?.generated_content) {
+        editForm.content = response.generated_content;
+      }
+    } catch (error) {
+      console.error('Failed to generate scene content:', error);
+    }
+  }
+
+  function buildSceneSummary(form: any): string {
+    const parts = [];
+    
+    if (form.purpose) parts.push(`Purpose: ${form.purpose}`);
+    if (form.conflict) parts.push(`Conflict: ${form.conflict}`);
+    if (form.outcome) parts.push(`Outcome: ${form.outcome}`);
+    if (form.location) parts.push(`Location: ${form.location}`);
+    if (form.character_pov) {
+      const characterName = getCharacterName(form.character_pov);
+      parts.push(`POV Character: ${characterName}`);
+    }
+    if (form.mood) parts.push(`Mood: ${getMoodLabel(form.mood)}`);
+    if (form.time_of_day) parts.push(`Time: ${getTimeOfDayLabel(form.time_of_day)}`);
+    
+    return parts.join('. ');
+  }
   
   function formatSceneReference(scene: Scene): string {
     const parts = [];
@@ -715,13 +779,34 @@
     </div>
     
     <div class="form-group">
-      <label for="create-content">Scene Content:</label>
+      <div class="content-header">
+        <label for="create-content">Scene Content:</label>
+        <Button 
+          variant="secondary" 
+          size="small"
+          on:click={handleGenerateSceneContent}
+          disabled={state.isLoadingScenes || !createForm.title || !createForm.purpose}
+          title="Generate scene content with AI"
+        >
+          {#if state.isLoadingScenes}
+            <LoadingSpinner size="small" />
+            Generating...
+          {:else}
+            ✨ Generate with AI
+          {/if}
+        </Button>
+      </div>
       <TextArea
         id="create-content"
         bind:value={createForm.content}
         placeholder="Write your scene content or detailed breakdown..."
         rows={6}
       />
+      {#if createForm.content && createForm.content.length > 0}
+        <div class="content-info">
+          <span class="word-count">{createForm.content.split(' ').length} words</span>
+        </div>
+      {/if}
     </div>
     
     <div class="form-group">
@@ -905,13 +990,34 @@
     </div>
     
     <div class="form-group">
-      <label for="edit-content">Scene Content:</label>
+      <div class="content-header">
+        <label for="edit-content">Scene Content:</label>
+        <Button 
+          variant="secondary" 
+          size="small"
+          on:click={handleGenerateSceneContentEdit}
+          disabled={state.isLoadingScenes || !editForm.title || !editForm.purpose}
+          title="Generate scene content with AI"
+        >
+          {#if state.isLoadingScenes}
+            <LoadingSpinner size="small" />
+            Generating...
+          {:else}
+            ✨ Generate with AI
+          {/if}
+        </Button>
+      </div>
       <TextArea
         id="edit-content"
         bind:value={editForm.content}
         placeholder="Write your scene content or detailed breakdown..."
         rows={6}
       />
+      {#if editForm.content && editForm.content.length > 0}
+        <div class="content-info">
+          <span class="word-count">{editForm.content.split(' ').length} words</span>
+        </div>
+      {/if}
     </div>
     
     <div class="form-group">
@@ -1494,6 +1600,30 @@
   
   .icon {
     margin-right: 0.5rem;
+  }
+  
+  /* AI Generation Styles */
+  .content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  
+  .content-header label {
+    margin: 0;
+  }
+  
+  .content-info {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+  
+  .word-count {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
   }
   
   /* Responsive Design */

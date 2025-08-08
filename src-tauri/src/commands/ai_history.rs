@@ -64,7 +64,7 @@ pub struct AIGenerationSummary {
 
 /// Create a new AI generation history record
 #[tauri::command]
-pub async fn create_ai_history(request: CreateAIHistoryRequest) -> CommandResponse<AIGenerationHistory> {
+pub async fn create_ai_history(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
     async fn create(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
         let pool = get_pool()?;
         
@@ -96,23 +96,23 @@ pub async fn create_ai_history(request: CreateAIHistoryRequest) -> CommandRespon
         AIHistoryOps::create(&pool, record).await
     }
     
-    create(request).await.into()
+    create(request).await
 }
 
 /// Get AI generation history for a project
 #[tauri::command]
-pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> CommandResponse<Vec<AIGenerationHistory>> {
+pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
     async fn get_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
         let pool = get_pool()?;
         AIHistoryOps::get_by_project(&pool, &project_id, limit).await
     }
     
-    get_history(project_id, limit).await.into()
+    get_history(project_id, limit).await
 }
 
 /// Get AI usage statistics for a project
 #[tauri::command]
-pub async fn get_ai_usage_stats(project_id: String) -> CommandResponse<AIUsageStats> {
+pub async fn get_ai_usage_stats(project_id: String) -> Result<AIUsageStats> {
     async fn get_stats(project_id: String) -> Result<AIUsageStats> {
         let pool = get_pool()?;
         let history = AIHistoryOps::get_by_project(&pool, &project_id, None).await?;
@@ -196,12 +196,12 @@ pub async fn get_ai_usage_stats(project_id: String) -> CommandResponse<AIUsageSt
         })
     }
     
-    get_stats(project_id).await.into()
+    get_stats(project_id).await
 }
 
 /// Get AI generation history by document
 #[tauri::command]
-pub async fn get_ai_history_by_document(document_id: String) -> CommandResponse<Vec<AIGenerationHistory>> {
+pub async fn get_ai_history_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
     async fn get_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
         let pool = get_pool()?;
         
@@ -209,50 +209,50 @@ pub async fn get_ai_history_by_document(document_id: String) -> CommandResponse<
             "SELECT * FROM ai_generation_history WHERE document_id = ? ORDER BY created_at DESC"
         )
         .bind(&document_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get AI history: {}", e)))?;
         
         Ok(history)
     }
     
-    get_by_document(document_id).await.into()
+    get_by_document(document_id).await
 }
 
 /// Delete AI generation history record
 #[tauri::command]
-pub async fn delete_ai_history(id: String) -> CommandResponse<()> {
+pub async fn delete_ai_history(id: String) -> Result<()> {
     async fn delete(id: String) -> Result<()> {
         let pool = get_pool()?;
         
         sqlx::query("DELETE FROM ai_generation_history WHERE id = ?")
             .bind(&id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to delete AI history: {}", e)))?;
         
         Ok(())
     }
     
-    delete(id).await.into()
+    delete(id).await
 }
 
 /// Clear AI generation history for a project
 #[tauri::command]
-pub async fn clear_ai_history(project_id: String) -> CommandResponse<()> {
+pub async fn clear_ai_history(project_id: String) -> Result<()> {
     async fn clear(project_id: String) -> Result<()> {
         let pool = get_pool()?;
         
         sqlx::query("DELETE FROM ai_generation_history WHERE project_id = ?")
             .bind(&project_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to clear AI history: {}", e)))?;
         
         Ok(())
     }
     
-    clear(project_id).await.into()
+    clear(project_id).await
 }
 
 /// AI cost estimation for different providers and models
@@ -272,7 +272,7 @@ pub async fn calculate_cost_estimate(
     model: String,
     input_tokens: i32,
     output_tokens: i32,
-) -> CommandResponse<CostEstimate> {
+) -> Result<CostEstimate> {
     async fn calculate(provider: String, model: String, input_tokens: i32, output_tokens: i32) -> Result<CostEstimate> {
         // Cost calculation based on provider and model
         // These are approximate rates as of 2024 - should be updated regularly
@@ -344,12 +344,12 @@ pub async fn calculate_cost_estimate(
         })
     }
     
-    calculate(provider, model, input_tokens, output_tokens).await.into()
+    calculate(provider, model, input_tokens, output_tokens).await
 }
 
 /// Export AI generation history to CSV
 #[tauri::command]
-pub async fn export_ai_history(project_id: String) -> CommandResponse<String> {
+pub async fn export_ai_history(project_id: String) -> Result<String> {
     async fn export(project_id: String) -> Result<String> {
         let pool = get_pool()?;
         let history = AIHistoryOps::get_by_project(&pool, &project_id, None).await?;
@@ -381,5 +381,5 @@ pub async fn export_ai_history(project_id: String) -> CommandResponse<String> {
         Ok(csv_content)
     }
     
-    export(project_id).await.into()
+    export(project_id).await
 }

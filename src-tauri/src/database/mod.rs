@@ -71,7 +71,7 @@ pub fn get_pool() -> Result<Arc<DbPool>> {
 pub async fn health_check() -> Result<()> {
     let pool = get_pool()?;
     sqlx::query("SELECT 1")
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Health check failed: {}", e)))?;
     Ok(())
@@ -82,47 +82,47 @@ pub async fn get_stats() -> Result<DatabaseStats> {
     let pool = get_pool()?;
     
     let projects_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM projects")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let documents_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM documents")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let characters_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM characters")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let locations_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM locations")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let folders_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM folders")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let series_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM series")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let document_links_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM document_links")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let document_versions_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM document_versions")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     
     let deleted_items_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM deleted_items")
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .unwrap_or(0);
     

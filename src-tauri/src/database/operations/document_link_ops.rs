@@ -24,7 +24,7 @@ impl DocumentLinkOps {
         .bind(&link.to_document_id)
         .bind(link.link_order)
         .bind(link.created_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create document link: {}", e)))?;
         
@@ -35,7 +35,7 @@ impl DocumentLinkOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<DocumentLink>> {
         let link = sqlx::query_as::<_, DocumentLink>("SELECT * FROM document_links WHERE id = ?")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get document link: {}", e)))?;
         
@@ -48,7 +48,7 @@ impl DocumentLinkOps {
             "SELECT * FROM document_links WHERE from_document_id = ? ORDER BY link_order"
         )
         .bind(document_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get outgoing document links: {}", e)))?;
         
@@ -61,7 +61,7 @@ impl DocumentLinkOps {
             "SELECT * FROM document_links WHERE to_document_id = ? ORDER BY link_order"
         )
         .bind(document_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get incoming document links: {}", e)))?;
         
@@ -79,7 +79,7 @@ impl DocumentLinkOps {
         )
         .bind(document_id)
         .bind(document_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get all document links: {}", e)))?;
         
@@ -98,7 +98,7 @@ impl DocumentLinkOps {
         .bind(&link.to_document_id)
         .bind(link.link_order)
         .bind(&link.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update document link: {}", e)))?;
         
@@ -109,7 +109,7 @@ impl DocumentLinkOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM document_links WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete document link: {}", e)))?;
         
@@ -126,7 +126,7 @@ impl DocumentLinkOps {
         )
         .bind(document_id)
         .bind(document_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete document links: {}", e)))?;
         
@@ -158,7 +158,7 @@ impl DocumentLinkOps {
             "#,
             document_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get previous documents: {}", e)))?;
         
@@ -182,7 +182,7 @@ impl DocumentLinkOps {
             "#,
             document_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get next documents: {}", e)))?;
         

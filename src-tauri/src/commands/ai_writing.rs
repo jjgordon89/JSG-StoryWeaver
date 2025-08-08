@@ -173,13 +173,9 @@ pub async fn auto_write(
     document_id: i32,
     cursor_position: usize,
     settings: WriteSettings,
-) -> CommandResponse<WriteResult> {
+) -> Result<WriteResult> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
-    
-    match processor.auto_write(document_id, cursor_position, settings).await {
-        Ok(result) => CommandResponse::success(result),
-        Err(e) => CommandResponse::error(format!("Auto write failed: {}", e)), // More specific error message
-    }
+    processor.auto_write(document_id, cursor_position, settings).await
 }
 
 #[tauri::command]
@@ -188,13 +184,9 @@ pub async fn guided_write(
     document_id: i32,
     user_prompt: String,
     settings: WriteSettings,
-) -> CommandResponse<WriteResult> {
+) -> Result<WriteResult> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
-    
-    match processor.guided_write(document_id, &user_prompt, settings).await {
-        Ok(result) => CommandResponse::success(result),
-        Err(e) => CommandResponse::error(format!("Guided write failed: {}", e)), // More specific error message
-    }
+    processor.guided_write(document_id, &user_prompt, settings).await
 }
 
 // Streaming Tauri Commands
@@ -205,7 +197,7 @@ pub async fn auto_write_stream(
     document_id: i32,
     cursor_position: usize,
     settings: WriteSettings,
-) -> CommandResponse<StreamStartResponse> {
+) -> Result<StreamStartResponse> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     let stream_id = format!("auto_write_{}_{}", document_id, chrono::Utc::now().timestamp_millis());
     let stream_id_clone = stream_id.clone();
@@ -250,7 +242,7 @@ pub async fn auto_write_stream(
         }
     });
     
-    CommandResponse::success(StreamStartResponse {
+    Ok(StreamStartResponse {
         stream_id,
         success: true,
     })
@@ -263,7 +255,7 @@ pub async fn guided_write_stream(
     document_id: i32,
     user_prompt: String,
     settings: WriteSettings,
-) -> CommandResponse<StreamStartResponse> {
+) -> Result<StreamStartResponse> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     let stream_id = format!("guided_write_{}_{}", document_id, chrono::Utc::now().timestamp_millis());
     let stream_id_clone = stream_id.clone();
@@ -308,7 +300,7 @@ pub async fn guided_write_stream(
         }
     });
     
-    CommandResponse::success(StreamStartResponse {
+    Ok(StreamStartResponse {
         stream_id,
         success: true,
     })
@@ -342,7 +334,7 @@ pub async fn rewrite_text(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     settings: RewriteSettings,
-) -> CommandResponse<String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let rewrite_style = match settings.style.as_str() {
@@ -356,12 +348,9 @@ pub async fn rewrite_text(
                 _ => crate::ai::RewriteStyle::Rephrase,
             };
             
-            match provider.rewrite_text(&text, &rewrite_style).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Rewrite failed: {}", e)),
-            }
+            provider.rewrite_text(&text, &rewrite_style).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -370,7 +359,7 @@ pub async fn expand_text(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     settings: ExpandSettings,
-) -> CommandResponse<String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -383,12 +372,9 @@ pub async fn expand_text(
                 options
             });
             
-            match provider.expand_text(&text, &context).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Expand failed: {}", e)),
-            }
+            provider.expand_text(&text, &context).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -397,7 +383,7 @@ pub async fn describe_scene(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     focus: Option<String>,
-) -> CommandResponse<String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -410,12 +396,9 @@ pub async fn describe_scene(
                 });
             }
             
-            match provider.describe_scene(&text, &context).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Describe scene failed: {}", e)),
-            }
+            provider.describe_scene(&text, &context).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -424,7 +407,7 @@ pub async fn brainstorm(
     state: State<'_, Arc<AIProviderManager>>,
     prompt: String,
     settings: BrainstormSettings,
-) -> CommandResponse<Vec<String>> {
+) -> Result<Vec<String>> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -436,12 +419,9 @@ pub async fn brainstorm(
                 options
             });
             
-            match provider.brainstorm(&prompt, &context).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Brainstorm failed: {}", e)),
-            }
+            provider.brainstorm(&prompt, &context).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -449,15 +429,12 @@ pub async fn brainstorm(
 pub async fn visualize_scene(
     state: State<'_, Arc<AIProviderManager>>,
     description: String,
-) -> CommandResponse<String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
-            match provider.generate_image(&description).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Visualize scene failed: {}", e)),
-            }
+            provider.generate_image(&description).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -466,15 +443,12 @@ pub async fn quick_edit(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     instruction: String,
-) -> CommandResponse<String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
-            match provider.quick_edit(&text, &instruction).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Quick edit failed: {}", e)),
-            }
+            provider.quick_edit(&text, &instruction).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -483,7 +457,7 @@ pub async fn quick_chat(
     state: State<'_, Arc<AIProviderManager>>,
     message: String,
     context: Option<String>,
-) -> CommandResponse<String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut ai_context = crate::ai::AIContext::default();
@@ -491,12 +465,9 @@ pub async fn quick_chat(
                 ai_context.story_context = Some(ctx);
             }
             
-            match provider.quick_chat(&message, &ai_context).await {
-                Ok(result) => CommandResponse::success(result),
-                Err(e) => CommandResponse::error(format!("Quick chat failed: {}", e)),
-            }
+            provider.quick_chat(&message, &ai_context).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }
 
@@ -507,17 +478,14 @@ pub async fn tone_shift_write(
     cursor_position: usize,
     tone: String,
     settings: WriteSettings,
-) -> CommandResponse<WriteResult> {
+) -> Result<WriteResult> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     
     // Create modified settings with the specified tone
     let mut tone_settings = settings;
     tone_settings.tone = tone;
     
-    match processor.auto_write(document_id, cursor_position, tone_settings).await {
-        Ok(result) => CommandResponse::success(result),
-        Err(e) => CommandResponse::error(format!("Tone shift write failed: {}", e)),
-    }
+    processor.auto_write(document_id, cursor_position, tone_settings).await
 }
 
 #[tauri::command]
@@ -525,7 +493,7 @@ pub async fn get_related_words(
     state: State<'_, Arc<AIProviderManager>>,
     word: String,
     context: Option<String>,
-) -> CommandResponse<Vec<String>> {
+) -> Result<Vec<String>> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut ai_context = crate::ai::AIContext::default();
@@ -533,11 +501,8 @@ pub async fn get_related_words(
                 ai_context.preceding_text = Some(ctx);
             }
             
-            match provider.related_words(&word, &ai_context).await {
-                Ok(words) => CommandResponse::success(words),
-                Err(e) => CommandResponse::error(format!("Failed to get related words: {}", e)),
-            }
+            provider.related_words(&word, &ai_context).await
         }
-        None => CommandResponse::error("No AI provider available".to_string()),
+        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
     }
 }

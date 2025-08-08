@@ -28,7 +28,7 @@ pub async fn create_background_tasks_table(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create background_tasks table: {}", e)))?;
     
@@ -44,7 +44,7 @@ pub async fn create_background_tasks_table(pool: &Pool<Sqlite>) -> Result<()> {
     
     for index_sql in indexes {
         sqlx::query(index_sql)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
     }

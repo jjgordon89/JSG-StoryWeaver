@@ -34,7 +34,7 @@ impl super::LocationOps {
         .bind(location.created_at)
         .bind(location.updated_at)
         .bind(&location.metadata)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create location: {}", e)))?;
         
@@ -47,7 +47,7 @@ impl super::LocationOps {
             "SELECT * FROM locations WHERE project_id = ? ORDER BY name"
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get locations: {}", e)))?;
         
@@ -76,7 +76,7 @@ impl super::LocationOps {
         .bind(Utc::now())
         .bind(&location.metadata)
         .bind(&location.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update location: {}", e)))?;
         
@@ -87,7 +87,7 @@ impl super::LocationOps {
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query("DELETE FROM locations WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete location: {}", e)))?;
         

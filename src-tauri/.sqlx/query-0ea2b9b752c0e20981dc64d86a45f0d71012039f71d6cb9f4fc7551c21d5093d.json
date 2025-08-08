@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, title, document_type as \"document_type: String\", word_count, updated_at\n            FROM documents \n            WHERE project_id = ? \n            ORDER BY updated_at DESC \n            LIMIT 5\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "document_type: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "word_count",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "0ea2b9b752c0e20981dc64d86a45f0d71012039f71d6cb9f4fc7551c21d5093d"
+}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '../../utils/tauriSafe';
-import SeriesConsistencyWidget from '../SeriesConsistencyWidget.svelte';
-import SeriesConsistencyReport from '../SeriesConsistencyReport.svelte';
+import { SeriesConsistencyWidgetReact, SeriesConsistencyReportReact } from '../SeriesConsistencyIntegration';
 
 interface Series {
   id: string;
@@ -149,6 +148,17 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
     }
   };
 
+  // Handle consistency report modal
+  const handleShowConsistencyReport = (seriesId: string) => {
+    setConsistencyReportSeriesId(seriesId);
+    setShowConsistencyReport(true);
+  };
+
+  const handleCloseConsistencyReport = () => {
+    setShowConsistencyReport(false);
+    setConsistencyReportSeriesId(null);
+  };
+
   if (loading) {
     return <div className="p-4">Loading series data...</div>;
   }
@@ -222,9 +232,18 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
             >
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">{s.name}</h4>
-                <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                  {s.project_count} projects
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                    {s.project_count} projects
+                  </span>
+                  {s.project_count > 1 && (
+                     <SeriesConsistencyWidgetReact 
+                       seriesId={s.id}
+                       size="small"
+                       onViewReport={() => handleShowConsistencyReport(s.id)}
+                     />
+                   )}
+                </div>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{s.description}</p>
             </div>
@@ -309,6 +328,24 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
                 <div className="text-xs text-gray-500">{project.description}</div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Series Consistency Report Modal */}
+      {showConsistencyReport && consistencyReportSeriesId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Series Consistency Report</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                onClick={handleCloseConsistencyReport}
+              >
+                ✕
+              </button>
+            </div>
+            <SeriesConsistencyReportReact seriesId={consistencyReportSeriesId} />
           </div>
         </div>
       )}

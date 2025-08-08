@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { storyBibleStore, storyBibleActions, filteredOutlines } from '../../../stores/storyBibleStore';
-  import type { Outline, CreateOutlineRequest, UpdateOutlineRequest } from '../../../types/storyBible';
+  import type { Outline, CreateOutlineRequest, UpdateOutlineRequest, GenerateOutlineRequest } from '../../../types/storyBible';
   
   import Button from '../../../components/ui/Button.svelte';
   import Input from '../../../components/ui/Input.svelte';
@@ -24,6 +24,7 @@
   let showDetailModal = false;
   let editingOutline: Outline | null = null;
   let viewingOutline: Outline | null = null;
+  let isGeneratingOutline = false;
   
   // Form state
   let createForm = {
@@ -187,7 +188,33 @@
       await storyBibleActions.deleteOutline(outlineId);
     }
   }
-  
+
+  async function generateOutline() {
+    if (!createForm.outline_type || !createForm.title) return;
+    
+    isGeneratingOutline = true;
+    
+    try {
+      const request: GenerateOutlineRequest = {
+        project_id: projectId,
+        outline_type: createForm.outline_type,
+        title: createForm.title,
+        chapter_number: createForm.chapter_number,
+        scene_number: createForm.scene_number
+      };
+      
+      const generatedContent = await storyBibleActions.generateOutline(request);
+      
+      if (generatedContent) {
+        createForm.content = generatedContent;
+      }
+    } catch (err) {
+      console.error('Failed to generate outline content:', err);
+    } finally {
+      isGeneratingOutline = false;
+    }
+  }
+
   async function handleSearch() {
     if (searchQuery.trim()) {
       await storyBibleActions.searchOutlines(projectId, searchQuery, seriesId);
@@ -491,13 +518,33 @@
     </div>
     
     <div class="form-group">
-      <label for="create-content">Content:</label>
+      <div class="field-header">
+        <label for="create-content">Content:</label>
+        <Button
+          variant="ghost"
+          size="small"
+          class="ai-generate-btn"
+          on:click={generateOutline}
+          disabled={!createForm.outline_type || !createForm.title || isGeneratingOutline}
+          title="Generate content with AI"
+        >
+          {#if isGeneratingOutline}
+            <span class="loading-spinner"></span>
+          {:else}
+            🤖
+          {/if}
+          Generate with AI
+        </Button>
+      </div>
       <TextArea
         id="create-content"
         bind:value={createForm.content}
         placeholder="Write your outline content..."
         rows={6}
       />
+      {#if !createForm.outline_type || !createForm.title}
+        <div class="hint-text">Select an outline type and enter a title to enable AI generation</div>
+      {/if}
     </div>
     
     <div class="form-row">
@@ -1096,5 +1143,62 @@
       flex-direction: column;
       gap: 0.5rem;
     }
+  }
+
+  /* AI Generation Styles */
+  .field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .field-header label {
+    margin: 0;
+  }
+
+  :global(.ai-generate-btn) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+  }
+
+  :global(.ai-generate-btn:hover:not(:disabled)) {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+  }
+
+  :global(.ai-generate-btn:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .loading-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-color);
+    border-top: 2px solid var(--text-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .hint-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-style: italic;
   }
 </style>

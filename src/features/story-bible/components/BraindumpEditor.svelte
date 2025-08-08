@@ -1,7 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { storyBibleActions } from '../../../stores/storyBibleStore';
-  import type { CreateStoryBibleRequest, UpdateStoryBibleRequest } from '../../../types/storyBible';
+  import { useAIStore } from '../../../stores/aiStore';
+  import type { CreateStoryBibleRequest, UpdateStoryBibleRequest, GenerateSynopsisRequest } from '../../../types/storyBible';
+  import type { BrainstormSettings } from '../../../stores/aiStore';
   
   import Button from '../../../components/ui/Button.svelte';
   import TextArea from '../../../components/ui/TextArea.svelte';
@@ -25,6 +27,16 @@
   let isEditing = false;
   let isSaving = false;
   let hasChanges = false;
+  let isGeneratingSynopsis = false;
+  let isBrainstorming = false;
+  let brainstormIdeas: string[] = [];
+  let brainstormPrompt = '';
+  let selectedCategory: BrainstormSettings['category'] = 'characters';
+  let keepersList: string[] = [];
+  let showBrainstormResults = false;
+  
+  // AI Store
+  const aiStore = useAIStore();
   
   // Form data
   let formData = {
@@ -63,6 +75,15 @@
     'Fantasy', 'Science Fiction', 'Mystery', 'Romance', 'Thriller',
     'Horror', 'Historical Fiction', 'Contemporary Fiction', 'Young Adult',
     'Literary Fiction', 'Adventure', 'Crime', 'Dystopian', 'Urban Fantasy'
+  ];
+  
+  // Brainstorm category options
+  const brainstormCategories = [
+    { value: 'characters', label: 'Characters' },
+    { value: 'plot_points', label: 'Plot Points' },
+    { value: 'settings', label: 'Settings & Worldbuilding' },
+    { value: 'conflicts', label: 'Conflicts & Tension' },
+    { value: 'themes', label: 'Themes & Messages' }
   ];
   
   // Watch for changes
@@ -137,6 +158,92 @@
   
   function handleGenreSelect(selectedGenre: string) {
     formData.genre = selectedGenre;
+  }
+  
+  async function generateSynopsis() {
+    if (!projectId || !formData.braindump.trim()) return;
+    
+    isGeneratingSynopsis = true;
+    
+    try {
+      const request: GenerateSynopsisRequest = {
+        project_id: projectId,
+        braindump: formData.braindump,
+        genre: formData.genre,
+        style: formData.style
+      };
+      
+      const response = await storyBibleActions.generateSynopsis(request);
+      
+      if (response && response.generated_content) {
+        formData.synopsis = response.generated_content;
+      }
+    } catch (error) {
+      console.error('Failed to generate synopsis:', error);
+    } finally {
+      isGeneratingSynopsis = false;
+    }
+  }
+  
+  async function generateBrainstormIdeas() {
+    if (!brainstormPrompt.trim()) return;
+    
+    isBrainstorming = true;
+    
+    try {
+      const settings: BrainstormSettings = {
+        category: selectedCategory,
+        count: 5,
+        creativity_level: 7
+      };
+      
+      // Build context from existing story data
+      let contextualPrompt = brainstormPrompt;
+      if (formData.genre) {
+        contextualPrompt += ` (Genre: ${formData.genre})`;
+      }
+      if (formData.braindump) {
+        contextualPrompt += ` Context: ${formData.braindump.slice(0, 200)}...`;
+      }
+      
+      const ideas = await aiStore.brainstorm(contextualPrompt, settings);
+      brainstormIdeas = ideas;
+      showBrainstormResults = true;
+    } catch (error) {
+      console.error('Failed to generate brainstorm ideas:', error);
+    } finally {
+      isBrainstorming = false;
+    }
+  }
+  
+  function addToKeepers(idea: string) {
+    if (!keepersList.includes(idea)) {
+      keepersList = [...keepersList, idea];
+    }
+  }
+  
+  function removeFromKeepers(idea: string) {
+    keepersList = keepersList.filter(keeper => keeper !== idea);
+  }
+  
+  function addKeepersToContent() {
+    if (keepersList.length === 0) return;
+    
+    const keepersText = '\n\n--- Brainstorm Ideas ---\n' + keepersList.map(idea => `• ${idea}`).join('\n') + '\n';
+    formData.braindump = formData.braindump + keepersText;
+    
+    // Clear keepers and hide results
+    keepersList = [];
+    showBrainstormResults = false;
+    brainstormIdeas = [];
+    brainstormPrompt = '';
+  }
+  
+  function clearBrainstormResults() {
+    brainstormIdeas = [];
+    keepersList = [];
+    showBrainstormResults = false;
+    brainstormPrompt = '';
   }
 </script>
 
@@ -254,7 +361,23 @@
     </Card>
     
     <!-- Synopsis -->
-    <Card title="Synopsis" class="synopsis-card">
+    <Card class="synopsis-card">
+      <div slot="header" class="card-header-with-actions">
+        <h3>Synopsis</h3>
+        {#if isEditing}
+          <Button
+            variant="secondary"
+            size="sm"
+            on:click={generateSynopsis}
+            disabled={isGeneratingSynopsis || !formData.braindump.trim()}
+            class="ai-generate-btn"
+          >
+            <span class="icon">{isGeneratingSynopsis ? '⏳' : '✨'}</span>
+            {isGeneratingSynopsis ? 'Generating...' : 'Generate with AI'}
+          </Button>
+        {/if}
+      </div>
+      
       {#if isEditing}
         <TextArea
           bind:value={formData.synopsis}
@@ -319,6 +442,123 @@
         </div>
       </div>
     </Card>
+    
+    <!-- AI Brainstorming -->
+    {#if isEditing}
+      <Card title="AI Brainstorming" class="brainstorm-card">
+        <div class="brainstorm-content">
+          <div class="brainstorm-controls">
+            <div class="brainstorm-input-row">
+              <div class="category-select">
+                <label for="brainstorm-category">Category:</label>
+                <Select
+                  id="brainstorm-category"
+                  bind:value={selectedCategory}
+                  options={brainstormCategories}
+                />
+              </div>
+              
+              <div class="prompt-input">
+                <Input
+                  bind:value={brainstormPrompt}
+                  placeholder="What would you like to brainstorm? (e.g., 'mysterious characters for a fantasy tavern')"
+                  class="brainstorm-prompt"
+                />
+              </div>
+              
+              <Button
+                variant="primary"
+                on:click={generateBrainstormIdeas}
+                disabled={isBrainstorming || !brainstormPrompt.trim()}
+                loading={isBrainstorming}
+              >
+                <span class="icon">{isBrainstorming ? '⏳' : '💡'}</span>
+                {isBrainstorming ? 'Generating...' : 'Generate Ideas'}
+              </Button>
+            </div>
+          </div>
+          
+          {#if showBrainstormResults}
+            <div class="brainstorm-results">
+              <div class="results-header">
+                <h4>Generated Ideas</h4>
+                <div class="results-actions">
+                  {#if keepersList.length > 0}
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      on:click={addKeepersToContent}
+                    >
+                      <span class="icon">📝</span>
+                      Add {keepersList.length} to Braindump
+                    </Button>
+                  {/if}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    on:click={clearBrainstormResults}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+              
+              <div class="ideas-list">
+                {#each brainstormIdeas as idea, index}
+                  <div class="idea-item">
+                    <div class="idea-content">
+                      <span class="idea-text">{idea}</span>
+                    </div>
+                    <div class="idea-actions">
+                      {#if keepersList.includes(idea)}
+                        <Button
+                          variant="success"
+                          size="sm"
+                          on:click={() => removeFromKeepers(idea)}
+                          title="Remove from keepers"
+                        >
+                          <span class="icon">👍</span>
+                        </Button>
+                      {:else}
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          on:click={() => addToKeepers(idea)}
+                          title="Add to keepers"
+                        >
+                          <span class="icon">👍</span>
+                        </Button>
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+              
+              {#if keepersList.length > 0}
+                <div class="keepers-list">
+                  <h5>Keepers List ({keepersList.length})</h5>
+                  <div class="keepers-items">
+                    {#each keepersList as keeper}
+                      <div class="keeper-item">
+                        <span class="keeper-text">{keeper}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          on:click={() => removeFromKeepers(keeper)}
+                          title="Remove from keepers"
+                        >
+                          <span class="icon">✕</span>
+                        </Button>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </div>
+      </Card>
+    {/if}
     
     <!-- Braindump -->
     <Card title="Creative Braindump" class="braindump-card">
@@ -502,6 +742,175 @@
     margin-right: 0.5rem;
   }
   
+  /* Card Header with Actions */
+  .card-header-with-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+  }
+  
+  .card-header-with-actions h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  
+  .ai-generate-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Brainstorming Styles */
+  .brainstorm-card {
+    margin-top: 1.5rem;
+  }
+
+  .brainstorm-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .brainstorm-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .brainstorm-input-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: end;
+  }
+
+  .category-select {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 150px;
+  }
+
+  .category-select label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .prompt-input {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .brainstorm-results {
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    background: var(--bg-secondary);
+    padding: 1rem;
+  }
+
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .results-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .results-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .ideas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .idea-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+  }
+
+  .idea-item:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .idea-content {
+    flex: 1;
+    margin-right: 1rem;
+  }
+
+  .idea-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+
+  .idea-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .keepers-list {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+  }
+
+  .keepers-list h5 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .keepers-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .keeper-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: #d4edda;
+    border: 1px solid #28a745;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .keeper-text {
+    flex: 1;
+    color: #155724;
+    font-weight: 500;
+  }
+
   /* Responsive Design */
   @media (max-width: 768px) {
     .editor-header {
@@ -524,6 +933,15 @@
     
     .metadata-grid {
       grid-template-columns: 1fr;
+    }
+    
+    .brainstorm-input-row {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    
+    .category-select {
+      min-width: auto;
     }
   }
   

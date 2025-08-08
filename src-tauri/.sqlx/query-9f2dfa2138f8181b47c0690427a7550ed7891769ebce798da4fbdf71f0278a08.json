@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO audit_logs (\n                event_type, category, severity, description, context_data, \n                project_id, document_id, created_at\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)\n            RETURNING id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9f2dfa2138f8181b47c0690427a7550ed7891769ebce798da4fbdf71f0278a08"
+}

@@ -12,7 +12,7 @@ mod performance_metrics;
 pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
     // Enable foreign keys
     sqlx::query("PRAGMA foreign_keys = ON")
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to enable foreign keys: {}", e)))?;
     
@@ -32,6 +32,7 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("009_performance_metrics", |pool| Box::pin(migration_009_performance_metrics(pool))),
         ("010_ai_response_cards", |pool| Box::pin(migration_010_ai_response_cards(pool))),
         ("011_story_bible_core", |pool| Box::pin(migration_011_story_bible_core(pool))),
+        ("012_style_examples", |pool| Box::pin(migration_012_style_examples(pool))),
     ];
     
     for (name, migration_fn) in migrations {
@@ -44,6 +45,37 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
     }
     
     Ok(())
+}
+
+async fn migration_012_style_examples(pool: &Pool<Sqlite>) -> Result<()> {
+    // Create style_examples table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS style_examples (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            user_id TEXT,
+            example_text TEXT NOT NULL,
+            analysis_result TEXT,
+            generated_style_prompt TEXT,
+            word_count INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )
+        "#,
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create style_examples table: {}", e)))?;
+
+    // Create index for style_examples
+    sqlx::query("CREATE INDEX IF NOT EXISTS idx_style_examples_project_id ON style_examples(project_id)")
+        .execute(&*pool)
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create style_examples index: {}", e)))?;
+
+    Ok()
 }
 
 /// Migration 010: Create AI response cards table
@@ -73,7 +105,7 @@ async fn migration_010_ai_response_cards(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create ai_response_cards table: {}", e)))?;
 
@@ -90,7 +122,7 @@ async fn migration_010_ai_response_cards(pool: &Pool<Sqlite>) -> Result<()> {
 
     for index_sql in indexes {
         sqlx::query(index_sql)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create ai_response_cards index: {}", e)))?;
     }
@@ -115,7 +147,7 @@ async fn migration_008_background_tasks(pool: &Pool<Sqlite>) -> Result<()> {
         )
         .bind(key)
         .bind(value)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to insert background task setting: {}", e)))?;
     }
@@ -140,7 +172,7 @@ async fn create_migrations_table(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create migrations table: {}", e)))?;
     
@@ -151,7 +183,7 @@ async fn create_migrations_table(pool: &Pool<Sqlite>) -> Result<()> {
 async fn is_migration_applied(pool: &Pool<Sqlite>, name: &str) -> Result<bool> {
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM migrations WHERE name = ?")
         .bind(name)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check migration status: {}", e)))?;
     
@@ -162,7 +194,7 @@ async fn is_migration_applied(pool: &Pool<Sqlite>, name: &str) -> Result<bool> {
 async fn mark_migration_applied(pool: &Pool<Sqlite>, name: &str) -> Result<()> {
     sqlx::query("INSERT INTO migrations (name) VALUES (?)")
         .bind(name)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to mark migration as applied: {}", e)))?;
     
@@ -187,7 +219,7 @@ async fn migration_001_initial_schema(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create projects table: {}", e)))?;
     
@@ -210,7 +242,7 @@ async fn migration_001_initial_schema(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create documents table: {}", e)))?;
     
@@ -242,7 +274,7 @@ async fn migration_002_story_bible_tables(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create characters table: {}", e)))?;
     
@@ -268,7 +300,7 @@ async fn migration_002_story_bible_tables(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create locations table: {}", e)))?;
     
@@ -292,7 +324,7 @@ async fn migration_002_story_bible_tables(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create timeline_events table: {}", e)))?;
     
@@ -315,7 +347,7 @@ async fn migration_002_story_bible_tables(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create plot_threads table: {}", e)))?;
     
@@ -344,7 +376,7 @@ async fn migration_003_ai_history_table(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create ai_generation_history table: {}", e)))?;
     
@@ -366,7 +398,7 @@ async fn migration_004_user_preferences(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create user_preferences table: {}", e)))?;
     
@@ -376,7 +408,7 @@ async fn migration_004_user_preferences(pool: &Pool<Sqlite>) -> Result<()> {
         INSERT OR IGNORE INTO user_preferences (id) VALUES ('default')
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to insert default preferences: {}", e)))?;
     
@@ -396,7 +428,7 @@ async fn migration_005_full_text_search(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create documents FTS table: {}", e)))?;
     
@@ -412,7 +444,7 @@ async fn migration_005_full_text_search(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create story bible FTS table: {}", e)))?;
     
@@ -425,7 +457,7 @@ async fn migration_005_full_text_search(pool: &Pool<Sqlite>) -> Result<()> {
         END
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create FTS insert trigger: {}", e)))?;
     
@@ -437,7 +469,7 @@ async fn migration_005_full_text_search(pool: &Pool<Sqlite>) -> Result<()> {
         END
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create FTS update trigger: {}", e)))?;
     
@@ -449,7 +481,7 @@ async fn migration_005_full_text_search(pool: &Pool<Sqlite>) -> Result<()> {
         END
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create FTS delete trigger: {}", e)))?;
     
@@ -474,11 +506,11 @@ async fn migration_006_indexes(pool: &Pool<Sqlite>) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)",
         "CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects(updated_at)",
         "CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON documents(updated_at)",
-    ]
+    ];
     
     for index_sql in indexes {
         sqlx::query(index_sql)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
     }
@@ -508,7 +540,7 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create story_bible table: {}", e)))?;
 
@@ -525,9 +557,43 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create character_traits table: {}", e)))?;
+
+    // Create folders table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS folders (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            parent_folder_id TEXT,
+            is_series BOOLEAN NOT NULL DEFAULT 0,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (parent_folder_id) REFERENCES folders(id) ON DELETE SET NULL
+        )
+        "#,
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create folders table: {}", e)))?;
+
+    // Create series table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS series (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            folder_id TEXT,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL
+        )
+        "#,
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create series table: {}", e)))?;
 
     // Create worldbuilding table
     sqlx::query(
@@ -549,7 +615,7 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create worldbuilding table: {}", e)))?;
 
@@ -571,7 +637,7 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create outlines table: {}", e)))?;
 
@@ -590,7 +656,7 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create outline_acts table: {}", e)))?;
 
@@ -617,7 +683,7 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create scenes table: {}", e)))?;
 
@@ -634,7 +700,7 @@ async fn migration_011_story_bible_core(pool: &Pool<Sqlite>) -> Result<()> {
 
     for index_sql in indexes {
         sqlx::query(index_sql)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create story bible index: {}", e)))?;
     }
@@ -656,7 +722,7 @@ async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create backups table: {}", e)))?;
     
@@ -676,7 +742,7 @@ async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create document_versions table: {}", e)))?;
     
@@ -695,7 +761,7 @@ async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create deleted_items table: {}", e)))?;
     
@@ -710,7 +776,7 @@ async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result
         )
         "#,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create settings table: {}", e)))?;
     
@@ -729,7 +795,7 @@ async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result
         )
         .bind(key)
         .bind(value)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to insert default setting: {}", e)))?;
     }
@@ -747,7 +813,7 @@ async fn migration_007_backup_recovery_versioning(pool: &Pool<Sqlite>) -> Result
     
     for index_sql in indexes {
         sqlx::query(index_sql)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
     }

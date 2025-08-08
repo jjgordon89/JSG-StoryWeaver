@@ -1,7 +1,7 @@
 use crate::database::models::*;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, Row};
 use uuid::Uuid;
 use serde_json;
 
@@ -40,7 +40,7 @@ impl StoryBibleOps {
             .bind(serde_json::to_string(&story_bible.global_character_pov_ids).unwrap_or_default())
             .bind(story_bible.updated_at)
             .bind(&story_bible.project_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update story bible: {}", e)))?;
         } else {
@@ -70,7 +70,7 @@ impl StoryBibleOps {
             .bind(serde_json::to_string(&story_bible.global_character_pov_ids).unwrap_or_default())
             .bind(story_bible.created_at)
             .bind(story_bible.updated_at)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create story bible: {}", e)))?;
         }
@@ -84,13 +84,11 @@ impl StoryBibleOps {
             "SELECT * FROM story_bible WHERE project_id = ?"
         )
         .bind(project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get story bible: {}", e)))?;
         
-        let global_character_pov_ids: Vec<String> = serde_json::from_str(
-            row.get::<String, _>("global_character_pov_ids").as_str()
-        ).unwrap_or_default();
+        let global_character_pov_ids: String = row.get("global_character_pov_ids");
         
         Ok(StoryBible {
             id: row.get("id"),
@@ -117,7 +115,7 @@ impl StoryBibleOps {
         .bind(braindump)
         .bind(Utc::now())
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update braindump: {}", e)))?;
         
@@ -132,7 +130,7 @@ impl StoryBibleOps {
         .bind(synopsis)
         .bind(Utc::now())
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update synopsis: {}", e)))?;
         
@@ -147,7 +145,7 @@ impl StoryBibleOps {
         .bind(genre)
         .bind(Utc::now())
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update genre: {}", e)))?;
         
@@ -163,7 +161,7 @@ impl StoryBibleOps {
         .bind(style_examples)
         .bind(Utc::now())
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update style: {}", e)))?;
         
@@ -196,7 +194,7 @@ impl StoryBibleOps {
         .bind(character_pov_ids_json)
         .bind(Utc::now())
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update POV settings: {}", e)))?;
         
@@ -207,7 +205,7 @@ impl StoryBibleOps {
     pub async fn delete(pool: &Pool<Sqlite>, project_id: &str) -> Result<()> {
         sqlx::query("DELETE FROM story_bible WHERE project_id = ?")
             .bind(project_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete story bible: {}", e)))?;
         

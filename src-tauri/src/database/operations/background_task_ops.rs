@@ -61,7 +61,7 @@ impl BackgroundTaskOps {
         .bind(&task.project_id)
         .bind(&task.document_id)
         .bind(metadata_json)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to save task: {}", e)))?;
         
@@ -76,7 +76,7 @@ impl BackgroundTaskOps {
             "#,
             task_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get task: {}", e)))?
         .ok_or_else(|| StoryWeaverError::internal(format!("Task not found: {}", task_id)))?;
@@ -91,7 +91,7 @@ impl BackgroundTaskOps {
             SELECT * FROM background_tasks ORDER BY created_at DESC
             "#,
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks: {}", e)))?;
         
@@ -119,7 +119,7 @@ impl BackgroundTaskOps {
             "#,
             status_str
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks by status: {}", e)))?;
         
@@ -139,7 +139,7 @@ impl BackgroundTaskOps {
             "#,
             project_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks by project: {}", e)))?;
         
@@ -159,7 +159,7 @@ impl BackgroundTaskOps {
             "#,
             document_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks by document: {}", e)))?;
         
@@ -179,7 +179,7 @@ impl BackgroundTaskOps {
             "#,
             task_id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete task: {}", e)))?;
         
@@ -196,7 +196,7 @@ impl BackgroundTaskOps {
             "#,
             format!("-{} days", days)
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to clean up old tasks: {}", e)))?;
         

@@ -11,6 +11,7 @@ import { StoryBibleTextDetector } from '../../utils/storyBibleTextDetection';
 import FocusMode from './FocusMode';
 import FocusModeSettings from './FocusModeSettings';
 import VersionHistory from './VersionHistory';
+import StoryBibleBoxes from './StoryBibleBoxes';
 import { AISelectionMenu, AIWritingPanel, AIQuickTools } from '../ai';
 import { Button } from '../ui/button';
 import { Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
@@ -503,25 +504,33 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
               </button>
             </div>
         </div>
-        <div className="flex flex-grow overflow-hidden">
-          <div 
-            ref={containerRef} 
-            className={`flex-grow overflow-hidden ${focusModeEnabled ? 'focus-mode-editor' : ''}`}
-          />
+        <div className="flex flex-col flex-grow overflow-hidden">
+          <div className="flex flex-grow overflow-hidden">
+            <div 
+              ref={containerRef} 
+              className={`flex-grow overflow-hidden ${focusModeEnabled ? 'focus-mode-editor' : ''}`}
+            />
+            
+            {/* AI Writing Panel */}
+            {showAIPanel && (
+              <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <AIWritingPanel
+                  isOpen={showAIPanel}
+                  onToggle={() => setShowAIPanel(!showAIPanel)}
+                  onInsertText={handleInsertText}
+                  onReplaceText={handleReplaceText}
+                  selectedText={selectedText}
+                  documentContext={content}
+                />
+              </div>
+            )}
+          </div>
           
-          {/* AI Writing Panel */}
-          {showAIPanel && (
-            <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <AIWritingPanel
-                isOpen={showAIPanel}
-                onToggle={() => setShowAIPanel(!showAIPanel)}
-                onInsertText={handleInsertText}
-                onReplaceText={handleReplaceText}
-                selectedText={selectedText}
-                documentContext={content}
-              />
-            </div>
-          )}
+          {/* Story Bible Boxes */}
+          <StoryBibleBoxes
+            projectId={documentId.toString()}
+            isVisible={storyBibleDetectionEnabled}
+          />
         </div>
         
         {/* AI Selection Menu */}

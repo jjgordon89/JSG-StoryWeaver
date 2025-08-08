@@ -220,7 +220,27 @@ pub fn run() {
             commands::story_bible_ai::generate_character_traits,
             commands::story_bible_ai::generate_world_element,
             commands::story_bible_ai::generate_outline_from_story_bible,
-            commands::story_bible_ai::generate_scene_content
+            commands::story_bible_ai::generate_scene_content,
+            commands::story_bible_ai::analyze_style_example,
+            
+            // Style Example commands
+            commands::style_examples::create_style_example,
+            commands::style_examples::get_style_examples_by_project,
+            commands::style_examples::get_analyzed_style_examples,
+            commands::style_examples::get_style_example_by_id,
+            commands::style_examples::update_style_example,
+            commands::style_examples::delete_style_example,
+            commands::style_examples::delete_style_examples_by_project,
+            
+            // Template commands
+            commands::templates::get_character_templates,
+            commands::templates::get_character_templates_by_archetype,
+            commands::templates::get_character_archetypes,
+            commands::templates::apply_character_template,
+            commands::templates::get_worldbuilding_templates,
+            commands::templates::get_worldbuilding_templates_by_type,
+            commands::templates::get_worldbuilding_element_types,
+            commands::templates::apply_worldbuilding_template
         ])
         .setup(|app| {
             // Initialize database on startup

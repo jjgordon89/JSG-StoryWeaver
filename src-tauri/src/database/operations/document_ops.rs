@@ -31,7 +31,7 @@ impl super::DocumentOps {
         .bind(document.created_at)
         .bind(document.updated_at)
         .bind(&document.metadata)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create document: {}", e)))?;
         
@@ -45,7 +45,7 @@ impl super::DocumentOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<Document>> {
         let document = sqlx::query_as::<_, Document>("SELECT * FROM documents WHERE id = ?")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get document: {}", e)))?;
         
@@ -58,7 +58,7 @@ impl super::DocumentOps {
             "SELECT * FROM documents WHERE project_id = ? ORDER BY order_index, created_at"
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get documents: {}", e)))?;
         
@@ -85,7 +85,7 @@ impl super::DocumentOps {
         .bind(Utc::now())
         .bind(&document.metadata)
         .bind(&document.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update document: {}", e)))?;
         
@@ -102,13 +102,13 @@ impl super::DocumentOps {
             "SELECT project_id FROM documents WHERE id = ?"
         )
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get project_id: {}", e)))?;
         
         sqlx::query("DELETE FROM documents WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete document: {}", e)))?;
         
@@ -132,7 +132,7 @@ impl super::DocumentOps {
         )
         .bind(project_id)
         .bind(query)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to search documents: {}", e)))?;
         

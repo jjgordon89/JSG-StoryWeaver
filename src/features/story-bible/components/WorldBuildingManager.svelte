@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { storyBibleStore, storyBibleActions, filteredWorldElements } from '../../../stores/storyBibleStore';
-  import type { WorldElement, CreateWorldElementRequest, UpdateWorldElementRequest } from '../../../types/storyBible';
+  import type { WorldElement, CreateWorldElementRequest, UpdateWorldElementRequest, GenerateWorldElementRequest } from '../../../types/storyBible';
+  import type { WorldBuildingTemplate } from '../../../types/templates';
+  import { TemplateService } from '../../../types/templates';
   
   import Button from '../../../components/ui/Button.svelte';
   import Input from '../../../components/ui/Input.svelte';
@@ -11,6 +13,8 @@
   import Modal from '../../../components/ui/Modal.svelte';
   import LoadingSpinner from '../../../components/ui/LoadingSpinner.svelte';
   import ErrorMessage from '../../../components/ui/ErrorMessage.svelte';
+  import TemplateSelector from '../../../components/templates/TemplateSelector.svelte';
+  import TemplateApplicationDialog from '../../../components/templates/TemplateApplicationDialog.svelte';
   
   export let projectId: string;
   export let seriesId: string | undefined = undefined;
@@ -24,6 +28,15 @@
   let showDetailModal = false;
   let editingElement: WorldElement | null = null;
   let viewingElement: WorldElement | null = null;
+  let isGeneratingWorldElement = false;
+  
+  // Template state
+  let showTemplateSelector = false;
+  let showTemplateDialog = false;
+  let worldBuildingTemplates: WorldBuildingTemplate[] = [];
+  let selectedTemplate: WorldBuildingTemplate | null = null;
+  let availableElementTypes: string[] = [];
+  let isLoadingTemplates = false;
   
   // Form state
   let createForm = {
@@ -77,10 +90,65 @@
   
   onMount(() => {
     loadWorldElements();
+    loadAvailableElementTypes();
   });
   
   async function loadWorldElements() {
     await storyBibleActions.loadWorldElements(projectId, seriesId);
+  }
+  
+  async function loadAvailableElementTypes() {
+    try {
+      availableElementTypes = await TemplateService.getWorldBuildingElementTypes();
+    } catch (error) {
+      console.error('Failed to load available element types:', error);
+    }
+  }
+  
+  async function loadWorldBuildingTemplates(elementType: string) {
+    try {
+      isLoadingTemplates = true;
+      worldBuildingTemplates = await TemplateService.getWorldBuildingTemplatesByType(elementType);
+    } catch (error) {
+      console.error('Failed to load worldbuilding templates:', error);
+      worldBuildingTemplates = [];
+    } finally {
+      isLoadingTemplates = false;
+    }
+  }
+  
+  async function openTemplateSelector() {
+    showTemplateSelector = true;
+  }
+  
+  async function handleTemplateSelected(event: CustomEvent<{ template: WorldBuildingTemplate; elementType: string }>) {
+    selectedTemplate = event.detail.template;
+    showTemplateSelector = false;
+    showTemplateDialog = true;
+  }
+  
+  async function handleTemplateApplied(event: CustomEvent<{ name: string; description: string; propertyOverrides: Record<string, any> }>) {
+    if (!selectedTemplate) return;
+    
+    try {
+      const { name, description, propertyOverrides } = event.detail;
+      
+      await TemplateService.applyWorldBuildingTemplate({
+        template_id: selectedTemplate.id,
+        project_id: projectId,
+        name,
+        description,
+        property_overrides: propertyOverrides
+      });
+      
+      // Reload world elements to show the new element
+      await loadWorldElements();
+      
+      showTemplateDialog = false;
+      selectedTemplate = null;
+    } catch (error) {
+      console.error('Failed to apply worldbuilding template:', error);
+    }
   }
   
   function openCreateModal() {
@@ -191,6 +259,48 @@
     return visibilityOptions.find(opt => opt.value === visibility)?.label || visibility;
   }
   
+  async function generateWorldElement() {
+    if (!projectId || !createForm.element_type) return;
+    
+    isGeneratingWorldElement = true;
+    
+    try {
+      // Get existing elements for context
+      const existingElements = worldElements.map(e => `${e.element_type}: ${e.name} - ${e.description}`);
+      
+      const request: GenerateWorldElementRequest = {
+        element_type: createForm.element_type,
+        story_context: 'World building element generation for story bible',
+        existing_elements: existingElements,
+        creativity: 0.7
+      };
+      
+      const response = await storyBibleActions.generateWorldElement(request);
+      
+      if (response && response.generated_content) {
+        // Parse the generated content and populate the form
+        const lines = response.generated_content.split('\n').filter(line => line.trim());
+        
+        // Try to extract name and description from the generated content
+        if (lines.length > 0) {
+          const firstLine = lines[0].trim();
+          // If the first line looks like a title/name, use it as name
+          if (firstLine.length < 100) {
+            createForm.name = firstLine.replace(/^(Name:|Title:)\s*/i, '');
+            createForm.description = lines.slice(1).join('\n').trim();
+          } else {
+            // Otherwise, use the entire content as description
+            createForm.description = response.generated_content.trim();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate world element:', error);
+    } finally {
+      isGeneratingWorldElement = false;
+    }
+  }
+  
   function getElementIcon(elementType: string): string {
     const icons: Record<string, string> = {
       location: '🏛️',
@@ -224,6 +334,10 @@
     </div>
     
     <div class="header-actions">
+      <Button variant="secondary" on:click={openTemplateSelector}>
+        <span class="icon">📋</span>
+        Use Template
+      </Button>
       <Button variant="primary" on:click={openCreateModal}>
         <span class="icon">➕</span>
         Add Element
@@ -404,13 +518,34 @@
     </div>
     
     <div class="form-group">
-      <label for="create-description">Description:</label>
+      <div class="field-header">
+        <label for="create-description">Description:</label>
+        <Button
+          variant="outline"
+          size="sm"
+          on:click={generateWorldElement}
+          disabled={isGeneratingWorldElement || !createForm.element_type}
+          class="ai-generate-btn"
+        >
+          {#if isGeneratingWorldElement}
+            <span class="loading-spinner"></span>
+            Generating...
+          {:else}
+            ✨ Generate with AI
+          {/if}
+        </Button>
+      </div>
       <TextArea
         id="create-description"
         bind:value={createForm.description}
         placeholder="Describe this world element..."
         rows={4}
       />
+      {#if !createForm.element_type}
+        <p class="hint-text">
+          💡 Select an element type to enable AI generation
+        </p>
+      {/if}
     </div>
     
     <div class="form-group">
@@ -595,6 +730,27 @@
     {/if}
   </div>
 </Modal>
+
+<!-- Template Selector Modal -->
+<TemplateSelector
+  bind:show={showTemplateSelector}
+  templates={worldBuildingTemplates}
+  type="worldbuilding"
+  availableTypes={availableElementTypes}
+  isLoading={isLoadingTemplates}
+  on:typeSelected={(e) => loadWorldBuildingTemplates(e.detail)}
+  on:templateSelected={handleTemplateSelected}
+  on:close={() => showTemplateSelector = false}
+/>
+
+<!-- Template Application Dialog -->
+<TemplateApplicationDialog
+  bind:show={showTemplateDialog}
+  template={selectedTemplate}
+  type="worldbuilding"
+  on:apply={handleTemplateApplied}
+  on:close={() => { showTemplateDialog = false; selectedTemplate = null; }}
+/>
 
 <style>
   .world-building-manager {
@@ -932,6 +1088,42 @@
   
   .icon {
     margin-right: 0.5rem;
+  }
+  
+  .field-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+  
+  :global(.ai-generate-btn) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .hint-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    font-style: italic;
   }
   
   /* Responsive Design */

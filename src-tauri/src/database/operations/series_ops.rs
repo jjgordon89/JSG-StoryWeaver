@@ -24,7 +24,7 @@ impl SeriesOps {
         .bind(&series.description)
         .bind(&series.folder_id)
         .bind(series.created_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create series: {}", e)))?;
         
@@ -35,7 +35,7 @@ impl SeriesOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<Series>> {
         let series = sqlx::query_as::<_, Series>("SELECT * FROM series WHERE id = ?")
             .bind(id)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get series: {}", e)))?;
         
@@ -47,7 +47,7 @@ impl SeriesOps {
         let series = sqlx::query_as::<_, Series>(
             "SELECT * FROM series ORDER BY name"
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get all series: {}", e)))?;
         
@@ -66,7 +66,7 @@ impl SeriesOps {
         .bind(&series.description)
         .bind(&series.folder_id)
         .bind(&series.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update series: {}", e)))?;
         
@@ -80,7 +80,7 @@ impl SeriesOps {
             "SELECT COUNT(*) FROM projects WHERE series_id = ?"
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check series projects: {}", e)))?;
         
@@ -91,7 +91,7 @@ impl SeriesOps {
         // If no projects, delete the series
         sqlx::query("DELETE FROM series WHERE id = ?")
             .bind(id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete series: {}", e)))?;
         
@@ -104,7 +104,7 @@ impl SeriesOps {
             "SELECT * FROM projects WHERE series_id = ? ORDER BY name"
         )
         .bind(series_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get series projects: {}", e)))?;
         
@@ -118,7 +118,7 @@ impl SeriesOps {
         )
         .bind(series_id)
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to add project to series: {}", e)))?;
         
@@ -131,7 +131,7 @@ impl SeriesOps {
             "UPDATE projects SET series_id = NULL WHERE id = ?"
         )
         .bind(project_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to remove project from series: {}", e)))?;
         
@@ -160,7 +160,7 @@ impl SeriesOps {
                 s.name
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get series with counts: {}", e)))?;
         

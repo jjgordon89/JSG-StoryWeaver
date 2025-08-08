@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT OR REPLACE INTO settings (key, value, updated_at)\n        VALUES ('privacy_settings', ?, CURRENT_TIMESTAMP)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "1617909a61705aa62afbfded69f22fc810d1e7c117c39dadec2bca43727270cf"
+}

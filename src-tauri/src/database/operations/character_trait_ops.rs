@@ -26,7 +26,7 @@ impl CharacterTraitOps {
         .bind(&character_trait.trait_value)
         .bind(character_trait.is_visible)
         .bind(character_trait.created_at)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create character trait: {}", e)))?;
         
@@ -44,7 +44,7 @@ impl CharacterTraitOps {
             "#,
         )
         .bind(character_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get character traits: {}", e)))?;
         
@@ -62,7 +62,7 @@ impl CharacterTraitOps {
             "#,
         )
         .bind(character_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get visible character traits: {}", e)))?;
         
@@ -79,7 +79,7 @@ impl CharacterTraitOps {
             "#,
         )
         .bind(id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get character trait: {}", e)))?;
         
@@ -99,7 +99,7 @@ impl CharacterTraitOps {
         .bind(&character_trait.trait_value)
         .bind(character_trait.is_visible)
         .bind(&character_trait.id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update character trait: {}", e)))?;
         
@@ -116,7 +116,7 @@ impl CharacterTraitOps {
         )
         .bind(is_visible)
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update character trait visibility: {}", e)))?;
         
@@ -131,7 +131,7 @@ impl CharacterTraitOps {
             "#,
         )
         .bind(id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete character trait: {}", e)))?;
         
@@ -146,7 +146,7 @@ impl CharacterTraitOps {
             "#,
         )
         .bind(character_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete character traits: {}", e)))?;
         
@@ -173,7 +173,7 @@ impl CharacterTraitOps {
             .bind(&trait_item.trait_value)
             .bind(trait_item.is_visible)
             .bind(trait_item.created_at)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create character trait: {}", e)))?;
             

@@ -76,7 +76,7 @@ impl AITaskProcessor {
         task.metadata["result"] = serde_json::Value::String(result.clone());
         
         // Emit event to notify frontend
-        if let Err(e) = self.app_handle.emit_all(
+        if let Err(e) = self.app_handle.emit(
             "ai-generation-completed",
             serde_json::json!({
                 "taskId": task.id,

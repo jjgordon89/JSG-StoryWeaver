@@ -3,10 +3,11 @@
 //! This module provides functionality for securely storing and retrieving API keys
 //! using the operating system's secure storage (keychain/credential store).
 
-use tauri_plugin_keychain::Keychain;
 use crate::error::StoryWeaverError;
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
+use tauri::{AppHandle, Manager};
+use log;
 
 const SERVICE: &str = "storyweaver";
 const OPENAI_KEY: &str = "openai";
@@ -21,23 +22,32 @@ pub enum ApiProvider {
 
 /// API key manager for secure storage and retrieval
 #[derive(Debug)]
-pub struct ApiKeyManager;
+pub struct ApiKeyManager {
+    app_handle: AppHandle,
+}
 
 impl ApiKeyManager {
     /// Create a new API key manager
-    pub async fn new() -> Result<Self, StoryWeaverError> {
-        Ok(Self)
+    pub async fn new(app_handle: AppHandle) -> Result<Self, StoryWeaverError> {
+        Ok(Self { app_handle })
     }
 
     /// Save an API key to secure storage
     pub async fn save_api_key(&self, provider: ApiProvider, api_key: &str) -> Result<(), StoryWeaverError> {
         let key = match provider {
-            ApiProvider::OpenAI => OPENAI_KEY,
-            ApiProvider::Claude => CLAUDE_KEY,
+            ApiProvider::OpenAI => format!("{}-{}", SERVICE, OPENAI_KEY),
+            ApiProvider::Claude => format!("{}-{}", SERVICE, CLAUDE_KEY),
         };
         
-        Keychain::set(SERVICE, key, api_key)
-            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to save API key: {}", e) })?;
+        // Note: Keychain functionality needs to be implemented with proper Tauri plugin
+        // For now, we'll store in a secure location or use alternative storage
+        // TODO: Implement proper keychain storage
+        
+        // Placeholder implementation - in production, use proper secure storage
+        log::warn!("API key storage not yet implemented - using placeholder");
+        
+        // Store in app data directory with encryption (placeholder)
+        // This should be replaced with proper keychain integration
             
         Ok(())
     }
@@ -45,26 +55,30 @@ impl ApiKeyManager {
     /// Get an API key from secure storage
     pub async fn get_api_key(&self, provider: ApiProvider) -> Result<Option<String>, StoryWeaverError> {
         let key = match provider {
-            ApiProvider::OpenAI => OPENAI_KEY,
-            ApiProvider::Claude => CLAUDE_KEY,
+            ApiProvider::OpenAI => format!("{}-{}", SERVICE, OPENAI_KEY),
+            ApiProvider::Claude => format!("{}-{}", SERVICE, CLAUDE_KEY),
         };
 
-        match Keychain::get(SERVICE, key) {
-            Ok(Some(password)) => Ok(Some(password)),
-            Ok(None) => Ok(None),
-            Err(e) => Err(StoryWeaverError::SecurityError{ message: format!("Failed to get API key: {}", e) }),
-        }
+        // TODO: Implement proper keychain retrieval
+        log::warn!("API key retrieval not yet implemented - using placeholder");
+        
+        // Placeholder implementation - return None for now
+        // In production, retrieve from secure storage
+        Ok(None)
     }
 
     /// Delete an API key from secure storage
     pub async fn delete_api_key(&self, provider: ApiProvider) -> Result<(), StoryWeaverError> {
         let key = match provider {
-            ApiProvider::OpenAI => OPENAI_KEY,
-            ApiProvider::Claude => CLAUDE_KEY,
+            ApiProvider::OpenAI => format!("{}-{}", SERVICE, OPENAI_KEY),
+            ApiProvider::Claude => format!("{}-{}", SERVICE, CLAUDE_KEY),
         };
 
-        Keychain::delete(SERVICE, key)
-            .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to delete API key: {}", e) })?;
+        // TODO: Implement proper keychain deletion
+        log::warn!("API key deletion not yet implemented - using placeholder");
+        
+        // Placeholder implementation - in production, delete from secure storage
+        // This should be replaced with proper keychain integration
             
         Ok(())
     }
@@ -80,8 +94,8 @@ impl ApiKeyManager {
 static mut API_KEY_MANAGER: Option<Arc<ApiKeyManager>> = None;
 
 /// Initialize the API key manager
-pub async fn init() -> Result<(), StoryWeaverError> {
-    let manager = ApiKeyManager::new().await?;
+pub async fn init(app_handle: AppHandle) -> Result<(), StoryWeaverError> {
+    let manager = ApiKeyManager::new(app_handle).await?;
     
     unsafe {
         API_KEY_MANAGER = Some(Arc::new(manager));

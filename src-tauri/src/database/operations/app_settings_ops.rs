@@ -12,7 +12,7 @@ impl AppSettingsOps {
     pub async fn get_setting(pool: &Pool<Sqlite>, key: &str) -> Result<Option<AppSettings>> {
         let setting = sqlx::query_as::<_, AppSettings>("SELECT * FROM settings WHERE key = ?")
             .bind(key)
-            .fetch_optional(pool)
+            .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get setting: {}", e)))?;
         
@@ -22,7 +22,7 @@ impl AppSettingsOps {
     /// Get all settings
     pub async fn get_all_settings(pool: &Pool<Sqlite>) -> Result<Vec<AppSettings>> {
         let settings = sqlx::query_as::<_, AppSettings>("SELECT * FROM settings")
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get all settings: {}", e)))?;
         
@@ -36,7 +36,7 @@ impl AppSettingsOps {
             "SELECT EXISTS(SELECT 1 FROM settings WHERE key = ?)"
         )
         .bind(key)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check if setting exists: {}", e)))?;
         
@@ -48,7 +48,7 @@ impl AppSettingsOps {
             .bind(value)
             .bind(Utc::now())
             .bind(key)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update setting: {}", e)))?;
         } else {
@@ -60,7 +60,7 @@ impl AppSettingsOps {
             .bind(key)
             .bind(value)
             .bind(Utc::now())
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to insert setting: {}", e)))?;
         }
@@ -72,7 +72,7 @@ impl AppSettingsOps {
     pub async fn delete_setting(pool: &Pool<Sqlite>, key: &str) -> Result<()> {
         sqlx::query("DELETE FROM settings WHERE key = ?")
             .bind(key)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete setting: {}", e)))?;
         
@@ -95,7 +95,7 @@ impl UserPreferenceOps {
         )
         .bind(category)
         .bind(key)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get preference: {}", e)))?;
         
@@ -111,7 +111,7 @@ impl UserPreferenceOps {
             "SELECT * FROM user_preferences WHERE preference_category = ?"
         )
         .bind(category)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get preferences by category: {}", e)))?;
         
@@ -121,7 +121,7 @@ impl UserPreferenceOps {
     /// Get all preferences
     pub async fn get_all_preferences(pool: &Pool<Sqlite>) -> Result<Vec<UserPreference>> {
         let preferences = sqlx::query_as::<_, UserPreference>("SELECT * FROM user_preferences")
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get all preferences: {}", e)))?;
         
@@ -142,7 +142,7 @@ impl UserPreferenceOps {
         )
         .bind(category)
         .bind(key)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check if preference exists: {}", e)))?;
         
@@ -160,7 +160,7 @@ impl UserPreferenceOps {
             .bind(Utc::now())
             .bind(category)
             .bind(key)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update preference: {}", e)))?;
         } else {
@@ -180,7 +180,7 @@ impl UserPreferenceOps {
             .bind(value)
             .bind(&data_type)
             .bind(Utc::now())
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to insert preference: {}", e)))?;
         }
@@ -199,7 +199,7 @@ impl UserPreferenceOps {
         )
         .bind(category)
         .bind(key)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete preference: {}", e)))?;
         
@@ -210,7 +210,7 @@ impl UserPreferenceOps {
     pub async fn delete_category(pool: &Pool<Sqlite>, category: &str) -> Result<()> {
         sqlx::query("DELETE FROM user_preferences WHERE preference_category = ?")
             .bind(category)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete preference category: {}", e)))?;
         
