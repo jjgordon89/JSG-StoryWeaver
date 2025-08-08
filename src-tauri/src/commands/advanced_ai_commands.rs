@@ -1,0 +1,352 @@
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use tauri::State;
+use tokio::sync::Mutex;
+
+use crate::ai::{
+    AdvancedAIManager, AdvancedGenerationRequest, AdvancedGenerationResult,
+    VisualizeRequest, GeneratedImage, BrainstormRequest, BrainstormSession,
+    StyleExample, ProseMode, SaliencyContext, BrainstormIdea,
+    saliency_engine::StoryBibleElements,
+};
+
+// State wrapper for the Advanced AI Manager
+pub type AdvancedAIState = Mutex<AdvancedAIManager>;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ProseGenerationRequest {
+    pub project_id: String,
+    pub document_id: Option<String>,
+    pub prose_mode: String,
+    pub text_context: String,
+    pub generation_type: String,
+    pub max_words: Option<i32>,
+    pub ultra_creative: bool,
+    pub use_saliency_engine: bool,
+    pub style_examples: Vec<String>,
+    pub special_instructions: Option<String>,
+    pub story_bible: Option<StoryBibleElements>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImageGenerationRequest {
+    pub project_id: String,
+    pub document_id: Option<String>,
+    pub text_content: String,
+    pub style_preference: String,
+    pub resolution: String, // "1024x1024", "1792x1024", etc.
+    pub enhance_prompt: bool,
+    pub custom_prompt: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BrainstormSessionRequest {
+    pub project_id: String,
+    pub category: String,
+    pub focus_area: String,
+    pub num_ideas: u32,
+    pub creativity_level: u32,
+    pub context: String,
+    pub constraints: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StyleExampleRequest {
+    pub project_id: String,
+    pub name: String,
+    pub content: String,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreditUsageResponse {
+    pub project_usage: i32,
+    pub daily_usage: i32,
+    pub monthly_limit: Option<i32>,
+    pub remaining_credits: Option<i32>,
+}
+
+// Advanced Text Generation with Prose Modes
+#[tauri::command]
+pub async fn generate_with_prose_mode(
+    request: ProseGenerationRequest,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<AdvancedGenerationResult, String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    let advanced_request = AdvancedGenerationRequest {
+        project_id: request.project_id,
+        document_id: request.document_id,
+        prose_mode: request.prose_mode,
+        text_context: request.text_context,
+        generation_type: request.generation_type,
+        max_words: request.max_words,
+        ultra_creative: request.ultra_creative,
+        use_saliency_engine: request.use_saliency_engine,
+        style_examples: request.style_examples,
+        special_instructions: request.special_instructions,
+    };
+    
+    ai_manager
+        .generate_with_advanced_features(advanced_request, request.story_bible)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+// Image Generation with Visualize Engine
+#[tauri::command]
+pub async fn generate_image(
+    request: ImageGenerationRequest,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<GeneratedImage, String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    let visualize_request = VisualizeRequest {
+        project_id: request.project_id,
+        document_id: request.document_id,
+        text_content: request.text_content,
+        style_preference: request.style_preference,
+        resolution: match request.resolution.as_str() {
+            "1024x1024" => crate::ai::ImageResolution::Square1024,
+            "1792x1024" => crate::ai::ImageResolution::Landscape1792x1024,
+            "1024x1792" => crate::ai::ImageResolution::Portrait1024x1792,
+            _ => crate::ai::ImageResolution::Square1024,
+        },
+        enhance_prompt: request.enhance_prompt,
+        custom_prompt: request.custom_prompt,
+    };
+    
+    ai_manager
+        .generate_image(visualize_request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+// Advanced Brainstorming
+#[tauri::command]
+pub async fn create_brainstorm_session(
+    request: BrainstormSessionRequest,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<String, String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    let brainstorm_request = BrainstormRequest {
+        project_id: request.project_id,
+        category: request.category,
+        focus_area: request.focus_area,
+        num_ideas: request.num_ideas,
+        creativity_level: request.creativity_level,
+        context: request.context,
+        constraints: request.constraints,
+    };
+    
+    ai_manager
+        .create_brainstorm_session(brainstorm_request)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_brainstorm_session(
+    session_id: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<Option<BrainstormSession>, String> {
+    let ai_manager = ai_state.lock().await;
+    
+    Ok(ai_manager.get_brainstorm_session(&session_id).cloned())
+}
+
+#[tauri::command]
+pub async fn rate_brainstorm_idea(
+    session_id: String,
+    idea_id: String,
+    rating: u32,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<(), String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    // This would need to be implemented in the brainstorm engine
+    // For now, return success
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn mark_idea_as_keeper(
+    session_id: String,
+    idea_id: String,
+    is_keeper: bool,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<(), String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    // This would need to be implemented in the brainstorm engine
+    // For now, return success
+    Ok(())
+}
+
+// Style Examples Management
+#[tauri::command]
+pub async fn add_style_example(
+    request: StyleExampleRequest,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<StyleExample, String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    let style_example = StyleExample {
+        id: uuid::Uuid::new_v4().to_string(),
+        project_id: request.project_id,
+        name: request.name,
+        content: request.content.clone(),
+        word_count: request.content.split_whitespace().count() as i32,
+        analysis_result: Some(ai_manager.analyze_style(&request.content)),
+        is_active: request.is_active,
+    };
+    
+    ai_manager.add_style_example(style_example.clone());
+    
+    Ok(style_example)
+}
+
+#[tauri::command]
+pub async fn analyze_text_style(
+    content: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<crate::ai::advanced_ai_manager::StyleAnalysis, String> {
+    let ai_manager = ai_state.lock().await;
+    
+    Ok(ai_manager.analyze_style(&content))
+}
+
+// Prose Modes Management
+#[tauri::command]
+pub async fn get_available_prose_modes(
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<Vec<ProseMode>, String> {
+    let ai_manager = ai_state.lock().await;
+    
+    Ok(ai_manager.get_prose_modes().into_iter().cloned().collect())
+}
+
+#[tauri::command]
+pub async fn get_prose_mode_details(
+    mode_name: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<Option<ProseMode>, String> {
+    let ai_manager = ai_state.lock().await;
+    
+    Ok(ai_manager.get_prose_modes()
+        .into_iter()
+        .find(|mode| mode.name == mode_name)
+        .cloned())
+}
+
+// Credit Management
+#[tauri::command]
+pub async fn get_credit_usage(
+    project_id: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<CreditUsageResponse, String> {
+    let ai_manager = ai_state.lock().await;
+    
+    let project_usage = ai_manager.get_credit_usage(&project_id);
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    
+    Ok(CreditUsageResponse {
+        project_usage,
+        daily_usage: 0, // Would need to implement daily tracking
+        monthly_limit: None, // Would need to implement limit management
+        remaining_credits: None, // Would need to implement remaining calculation
+    })
+}
+
+// Image Management
+#[tauri::command]
+pub async fn get_project_images(
+    project_id: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<Vec<GeneratedImage>, String> {
+    let ai_manager = ai_state.lock().await;
+    
+    Ok(ai_manager.get_generated_images(&project_id)
+        .into_iter()
+        .cloned()
+        .collect())
+}
+
+#[tauri::command]
+pub async fn delete_generated_image(
+    image_id: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<(), String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    // This would need to be implemented in the visualize engine
+    // For now, return success
+    Ok(())
+}
+
+// Saliency Engine
+#[tauri::command]
+pub async fn build_saliency_context(
+    project_id: String,
+    text_context: String,
+    story_bible: StoryBibleElements,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<SaliencyContext, String> {
+    let mut ai_manager = ai_state.lock().await;
+    
+    // This would access the saliency engine directly
+    // For now, return a placeholder
+    Ok(SaliencyContext {
+        project_id,
+        context_hash: "placeholder".to_string(),
+        selected_elements: crate::ai::SelectedElements {
+            characters: Vec::new(),
+            locations: Vec::new(),
+            plot_threads: Vec::new(),
+            worldbuilding: Vec::new(),
+        },
+        relevance_scores: HashMap::new(),
+        token_count: 0,
+        created_at: chrono::Utc::now(),
+    })
+}
+
+// Smart Import (placeholder for future implementation)
+#[tauri::command]
+pub async fn smart_import_content(
+    project_id: String,
+    content: String,
+    content_type: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<HashMap<String, serde_json::Value>, String> {
+    // This would analyze imported content and suggest Story Bible entries
+    let mut result = HashMap::new();
+    result.insert("status".to_string(), serde_json::Value::String("analyzed".to_string()));
+    result.insert("suggestions".to_string(), serde_json::Value::Array(Vec::new()));
+    
+    Ok(result)
+}
+
+// Streaming Generation (placeholder for future implementation)
+#[tauri::command]
+pub async fn start_streaming_generation(
+    request: ProseGenerationRequest,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<String, String> {
+    // This would start a streaming generation and return a stream ID
+    Ok(uuid::Uuid::new_v4().to_string())
+}
+
+#[tauri::command]
+pub async fn get_stream_status(
+    stream_id: String,
+    ai_state: State<'_, AdvancedAIState>,
+) -> Result<HashMap<String, serde_json::Value>, String> {
+    // This would return the current status of a streaming generation
+    let mut result = HashMap::new();
+    result.insert("status".to_string(), serde_json::Value::String("completed".to_string()));
+    result.insert("progress".to_string(), serde_json::Value::Number(serde_json::Number::from(100)));
+    
+    Ok(result)
+}

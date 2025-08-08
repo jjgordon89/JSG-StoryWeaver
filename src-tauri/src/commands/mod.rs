@@ -32,6 +32,7 @@ pub mod security_commands;
 pub mod project_preview_commands;
 pub mod series_consistency_commands;
 pub mod templates;
+pub mod advanced_ai_commands;
 
 /// Response wrapper for Tauri commands
 #[derive(Debug, Serialize)]

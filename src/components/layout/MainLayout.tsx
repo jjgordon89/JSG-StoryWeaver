@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ProjectView from '../../features/projects/ProjectView';
 import DocumentEditor from '../editor/DocumentEditor';
+import AdvancedAI from '../AdvancedAI/AdvancedAI';
 import { useStore } from '../../stores/documentStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { invoke } from '../../utils/tauriSafe';
@@ -59,12 +60,9 @@ const MainLayout: React.FC = () => {
                 Last updated: {new Date(currentDocument.updated_at).toLocaleString()}
               </p>
             </div>
-            {/* Placeholder for AI cards */}
-            <div className="bg-white dark:bg-gray-700 p-3 rounded-md shadow">
-              <h3 className="font-medium">AI Suggestions</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                No suggestions yet. Select text to get AI assistance.
-              </p>
+            {/* Advanced AI Component */}
+            <div className="bg-white dark:bg-gray-700 rounded-md shadow overflow-hidden">
+              <AdvancedAI />
             </div>
           </div>
         ) : (

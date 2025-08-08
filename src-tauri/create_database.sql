@@ -144,6 +144,126 @@ CREATE TABLE IF NOT EXISTS deleted_items (
     can_restore BOOLEAN NOT NULL DEFAULT 1
 );
 
+-- Migration 008: Phase 4 Advanced AI Features
+-- AI Providers table
+CREATE TABLE IF NOT EXISTS ai_providers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    api_endpoint TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI Model Configurations
+CREATE TABLE IF NOT EXISTS ai_model_configurations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider_id INTEGER NOT NULL,
+    model_name TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    context_window INTEGER NOT NULL,
+    max_output_tokens INTEGER NOT NULL,
+    supports_streaming BOOLEAN DEFAULT TRUE,
+    supports_images BOOLEAN DEFAULT FALSE,
+    cost_per_input_token REAL,
+    cost_per_output_token REAL,
+    cost_per_image REAL,
+    quality_tier TEXT DEFAULT 'standard',
+    specializations TEXT, -- JSON
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (provider_id) REFERENCES ai_providers(id)
+);
+
+-- Prose Modes
+CREATE TABLE IF NOT EXISTS prose_modes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    model_configuration_id INTEGER NOT NULL,
+    creativity_level INTEGER DEFAULT 5,
+    temperature REAL DEFAULT 0.7,
+    top_p REAL DEFAULT 0.9,
+    frequency_penalty REAL DEFAULT 0.0,
+    presence_penalty REAL DEFAULT 0.0,
+    special_instructions TEXT,
+    is_experimental BOOLEAN DEFAULT FALSE,
+    max_context_words INTEGER DEFAULT 4000,
+    max_generation_words INTEGER DEFAULT 2000,
+    supports_streaming BOOLEAN DEFAULT TRUE,
+    supports_unfiltered BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (model_configuration_id) REFERENCES ai_model_configurations(id)
+);
+
+-- Style Examples
+CREATE TABLE IF NOT EXISTS style_examples (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    word_count INTEGER NOT NULL,
+    analysis_result TEXT, -- JSON with style analysis
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+-- Brainstorm Sessions
+CREATE TABLE IF NOT EXISTS brainstorm_sessions (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    seed_prompt TEXT,
+    session_data TEXT NOT NULL, -- JSON with ideas and keepers
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+-- Generated Images (Visualize feature)
+CREATE TABLE IF NOT EXISTS generated_images (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    source_text TEXT NOT NULL,
+    image_prompt TEXT NOT NULL,
+    image_data BLOB, -- Base64 encoded image or file path
+    image_url TEXT, -- External URL if hosted
+    resolution TEXT DEFAULT '1024x1024',
+    credits_used INTEGER DEFAULT 2500,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+-- Credit Usage Tracking
+CREATE TABLE IF NOT EXISTS credit_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id TEXT NOT NULL,
+    operation_type TEXT NOT NULL,
+    credits_used INTEGER NOT NULL,
+    cost_estimate REAL,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    details TEXT, -- JSON with operation details
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+-- Saliency Engine Context Cache
+CREATE TABLE IF NOT EXISTS saliency_context_cache (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    context_hash TEXT NOT NULL,
+    selected_elements TEXT NOT NULL, -- JSON with selected Story Bible elements
+    relevance_scores TEXT NOT NULL, -- JSON with relevance scores
+    total_tokens INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     key TEXT UNIQUE NOT NULL,

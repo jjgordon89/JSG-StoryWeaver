@@ -5,6 +5,12 @@ pub mod openai;
 pub mod claude;
 pub mod gemini;
 pub mod write_processor;
+pub mod ai_history;
+pub mod prose_modes;
+pub mod saliency_engine;
+pub mod visualize;
+pub mod brainstorm;
+pub mod advanced_ai_manager;
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -168,6 +174,13 @@ pub trait AIProvider: Send + Sync {
 pub use openai::OpenAIProvider;
 pub use claude::ClaudeProvider;
 pub use gemini::GeminiProvider;
+
+// Advanced AI Features
+pub use prose_modes::{ProseMode, ProseModelManager, GenerationSettings};
+pub use saliency_engine::{SaliencyEngine, SaliencyContext, SelectedElements};
+pub use visualize::{VisualizeEngine, VisualizeRequest, GeneratedImage, ImageResolution};
+pub use brainstorm::{BrainstormEngine, BrainstormSession, BrainstormRequest, BrainstormIdea};
+pub use advanced_ai_manager::{AdvancedAIManager, AdvancedGenerationRequest, AdvancedGenerationResult, StyleExample, CreditUsage};
 
 pub struct AIProviderManager {
     providers: HashMap<String, Arc<dyn AIProvider>>,

@@ -252,7 +252,26 @@ pub fn run() {
             commands::templates::get_worldbuilding_templates,
             commands::templates::get_worldbuilding_templates_by_type,
             commands::templates::get_worldbuilding_element_types,
-            commands::templates::apply_worldbuilding_template
+            commands::templates::apply_worldbuilding_template,
+            
+            // Advanced AI commands (Phase 4)
+            commands::advanced_ai_commands::generate_with_prose_mode,
+            commands::advanced_ai_commands::generate_image,
+            commands::advanced_ai_commands::create_brainstorm_session,
+            commands::advanced_ai_commands::get_brainstorm_session,
+            commands::advanced_ai_commands::rate_brainstorm_idea,
+            commands::advanced_ai_commands::mark_idea_as_keeper,
+            commands::advanced_ai_commands::add_style_example,
+            commands::advanced_ai_commands::analyze_text_style,
+            commands::advanced_ai_commands::get_available_prose_modes,
+            commands::advanced_ai_commands::get_prose_mode_details,
+            commands::advanced_ai_commands::get_credit_usage,
+            commands::advanced_ai_commands::get_project_images,
+            commands::advanced_ai_commands::delete_generated_image,
+            commands::advanced_ai_commands::build_saliency_context,
+            commands::advanced_ai_commands::smart_import_content,
+            commands::advanced_ai_commands::start_streaming_generation,
+            commands::advanced_ai_commands::get_stream_status
         ])
         .setup(|app| {
             // Initialize database on startup
@@ -272,6 +291,10 @@ pub fn run() {
             ai_manager.register_provider("openai".to_string(), openai_provider);
             ai_manager.set_default_provider("openai".to_string());
             app.manage(ai_manager);
+            
+            // Initialize Advanced AI Manager (Phase 4)
+            let advanced_ai_manager = ai::AdvancedAIManager::new();
+            app.manage(commands::advanced_ai_commands::AdvancedAIState::new(advanced_ai_manager));
             
             // Initialize background task manager
             let background_task_manager = background::BackgroundTaskManager::new(3, 100);
