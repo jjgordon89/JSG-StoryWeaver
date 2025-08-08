@@ -7,6 +7,7 @@ use sqlx::{Pool, Sqlite};
 // Import migrations
 mod background_tasks;
 mod performance_metrics;
+mod _014_create_document_links_table;
 
 /// Run all database migrations
 pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
@@ -33,6 +34,8 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("010_ai_response_cards", |pool| Box::pin(migration_010_ai_response_cards(pool))),
         ("011_story_bible_core", |pool| Box::pin(migration_011_story_bible_core(pool))),
         ("012_style_examples", |pool| Box::pin(migration_012_style_examples(pool))),
+        ("013_character_series_support", |pool| Box::pin(migration_013_character_series_support(pool))),
+        ("014_create_document_links_table", |pool| Box::pin(migration_014_create_document_links_table(pool))),
     ];
     
     for (name, migration_fn) in migrations {
@@ -76,6 +79,50 @@ async fn migration_012_style_examples(pool: &Pool<Sqlite>) -> Result<()> {
         .map_err(|e| StoryWeaverError::database(format!("Failed to create style_examples index: {}", e)))?;
 
     Ok()
+}
+
+/// Migration 013: Add series support to characters
+async fn migration_013_character_series_support(pool: &Pool<Sqlite>) -> Result<()> {
+    // Add series_id and original_project_id columns to characters table
+    sqlx::query(
+        r#"
+        ALTER TABLE characters ADD COLUMN series_id TEXT
+        "#,
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to add series_id to characters: {}", e)))?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE characters ADD COLUMN original_project_id TEXT
+        "#,
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to add original_project_id to characters: {}", e)))?;
+
+    // Add foreign key constraints (SQLite doesn't support adding foreign keys to existing tables,
+    // but we can add them as indexes for performance)
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_characters_series_id ON characters(series_id)"
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create characters series_id index: {}", e)))?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_characters_original_project_id ON characters(original_project_id)"
+    )
+    .execute(&*pool)
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create characters original_project_id index: {}", e)))?;
+
+    Ok()
+}
+
+async fn migration_014_create_document_links_table(pool: &Pool<Sqlite>) -> Result<()> {
+    _014_create_document_links_table::up(pool).await.map_err(|e| StoryWeaverError::database(format!("Failed to apply 014_create_document_links_table migration: {}", e)))
 }
 
 /// Migration 010: Create AI response cards table

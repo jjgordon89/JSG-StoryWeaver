@@ -215,9 +215,19 @@ Implement the comprehensive Story Bible system that serves as the centralized kn
   - [x] Implemented CSV export functionality for outlines ✅
   - [x] Added Export CSV button to OutlineManager ✅
   - [x] Created comprehensive CSV format with outline structure and details ✅
-- [ ] Build document linking from outline chapters
-- [ ] Add automatic document creation from chapters
-- [ ] Implement Reverse Sync to update outline from documents
+- [x] **Outline-to-Document Integration System** ✅
+  - [x] Build document linking from outline chapters ✅
+  - [x] Add automatic document creation from chapters ✅
+  - [x] Implement Reverse Sync to update outline from documents ✅
+  - [x] Added "Create Document" button to OutlineManager.svelte ✅
+  - [x] Implemented handleCreateDocument function with automatic chapter creation ✅
+  - [x] Built intelligent document linking system for sequential chapters ✅
+  - [x] Created automatic document link creation based on order_index ✅
+  - [x] Added "Sync from Document" button for reverse synchronization ✅
+  - [x] Implemented handleSyncFromDocument function to pull content from linked documents ✅
+  - [x] Enhanced outline content with document-derived summaries ✅
+  - [x] Integrated with existing backend commands (create_document, create_document_link) ✅
+  - [x] Added comprehensive error handling and user feedback ✅
 - [ ] Add scene validation with quick fixes
 - [ ] Build word count and credit estimates for scenes
 - [x] **AI-powered scene content generation UI** ✅

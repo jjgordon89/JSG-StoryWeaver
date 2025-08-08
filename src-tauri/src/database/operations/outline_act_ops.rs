@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// Outline act operations
-pub struct OutlineActOps;
-
-impl OutlineActOps {
+impl super::OutlineActOps {
     /// Create a new outline act
     pub async fn create(pool: &Pool<Sqlite>, outline_act: OutlineAct) -> Result<OutlineAct> {
         let mut outline_act = outline_act;

@@ -355,3 +355,47 @@ pub async fn get_character_stats(project_id: String) -> CommandResponse<Characte
     
     get_stats(project_id).await.into()
 }
+
+/// Get characters by series ID
+#[tauri::command]
+pub async fn get_characters_by_series(series_id: String) -> CommandResponse<Vec<Character>> {
+    async fn get_by_series(series_id: String) -> Result<Vec<Character>> {
+        let pool = get_pool()?;
+        CharacterOps::get_by_series(&pool, &series_id).await
+    }
+    
+    get_by_series(series_id).await.into()
+}
+
+/// Get visible characters for a project (includes project-specific and series-shared)
+#[tauri::command]
+pub async fn get_visible_characters(project_id: String, series_id: Option<String>) -> CommandResponse<Vec<Character>> {
+    async fn get_visible(project_id: String, series_id: Option<String>) -> Result<Vec<Character>> {
+        let pool = get_pool()?;
+        CharacterOps::get_visible_by_project(&pool, &project_id, series_id.as_deref()).await
+    }
+    
+    get_visible(project_id, series_id).await.into()
+}
+
+/// Share a character to series
+#[tauri::command]
+pub async fn share_character_to_series(character_id: String, series_id: String) -> CommandResponse<()> {
+    async fn share_to_series(character_id: String, series_id: String) -> Result<()> {
+        let pool = get_pool()?;
+        CharacterOps::share_to_series(&pool, &character_id, &series_id).await
+    }
+    
+    share_to_series(character_id, series_id).await.into()
+}
+
+/// Unshare a character from series
+#[tauri::command]
+pub async fn unshare_character_from_series(character_id: String) -> CommandResponse<()> {
+    async fn unshare_from_series(character_id: String) -> Result<()> {
+        let pool = get_pool()?;
+        CharacterOps::unshare_from_series(&pool, &character_id).await
+    }
+    
+    unshare_from_series(character_id).await.into()
+}

@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// Series operations
-pub struct SeriesOps;
-
-impl SeriesOps {
+impl super::SeriesOps {
     /// Create a new series
     pub async fn create(pool: &Pool<Sqlite>, mut series: Series) -> Result<Series> {
         series.id = Uuid::new_v4().to_string();
@@ -144,18 +142,18 @@ impl SeriesOps {
             SeriesWithCount,
             r#"
             SELECT 
-                s.id, 
-                s.name, 
-                s.description, 
-                s.folder_id, 
-                s.created_at,
-                COUNT(p.id) as project_count
+                s.id as "id: i64",
+                s.name,
+                s.description,
+                s.folder_id as "folder_id: i64", 
+                s.created_at as "created_at!: _",
+                CAST(COUNT(p.id) AS INTEGER) as "project_count: i64"
             FROM 
                 series s
             LEFT JOIN 
                 projects p ON s.id = p.series_id
             GROUP BY 
-                s.id
+                s.id, s.name, s.description, s.folder_id, s.created_at
             ORDER BY 
                 s.name
             "#
@@ -171,10 +169,10 @@ impl SeriesOps {
 /// Series with project count
 #[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
 pub struct SeriesWithCount {
-    pub id: String,
+    pub id: i64,
     pub name: String,
     pub description: Option<String>,
-    pub folder_id: Option<String>,
+    pub folder_id: Option<i64>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub project_count: i64,
 }

@@ -4,7 +4,7 @@ use crate::commands::CommandResponse;
 use crate::error::StoryWeaverError;
 use crate::ai::{AIProviderManager, AIContext, RewriteStyle, TextStream};
 use serde::{Deserialize, Serialize};
-use tauri::{State, Manager, Window};
+use tauri::{Emitter, State, Manager, Window};
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
@@ -350,7 +350,7 @@ pub async fn rewrite_text(
             
             provider.rewrite_text(&text, &rewrite_style).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -374,7 +374,7 @@ pub async fn expand_text(
             
             provider.expand_text(&text, &context).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -398,7 +398,7 @@ pub async fn describe_scene(
             
             provider.describe_scene(&text, &context).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -421,7 +421,7 @@ pub async fn brainstorm(
             
             provider.brainstorm(&prompt, &context).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -434,7 +434,7 @@ pub async fn visualize_scene(
         Some(provider) => {
             provider.generate_image(&description).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -448,7 +448,7 @@ pub async fn quick_edit(
         Some(provider) => {
             provider.quick_edit(&text, &instruction).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -467,7 +467,7 @@ pub async fn quick_chat(
             
             provider.quick_chat(&message, &ai_context).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }
 
@@ -503,6 +503,6 @@ pub async fn get_related_words(
             
             provider.related_words(&word, &ai_context).await
         }
-        None => Err(crate::error::StoryWeaverError::AIProviderError { message: "No AI provider available".to_string() }),
+        None => Err(crate::error::StoryWeaverError::AIProvider { provider: "Unknown".to_string(), message: "No AI provider available".to_string() }),
     }
 }

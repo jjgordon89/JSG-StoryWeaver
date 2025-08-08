@@ -1,6 +1,7 @@
 //! Series consistency checking commands
 
-use crate::database::{get_pool, operations::series_consistency_ops::*};
+use crate::database::{get_pool, operations::SeriesConsistencyOps};
+use crate::database::operations::series_consistency_ops::*;
 use crate::commands::CommandResponse;
 use tauri::command;
 

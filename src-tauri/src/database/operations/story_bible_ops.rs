@@ -6,9 +6,7 @@ use uuid::Uuid;
 use serde_json;
 
 /// Story Bible operations
-pub struct StoryBibleOps;
-
-impl StoryBibleOps {
+impl super::StoryBibleOps {
     /// Create or update story bible for a project
     pub async fn create_or_update(pool: &Pool<Sqlite>, story_bible: StoryBible) -> Result<StoryBible> {
         let mut story_bible = story_bible;

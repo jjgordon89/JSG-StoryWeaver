@@ -81,10 +81,10 @@ impl EncryptionManager {
 
 /// Get the path to the encryption key file
 fn get_key_path(app_handle: &AppHandle) -> Result<PathBuf, StoryWeaverError> {
-    let app_data_dir = app_handle.path_resolver().app_data_dir()
-        .ok_or_else(|| StoryWeaverError::SecurityError{ message: "Failed to get app data directory".to_string() })?;
+    let app_data_dir = app_handle.path().resolve("keys", BaseDirectory::AppData)
+        .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to get app data directory: {}", e) })?;
     
-    let key_dir = app_data_dir.join("keys");
+    let key_dir = app_data_dir.parent().unwrap().join("keys");
     fs::create_dir_all(&key_dir)
         .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to create key directory: {}", e) })?;
     

@@ -100,9 +100,8 @@ pub async fn get_style_example_by_id(
     let pool = get_pool()?;
     
     let style_example = StyleExampleOps::get_by_id(&pool, &id).await?
-        .ok_or_else(|| StoryWeaverError::NotFound { 
-            resource: "StyleExample".to_string(), 
-            id 
+        .ok_or_else(|| StoryWeaverError::Internal { 
+            message: format!("StyleExample not found: {}", id) 
         })?;
     
     Ok(style_example.into())

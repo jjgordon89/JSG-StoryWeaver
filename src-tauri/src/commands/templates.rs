@@ -3,7 +3,7 @@ use crate::database::operations::{
     character_template_ops::{CharacterTemplate, CharacterTemplateTrait},
     worldbuilding_template_ops::{WorldBuildingTemplate, WorldBuildingTemplateProperty}
 };
-use crate::database::DatabaseManager;
+use crate::database;
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -30,14 +30,13 @@ pub async fn get_character_archetypes() -> Result<Vec<String>> {
 /// Apply character template to create character with default traits
 #[tauri::command]
 pub async fn apply_character_template(
-    db: State<'_, DatabaseManager>,
     template_id: String,
     project_id: String,
     name: String,
     description: Option<String>,
     trait_overrides: Option<HashMap<String, String>>,
 ) -> Result<String> {
-    let pool = db.get_pool().await?;
+    let pool = database::get_pool()?;
     let character_id = CharacterTemplateOps::apply_template_to_character(
         &pool,
         &template_id,
@@ -70,14 +69,13 @@ pub async fn get_worldbuilding_element_types() -> Result<Vec<String>> {
 /// Apply worldbuilding template to create world element with default properties
 #[tauri::command]
 pub async fn apply_worldbuilding_template(
-    db: State<'_, DatabaseManager>,
     template_id: String,
     project_id: String,
     name: String,
     description: Option<String>,
     property_overrides: Option<HashMap<String, serde_json::Value>>,
 ) -> Result<String> {
-    let pool = db.get_pool().await?;
+    let pool = database::get_pool()?;
     let world_element = WorldBuildingTemplateOps::apply_template_to_world_element(
         &pool,
         &template_id,

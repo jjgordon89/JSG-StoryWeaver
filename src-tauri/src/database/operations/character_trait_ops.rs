@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// Character trait operations
-pub struct CharacterTraitOps;
-
-impl CharacterTraitOps {
+impl super::CharacterTraitOps {
     /// Create a new character trait
     pub async fn create(pool: &Pool<Sqlite>, character_trait: CharacterTrait) -> Result<CharacterTrait> {
         let mut character_trait = character_trait;

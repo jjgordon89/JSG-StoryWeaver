@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Series consistency checking operations
-pub struct SeriesConsistencyOps;
+// SeriesConsistencyOps struct is defined in mod.rs
 
 /// Consistency conflict types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,21 +67,21 @@ struct WorldElementConsistencyData {
     pub details: Option<String>,
 }
 
-impl SeriesConsistencyOps {
+impl super::SeriesConsistencyOps {
     /// Generate comprehensive consistency report for a series
     pub async fn generate_consistency_report(
         pool: &Pool<Sqlite>,
         series_id: &str,
     ) -> Result<SeriesConsistencyReport> {
         // Get series information
-        let series = crate::database::operations::series_ops::SeriesOps::get_by_id(pool, series_id)
+        let series = super::SeriesOps::get_by_id(&pool, series_id)
             .await?
             .ok_or_else(|| StoryWeaverError::SeriesNotFound {
                 id: series_id.to_string(),
             })?;
 
         // Get all projects in the series
-        let projects = crate::database::operations::series_ops::SeriesOps::get_projects(pool, series_id).await?;
+        let projects = super::SeriesOps::get_projects(&pool, series_id).await?;
         
         let mut conflicts = Vec::new();
         
@@ -212,7 +212,7 @@ impl SeriesConsistencyOps {
         
         // Collect story bible data from all projects
         for project in projects {
-            if let Ok(story_bible) = crate::database::operations::story_bible_ops::StoryBibleOps::get_by_project(pool, &project.id).await {
+            if let Ok(story_bible) = super::StoryBibleOps::get_by_project(&pool, &project.id).await {
                 story_bibles.push((project.clone(), story_bible));
             }
         }
@@ -272,9 +272,9 @@ impl SeriesConsistencyOps {
         
         for version in versions {
             for character_trait in &version.traits {
-                trait_conflicts.entry(&character_trait.trait_type)
+                trait_conflicts.entry(&character_trait.trait_name)
                     .or_insert_with(Vec::new)
-                    .push((version.project_id.clone(), character_trait.content.clone()));
+                    .push((version.project_id.clone(), character_trait.trait_value.clone().unwrap_or_default()));
             }
         }
         

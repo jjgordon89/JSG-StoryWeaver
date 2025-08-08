@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// Folder operations
-pub struct FolderOps;
-
-impl FolderOps {
+impl super::FolderOps {
     /// Create a new folder
     pub async fn create(pool: &Pool<Sqlite>, mut folder: Folder) -> Result<Folder> {
         folder.id = Uuid::new_v4().to_string();

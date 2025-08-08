@@ -62,6 +62,18 @@ pub fn run() {
             commands::documents::get_document_tree,
             commands::documents::get_document_stats,
             
+            // Character commands
+            commands::characters::create_character,
+            commands::characters::get_characters,
+            commands::characters::get_character,
+            commands::characters::update_character,
+            commands::characters::delete_character,
+            commands::characters::get_characters_by_series,
+            commands::characters::get_visible_characters,
+            commands::characters::share_character_to_series,
+            commands::characters::unshare_character_from_series,
+            commands::characters::get_character_stats,
+            
             // Folder commands
             commands::folder_commands::create_folder,
             commands::folder_commands::get_folder,

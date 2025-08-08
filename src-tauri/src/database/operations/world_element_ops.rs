@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// World element operations
-pub struct WorldElementOps;
-
-impl WorldElementOps {
+impl super::WorldElementOps {
     /// Create a new world element
     pub async fn create(pool: &Pool<Sqlite>, world_element: WorldElement) -> Result<WorldElement> {
         let mut world_element = world_element;
@@ -118,7 +116,7 @@ impl WorldElementOps {
     }
     
     /// Get a world element by ID
-    pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<WorldElement> {
+    pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<WorldElement>> {
         let element = sqlx::query_as::<_, WorldElement>(
             r#"
             SELECT id, project_id, series_id, name, description, element_type, 
@@ -128,7 +126,7 @@ impl WorldElementOps {
             "#,
         )
         .bind(id)
-        .fetch_one(&*pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get world element: {}", e)))?;
         

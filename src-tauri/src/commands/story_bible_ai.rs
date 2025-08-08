@@ -128,8 +128,8 @@ Synopsis:",
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate synopsis
-        let response = ai_manager.generate_text(&prompt, &context).await
-            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
             generated_content: response.text,
@@ -184,8 +184,8 @@ Generate {} new traits (one per line):",
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate traits
-        let response = ai_manager.generate_text(&prompt, &context).await
-            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         // Parse response into individual traits
         let traits: Vec<String> = response.text
@@ -268,8 +268,8 @@ Description:",
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate world element description
-        let response = ai_manager.generate_text(&prompt, &context).await
-            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
             generated_content: response.text,
@@ -300,14 +300,12 @@ pub async fn generate_outline_from_story_bible(
         let world_elements = WorldElementOps::get_by_project(&pool, &project_id).await?;
         
         // Build comprehensive context
-        let synopsis = story_bible.as_ref()
-            .and_then(|sb| sb.synopsis.as_ref())
-            .or_else(|| story_bible.as_ref().and_then(|sb| sb.braindump.as_ref()))
+        let synopsis = story_bible.synopsis.as_ref()
+            .or_else(|| story_bible.braindump.as_ref())
             .cloned()
             .unwrap_or_else(|| "No synopsis or braindump available.".to_string());
         
-        let genre = story_bible.as_ref()
-            .and_then(|sb| sb.genre.as_ref())
+        let genre = story_bible.genre.as_ref()
             .cloned();
         
         let character_context = if characters.is_empty() {
@@ -364,8 +362,8 @@ Outline:",
         let prompt = custom_prompt.unwrap_or(base_prompt);
         
         // Generate outline
-        let response = ai_manager.generate_text(&prompt, &context).await
-            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
             generated_content: response.text,
@@ -420,8 +418,8 @@ Write the full scene content:",
         let prompt = custom_prompt.unwrap_or(base_prompt);
         
         // Generate scene content
-        let response = ai_manager.generate_text(&prompt, &context).await
-            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
             generated_content: response.text,
@@ -481,8 +479,8 @@ STYLE_PROMPT:
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate style analysis
-        let response = ai_manager.generate_text(&prompt, &context).await
-            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         // Parse the response to extract analysis and style prompt
         let content = response.text;

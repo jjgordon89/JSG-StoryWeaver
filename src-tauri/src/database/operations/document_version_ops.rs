@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// DocumentVersion operations
-pub struct DocumentVersionOps;
-
-impl DocumentVersionOps {
+impl super::DocumentVersionOps {
     /// Create a new document version
     pub async fn create(pool: &Pool<Sqlite>, mut version: DocumentVersion) -> Result<DocumentVersion> {
         version.id = Uuid::new_v4().to_string();

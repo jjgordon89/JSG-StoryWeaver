@@ -47,6 +47,7 @@ pub use outline_act_ops::*;
 pub use scene_ops::*;
 pub use series_consistency_ops::*;
 pub use style_example_ops::*;
+pub use ai_history_ops::*;
 pub use character_template_ops::*;
 pub use worldbuilding_template_ops::*;
 
@@ -75,4 +76,4 @@ pub struct SeriesConsistencyOps;
 pub struct StyleExampleOps;
 pub struct AIHistoryOps;
 pub struct CharacterTemplateOps;
-pub struct WorldbuildingTemplateOps;
+pub struct WorldBuildingTemplateOps;

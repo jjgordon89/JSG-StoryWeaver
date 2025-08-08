@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// AppSettings operations
-pub struct AppSettingsOps;
-
-impl AppSettingsOps {
+impl super::AppSettingsOps {
     /// Get a setting by key
     pub async fn get_setting(pool: &Pool<Sqlite>, key: &str) -> Result<Option<AppSettings>> {
         let setting = sqlx::query_as::<_, AppSettings>("SELECT * FROM settings WHERE key = ?")

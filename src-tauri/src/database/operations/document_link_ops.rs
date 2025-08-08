@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// DocumentLink operations
-pub struct DocumentLinkOps;
-
-impl DocumentLinkOps {
+impl super::DocumentLinkOps {
     /// Create a new document link
     pub async fn create(pool: &Pool<Sqlite>, mut link: DocumentLink) -> Result<DocumentLink> {
         link.id = Uuid::new_v4().to_string();
@@ -146,7 +144,7 @@ impl DocumentLinkOps {
                 d.id, 
                 d.title, 
                 d.document_type as "document_type: _", 
-                dl.link_order
+                dl.link_order as "link_order: Option<i64>"
             FROM 
                 documents d
             JOIN 
@@ -170,7 +168,7 @@ impl DocumentLinkOps {
                 d.id, 
                 d.title, 
                 d.document_type as "document_type: _", 
-                dl.link_order
+                dl.link_order as "link_order: Option<i64>"
             FROM 
                 documents d
             JOIN 
@@ -196,7 +194,7 @@ pub struct LinkedDocument {
     pub id: String,
     pub title: String,
     pub document_type: crate::database::models::DocumentType,
-    pub link_order: i32,
+    pub link_order: Option<i64>,
 }
 
 /// Collection of linked documents

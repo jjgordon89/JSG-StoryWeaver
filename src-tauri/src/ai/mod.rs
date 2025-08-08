@@ -210,3 +210,146 @@ impl AIProviderManager {
         self.default_provider.clone()
     }
 }
+
+#[async_trait]
+impl AIProvider for AIProviderManager {
+    async fn generate_text(&self, prompt: &str, context: &AIContext) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.generate_text(prompt, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+        match self.get_default_provider() {
+            Some(provider) => provider.generate_text_stream(prompt, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.rewrite_text(text, style).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<TextStream> {
+        match self.get_default_provider() {
+            Some(provider) => provider.rewrite_text_stream(text, style).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn expand_text(&self, text: &str, context: &AIContext) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.expand_text(text, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+        match self.get_default_provider() {
+            Some(provider) => provider.expand_text_stream(text, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn describe_scene(&self, description: &str, context: &AIContext) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.describe_scene(description, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+        match self.get_default_provider() {
+            Some(provider) => provider.describe_scene_stream(description, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn brainstorm(&self, topic: &str, context: &AIContext) -> anyhow::Result<Vec<String>> {
+        match self.get_default_provider() {
+            Some(provider) => provider.brainstorm(topic, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn related_words(&self, word: &str, context: &AIContext) -> anyhow::Result<Vec<String>> {
+        match self.get_default_provider() {
+            Some(provider) => provider.related_words(word, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn quick_edit(&self, text: &str, instruction: &str) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.quick_edit(text, instruction).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn quick_chat(&self, message: &str, context: &AIContext) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.quick_chat(message, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+        match self.get_default_provider() {
+            Some(provider) => provider.quick_chat_stream(message, context).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn generate_image(&self, prompt: &str) -> anyhow::Result<String> {
+        match self.get_default_provider() {
+            Some(provider) => provider.generate_image(prompt).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    async fn generate_embedding(&self, text: &str) -> anyhow::Result<Vec<f32>> {
+        match self.get_default_provider() {
+            Some(provider) => provider.generate_embedding(text).await,
+            None => Err(anyhow::anyhow!("No default AI provider configured")),
+        }
+    }
+
+    fn supports_streaming(&self) -> bool {
+        match self.get_default_provider() {
+            Some(provider) => provider.supports_streaming(),
+            None => false,
+        }
+    }
+
+    fn supports_image_generation(&self) -> bool {
+        match self.get_default_provider() {
+            Some(provider) => provider.supports_image_generation(),
+            None => false,
+        }
+    }
+
+    fn get_context_window(&self) -> usize {
+        match self.get_default_provider() {
+            Some(provider) => provider.get_context_window(),
+            None => 0,
+        }
+    }
+
+    fn get_model_name(&self) -> &str {
+        match self.get_default_provider() {
+            Some(provider) => provider.get_model_name(),
+            None => "No Provider",
+        }
+    }
+
+    fn get_provider_name(&self) -> &str {
+        match self.get_default_provider() {
+            Some(provider) => provider.get_provider_name(),
+            None => "No Provider",
+        }
+    }
+}

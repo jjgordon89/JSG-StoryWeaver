@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// Scene operations
-pub struct SceneOps;
-
-impl SceneOps {
+impl super::SceneOps {
     /// Create a new scene
     pub async fn create(pool: &Pool<Sqlite>, scene: Scene) -> Result<Scene> {
         let mut scene = scene;

@@ -6,7 +6,7 @@ use crate::background::{Task, TaskProcessor, TaskStatus, TaskType};
 use crate::error::{Result, StoryWeaverError};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 /// AI Task Processor
 pub struct AITaskProcessor {

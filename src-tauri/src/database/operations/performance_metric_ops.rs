@@ -9,9 +9,7 @@ use sqlx::Row;
 use uuid::Uuid;
 
 /// Performance metrics operations
-pub struct PerformanceMetricOps;
-
-impl PerformanceMetricOps {
+impl super::PerformanceMetricOps {
     /// Record a new performance metric
     pub async fn record_metric(
         metric_name: String,
@@ -380,7 +378,7 @@ impl PerformanceMetricOps {
             .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get retention period: {}", e)))? {
-                Some(val) => val.parse().unwrap_or(30),
+                Some(val) => val.parse::<i64>().unwrap_or(30),
                 None => 30, // Default: 30 days
             };
         

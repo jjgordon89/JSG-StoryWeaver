@@ -52,7 +52,7 @@ pub async fn create_project(request: CreateProjectRequest) -> Result<Project> {
 pub async fn get_projects() -> Result<Vec<Project>> {
     async fn get_all() -> Result<Vec<Project>> {
         let pool = get_pool()?;
-        ProjectOps::get_all(pool).await
+        ProjectOps::get_all(&pool).await
     }
     
     get_all().await

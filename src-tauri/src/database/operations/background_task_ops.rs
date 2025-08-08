@@ -8,9 +8,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Background task database operations
-pub struct BackgroundTaskOps;
-
-impl BackgroundTaskOps {
+impl super::BackgroundTaskOps {
     /// Save a task to the database
     pub async fn save_task(pool: &Pool<Sqlite>, task: &Task) -> Result<()> {
         // Convert task status to string

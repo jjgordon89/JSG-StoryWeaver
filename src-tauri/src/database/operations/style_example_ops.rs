@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// Style example operations
-pub struct StyleExampleOps;
-
-impl StyleExampleOps {
+impl super::StyleExampleOps {
     /// Create a new style example
     pub async fn create(pool: &Pool<Sqlite>, style_example: StyleExample) -> Result<StyleExample> {
         let mut style_example = style_example;

@@ -36,7 +36,7 @@ impl super::DocumentOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to create document: {}", e)))?;
         
         // Update project word count
-        super::ProjectOps::update_word_count(pool, &document.project_id).await?;
+        super::ProjectOps::update_word_count(&pool, &document.project_id).await?;
         
         Ok(document)
     }
@@ -90,7 +90,7 @@ impl super::DocumentOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to update document: {}", e)))?;
         
         // Update project word count
-        super::ProjectOps::update_word_count(pool, &document.project_id).await?;
+        super::ProjectOps::update_word_count(&pool, &document.project_id).await?;
         
         Ok(())
     }
@@ -114,7 +114,7 @@ impl super::DocumentOps {
         
         // Update project word count if we found the project
         if let Some(project_id) = project_id {
-            super::ProjectOps::update_word_count(pool, &project_id).await?;
+            super::ProjectOps::update_word_count(&pool, &project_id).await?;
         }
         
         Ok(())

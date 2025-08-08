@@ -28,9 +28,7 @@ pub struct CharacterTemplateTrait {
 }
 
 /// Character template operations
-pub struct CharacterTemplateOps;
-
-impl CharacterTemplateOps {
+impl super::CharacterTemplateOps {
     /// Get all system character templates
     pub fn get_system_templates() -> Vec<CharacterTemplate> {
         vec![

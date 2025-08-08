@@ -97,6 +97,7 @@ pub enum DocumentType {
 pub struct Character {
     pub id: String,
     pub project_id: String,
+    pub series_id: Option<String>,
     pub name: String,
     pub description: Option<String>,
     pub role: CharacterRole,
@@ -107,6 +108,7 @@ pub struct Character {
     pub goals: Option<String>,
     pub relationships: String, // JSON string for character relationships
     pub visibility: VisibilityLevel,
+    pub original_project_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub metadata: String, // JSON string for additional character data
@@ -363,7 +365,7 @@ impl Character {
         let now = Utc::now();
         Self {
             id: Uuid::new_v4().to_string(),
-            project_id,
+            project_id: project_id.clone(),
             name,
             description: None,
             role,
@@ -377,6 +379,8 @@ impl Character {
             created_at: now,
             updated_at: now,
             metadata: "{}".to_string(),
+            series_id: None,
+            original_project_id: Some(project_id),
         }
     }
 }
@@ -549,14 +553,14 @@ impl WorldElement {
     pub fn new(project_id: Option<String>, name: String, element_type: String) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
-            project_id,
+            project_id: project_id.clone(),
             series_id: None,
             name,
             description: None,
             element_type,
             properties: "{}".to_string(),
             is_visible: true,
-            original_project_id: project_id.clone(),
+            original_project_id: project_id,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         }

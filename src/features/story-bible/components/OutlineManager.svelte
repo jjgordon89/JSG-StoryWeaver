@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { storyBibleStore, storyBibleActions, filteredOutlines } from '../../../stores/storyBibleStore';
   import type { Outline, CreateOutlineRequest, UpdateOutlineRequest, GenerateOutlineRequest } from '../../../types/storyBible';
+  import { tauriSafe } from '../../../utils/tauriSafe';
   
   import Button from '../../../components/ui/Button.svelte';
   import Input from '../../../components/ui/Input.svelte';
@@ -189,7 +190,136 @@
     }
   }
 
-  async function generateOutline() {
+  async function handleCreateDocument(outline: Outline) {
+    try {
+      const documentTitle = `${outline.title} - Chapter`;
+      const documentType = 'chapter';
+      
+      const request = {
+        project_id: projectId,
+        title: documentTitle,
+        content: outline.content,
+        document_type: documentType,
+        order_index: outline.chapter_number || null,
+        parent_id: null
+      };
+      
+      const result = await tauriSafe.invoke('create_document', request);
+      
+      if (result.success) {
+        const newDocument = result.data;
+        
+        // Try to create automatic document linking based on chapter sequence
+        if (outline.chapter_number && outline.chapter_number > 1) {
+          await createAutomaticDocumentLink(newDocument.id, outline.chapter_number);
+        }
+        
+        alert(`Document "${documentTitle}" created successfully!`);
+      } else {
+        console.error('Failed to create document:', result.error);
+        alert('Failed to create document. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating document:', error);
+      alert('An error occurred while creating the document.');
+    }
+  }
+  
+  async function createAutomaticDocumentLink(newDocumentId: string, chapterNumber: number) {
+    try {
+      // Get all documents in the project to find the previous chapter
+       const documentsResult = await tauriSafe.invoke('get_documents', { project_id: projectId });
+      
+      if (documentsResult.success) {
+        const documents = documentsResult.data;
+        
+        // Find a document that might be the previous chapter
+        const previousChapter = documents.find((doc: any) => 
+          doc.document_type === 'chapter' && 
+          doc.order_index === chapterNumber - 1
+        );
+        
+        if (previousChapter) {
+          // Create a link from previous chapter to new chapter
+          const linkRequest = {
+            from_document_id: previousChapter.id,
+            to_document_id: newDocumentId,
+            link_order: 1
+          };
+          
+          await tauriSafe.invoke('create_document_link', linkRequest);
+          console.log(`Automatically linked Chapter ${chapterNumber - 1} to Chapter ${chapterNumber}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create automatic document link:', error);
+      // Don't show error to user as this is a nice-to-have feature
+    }
+   }
+   
+   async function handleSyncFromDocument(outline: Outline) {
+     try {
+       // Get all documents in the project
+       const documentsResult = await tauriSafe.invoke('get_documents', { project_id: projectId });
+       
+       if (!documentsResult.success) {
+         alert('Failed to retrieve documents.');
+         return;
+       }
+       
+       const documents = documentsResult.data;
+       
+       // Find a document that matches this outline (by title or chapter number)
+       const matchingDocument = documents.find((doc: any) => {
+         const docTitle = doc.title.toLowerCase();
+         const outlineTitle = outline.title.toLowerCase();
+         
+         // Check if titles match or if chapter numbers match
+         return (
+           docTitle.includes(outlineTitle) || 
+           outlineTitle.includes(docTitle) ||
+           (outline.chapter_number && doc.order_index === outline.chapter_number)
+         );
+       });
+       
+       if (!matchingDocument) {
+         alert('No matching document found for this outline.');
+         return;
+       }
+       
+       if (!matchingDocument.content || matchingDocument.content.trim() === '') {
+         alert('The matching document has no content to sync.');
+         return;
+       }
+       
+       // Generate a summary from the document content
+       const summaryRequest = {
+         content: matchingDocument.content,
+         max_length: 500 // Limit summary length
+       };
+       
+       // For now, create a simple summary (first 500 characters)
+       // In a full implementation, this could use AI to generate a proper summary
+       const summary = matchingDocument.content.length > 500 
+         ? matchingDocument.content.substring(0, 500) + '...'
+         : matchingDocument.content;
+       
+       // Update the outline with the summary
+       const updateRequest: UpdateOutlineRequest = {
+         id: outline.id,
+         content: `[Synced from document: ${matchingDocument.title}]\n\n${summary}`
+       };
+       
+       await storyBibleActions.updateOutline(updateRequest);
+       alert(`Outline synced with content from "${matchingDocument.title}"`);
+       
+     } catch (error) {
+       console.error('Error syncing from document:', error);
+       alert('An error occurred while syncing from document.');
+     }
+   }
+ 
+   async function generateOutline() {
     if (!createForm.outline_type || !createForm.title) return;
     
     isGeneratingOutline = true;
@@ -424,6 +554,22 @@
                   title="Edit"
                 >
                   ✏️
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="small"
+                  on:click={() => handleCreateDocument(outline)}
+                  title="Create Document"
+                >
+                  📄
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="small"
+                  on:click={() => handleSyncFromDocument(outline)}
+                  title="Sync from Document"
+                >
+                  🔄
                 </Button>
                 <Button 
                   variant="ghost" 

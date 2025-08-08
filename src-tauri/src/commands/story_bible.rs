@@ -2,7 +2,7 @@
 
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
-use crate::error::Result;
+use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -40,7 +40,7 @@ pub async fn create_or_update_story_bible(request: CreateOrUpdateStoryBibleReque
             pov_mode: request.pov_mode.unwrap_or_else(|| "global".to_string()),
             global_pov: request.global_pov,
             global_tense: request.global_tense,
-            global_character_pov_ids: request.global_character_pov_ids.unwrap_or_default(),
+            global_character_pov_ids: serde_json::to_string(&request.global_character_pov_ids.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string()),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -95,7 +95,7 @@ pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> Com
             id: String::new(), // Will be set by the operation
             character_id: request.character_id,
             trait_name: request.trait_name,
-            trait_value: request.trait_value,
+            trait_value: Some(request.trait_value),
             is_visible: request.is_visible.unwrap_or(true),
             created_at: chrono::Utc::now(),
         };
@@ -122,7 +122,23 @@ pub async fn get_character_traits(character_id: String) -> CommandResponse<Vec<C
 pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> CommandResponse<()> {
     async fn update(request: UpdateCharacterTraitRequest) -> Result<()> {
         let pool = get_pool()?;
-        CharacterTraitOps::update(&pool, &request.id, request.trait_name, request.trait_value, request.is_visible).await
+        
+        // Get the existing trait
+        let mut character_trait = CharacterTraitOps::get_by_id(&pool, &request.id).await?;
+        
+        // Update fields if provided
+        if let Some(trait_name) = request.trait_name {
+            character_trait.trait_name = trait_name;
+        }
+        if let Some(trait_value) = request.trait_value {
+            character_trait.trait_value = Some(trait_value);
+        }
+        if let Some(is_visible) = request.is_visible {
+            character_trait.is_visible = is_visible;
+        }
+        
+        CharacterTraitOps::update(&pool, character_trait).await?;
+        Ok(())
     }
     
     update(request).await.into()
@@ -177,7 +193,7 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
             name: request.name,
             description: request.description,
             element_type: request.element_type,
-            properties: request.properties.unwrap_or_default(),
+            properties: serde_json::to_string(&request.properties.unwrap_or_default()).unwrap_or_else(|_| "{}".to_string()),
             is_visible: request.is_visible.unwrap_or(true),
             original_project_id: Some(request.project_id),
             created_at: chrono::Utc::now(),
@@ -217,7 +233,32 @@ pub async fn get_world_element(id: String) -> CommandResponse<Option<WorldElemen
 pub async fn update_world_element(request: UpdateWorldElementRequest) -> CommandResponse<()> {
     async fn update(request: UpdateWorldElementRequest) -> Result<()> {
         let pool = get_pool()?;
-        WorldElementOps::update(&pool, &request.id, request.name, request.description, request.element_type, request.properties, request.is_visible).await
+        
+        // Get the existing world element
+        let mut element = WorldElementOps::get_by_id(&pool, &request.id).await?
+            .ok_or_else(|| StoryWeaverError::Internal { 
+                message: format!("WorldElement with id {} not found", request.id)
+            })?;
+        
+        // Update fields
+        if let Some(name) = request.name {
+            element.name = name;
+        }
+        if let Some(description) = request.description {
+            element.description = Some(description);
+        }
+        if let Some(element_type) = request.element_type {
+            element.element_type = element_type;
+        }
+        if let Some(properties) = request.properties {
+            element.properties = serde_json::to_string(&properties).unwrap_or_else(|_| "{}".to_string());
+        }
+        if let Some(is_visible) = request.is_visible {
+            element.is_visible = is_visible;
+        }
+        
+        WorldElementOps::update(&pool, element).await?;
+        Ok(())
     }
     
     update(request).await.into()

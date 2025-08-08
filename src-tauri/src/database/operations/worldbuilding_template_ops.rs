@@ -30,9 +30,7 @@ pub struct WorldBuildingTemplateProperty {
 }
 
 /// Worldbuilding template operations
-pub struct WorldBuildingTemplateOps;
-
-impl WorldBuildingTemplateOps {
+impl super::WorldBuildingTemplateOps {
     /// Get all system worldbuilding templates
     pub fn get_system_templates() -> Vec<WorldBuildingTemplate> {
         vec![
@@ -401,7 +399,7 @@ impl WorldBuildingTemplateOps {
                     template_property.default_value.map(|v| {
                         match template_property.property_type.as_str() {
                             "list" => json!(v.split(", ").collect::<Vec<&str>>()),
-                            "number" => v.parse::<f64>().map(json!).unwrap_or(json!(v)),
+                            "number" => v.parse::<f64>().map(|x| json!(x)).unwrap_or(json!(v)),
                             "boolean" => json!(v.to_lowercase() == "true"),
                             _ => json!(v),
                         }

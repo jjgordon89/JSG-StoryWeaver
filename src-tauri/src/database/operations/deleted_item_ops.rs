@@ -5,9 +5,7 @@ use sqlx::{Pool, Sqlite};
 use uuid::Uuid;
 
 /// DeletedItem operations
-pub struct DeletedItemOps;
-
-impl DeletedItemOps {
+impl super::DeletedItemOps {
     /// Create a new deleted item record
     pub async fn create(pool: &Pool<Sqlite>, mut deleted_item: DeletedItem) -> Result<DeletedItem> {
         deleted_item.id = Uuid::new_v4().to_string();
@@ -150,7 +148,7 @@ impl DeletedItemOps {
         
         // Serialize project data to JSON
         let project_data = serde_json::to_string(&project)
-            .map_err(|e| StoryWeaverError::SerializationError { message: e.to_string() })?;
+            .map_err(|e| StoryWeaverError::Serialization { message: e.to_string() })?;
         
         // Create deleted item record
         let deleted_item = DeletedItem {
@@ -222,7 +220,7 @@ impl DeletedItemOps {
         
         // Serialize document data to JSON
         let document_data = serde_json::to_string(&document)
-            .map_err(|e| StoryWeaverError::SerializationError { message: e.to_string() })?;
+            .map_err(|e| StoryWeaverError::Serialization { message: e.to_string() })?;
         
         // Create deleted item record
         let deleted_item = DeletedItem {
@@ -287,7 +285,7 @@ impl DeletedItemOps {
             DeletedItemType::Project => {
                 // Parse project data
                 let project: crate::database::models::Project = serde_json::from_str(&deleted_item.item_data)
-                    .map_err(|e| StoryWeaverError::DeserializationError { message: e.to_string() })?;
+                    .map_err(|e| StoryWeaverError::Deserialization { message: e.to_string() })?;
                 
                 // Insert project back into database
                 sqlx::query(
@@ -318,7 +316,7 @@ impl DeletedItemOps {
             DeletedItemType::Document => {
                 // Parse document data
                 let document: crate::database::models::Document = serde_json::from_str(&deleted_item.item_data)
-                    .map_err(|e| StoryWeaverError::DeserializationError { message: e.to_string() })?;
+                    .map_err(|e| StoryWeaverError::Deserialization { message: e.to_string() })?;
                 
                 // Insert document back into database
                 sqlx::query(
@@ -349,7 +347,7 @@ impl DeletedItemOps {
             DeletedItemType::Folder => {
                 // Parse folder data
                 let folder: crate::database::models::Folder = serde_json::from_str(&deleted_item.item_data)
-                    .map_err(|e| StoryWeaverError::DeserializationError { message: e.to_string() })?;
+                    .map_err(|e| StoryWeaverError::Deserialization { message: e.to_string() })?;
                 
                 // Insert folder back into database
                 sqlx::query(
@@ -372,7 +370,7 @@ impl DeletedItemOps {
             DeletedItemType::Series => {
                 // Parse series data
                 let series: crate::database::models::Series = serde_json::from_str(&deleted_item.item_data)
-                    .map_err(|e| StoryWeaverError::DeserializationError { message: e.to_string() })?;
+                    .map_err(|e| StoryWeaverError::Deserialization { message: e.to_string() })?;
                 
                 // Insert series back into database
                 sqlx::query(

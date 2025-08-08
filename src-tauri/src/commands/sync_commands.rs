@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::commands::CommandResponse;
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 /// Event types for state synchronization
 #[derive(Debug, Serialize, Deserialize, Clone)]
