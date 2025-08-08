@@ -67,13 +67,34 @@ pub async fn get_story_bible(project_id: String) -> CommandResponse<Option<Story
 
 // ===== CHARACTER TRAIT COMMANDS =====
 
+/// Visibility enum for character traits
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum TraitVisibility {
+    Always,
+    Chapter,
+    Never,
+    Public,
+    Private,
+}
+
+impl TraitVisibility {
+    /// Convert visibility enum to boolean for database storage
+    pub fn to_boolean(&self) -> bool {
+        match self {
+            TraitVisibility::Always | TraitVisibility::Chapter | TraitVisibility::Public => true,
+            TraitVisibility::Never | TraitVisibility::Private => false,
+        }
+    }
+}
+
 /// Create character trait request
 #[derive(Debug, Deserialize)]
 pub struct CreateCharacterTraitRequest {
     pub character_id: String,
     pub trait_name: String,
     pub trait_value: String,
-    pub is_visible: Option<bool>,
+    pub visibility: Option<TraitVisibility>,
 }
 
 /// Update character trait request
@@ -82,7 +103,7 @@ pub struct UpdateCharacterTraitRequest {
     pub id: String,
     pub trait_name: Option<String>,
     pub trait_value: Option<String>,
-    pub is_visible: Option<bool>,
+    pub visibility: Option<TraitVisibility>,
 }
 
 /// Create a new character trait
@@ -91,12 +112,16 @@ pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> Com
     async fn create(request: CreateCharacterTraitRequest) -> Result<CharacterTrait> {
         let pool = get_pool()?;
         
+        let is_visible = request.visibility
+            .map(|v| v.to_boolean())
+            .unwrap_or(true);
+        
         let trait_data = CharacterTrait {
             id: String::new(), // Will be set by the operation
             character_id: request.character_id,
             trait_name: request.trait_name,
             trait_value: Some(request.trait_value),
-            is_visible: request.is_visible.unwrap_or(true),
+            is_visible,
             created_at: chrono::Utc::now(),
         };
         
@@ -133,8 +158,8 @@ pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> Com
         if let Some(trait_value) = request.trait_value {
             character_trait.trait_value = Some(trait_value);
         }
-        if let Some(is_visible) = request.is_visible {
-            character_trait.is_visible = is_visible;
+        if let Some(visibility) = request.visibility {
+            character_trait.is_visible = visibility.to_boolean();
         }
         
         CharacterTraitOps::update(&pool, character_trait).await?;

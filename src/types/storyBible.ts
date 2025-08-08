@@ -18,10 +18,9 @@ export interface StoryBible {
 export interface CharacterTrait {
   id: string;
   character_id: string;
-  trait_type: string;
-  content: string;
-  visibility: 'always' | 'chapter' | 'never';
-  series_shared: boolean;
+  trait_name: string;
+  trait_value: string;
+  visibility: 'always' | 'chapter' | 'never' | 'public' | 'private';
   created_at: string;
   updated_at: string;
 }
@@ -111,18 +110,16 @@ export interface UpdateStoryBibleRequest {
 
 export interface CreateCharacterTraitRequest {
   character_id: string;
-  trait_type: string;
-  content: string;
-  visibility?: 'always' | 'chapter' | 'never';
-  series_shared?: boolean;
+  trait_name: string;
+  trait_value: string;
+  visibility?: 'always' | 'chapter' | 'never' | 'public' | 'private';
 }
 
 export interface UpdateCharacterTraitRequest {
   id: string;
-  trait_type?: string;
-  content?: string;
-  visibility?: 'always' | 'chapter' | 'never';
-  series_shared?: boolean;
+  trait_name?: string;
+  trait_value?: string;
+  visibility?: 'always' | 'chapter' | 'never' | 'public' | 'private';
 }
 
 export interface CreateWorldElementRequest {

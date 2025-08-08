@@ -4,15 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
-import { Sparkles, Loader2, Download, Users, Plus, Trash2 } from 'lucide-react';
+import { Sparkles, Loader2, Download, Users, Plus, Trash2, Network, Upload } from 'lucide-react';
 import type { CharacterTrait, CharactersManagerProps } from '../../../../types/storyBible';
 import useStoryBible from '../../hooks/useStoryBible';
+import RelationshipGraph from './RelationshipGraph';
+import CSVImportDialog from './CSVImportDialog';
 
 interface CreateTraitForm {
   traitType: string;
   content: string;
   visibility: 'public' | 'private';
-  seriesShared: boolean;
 }
 
 interface EditTraitForm extends CreateTraitForm {
@@ -63,6 +64,8 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   
   // Relationship management state
   const [showRelationshipView, setShowRelationshipView] = useState(false);
+  const [showGraphView, setShowGraphView] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showCreateRelationshipModal, setShowCreateRelationshipModal] = useState(false);
   const [relationships, setRelationships] = useState<Array<{
     id: string;
@@ -99,16 +102,14 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   const [createForm, setCreateForm] = useState<CreateTraitForm>({
     traitType: '',
     content: '',
-    visibility: 'public',
-    seriesShared: false
+    visibility: 'public'
   });
   
   const [editForm, setEditForm] = useState<EditTraitForm>({
     id: '',
     traitType: '',
     content: '',
-    visibility: 'public',
-    seriesShared: false
+    visibility: 'public'
   });
 
   // Load character traits when character is selected
@@ -136,16 +137,14 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     setCreateForm({
       traitType: '',
       content: '',
-      visibility: 'public',
-      seriesShared: false
+      visibility: 'public'
     });
     
     setEditForm({
       id: '',
       traitType: '',
       content: '',
-      visibility: 'public',
-      seriesShared: false
+      visibility: 'public'
     });
   };
 
@@ -157,10 +156,9 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     try {
       await createCharacterTrait({
         character_id: selectedCharacter,
-        trait_type: createForm.traitType,
-        content: createForm.content,
-        visibility: createForm.visibility,
-        series_shared: createForm.seriesShared
+        trait_name: createForm.traitType,
+        trait_value: createForm.content,
+        visibility: createForm.visibility
       });
       
       closeModals();
@@ -177,10 +175,9 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     try {
       await updateCharacterTrait({
         id: editForm.id,
-        trait_type: editForm.traitType,
-        content: editForm.content,
-        visibility: editForm.visibility,
-        series_shared: editForm.seriesShared
+        trait_name: editForm.traitType,
+        trait_value: editForm.content,
+        visibility: editForm.visibility
       });
       
       closeModals();
@@ -207,10 +204,9 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     setEditingTrait(trait);
     setEditForm({
       id: trait.id,
-      traitType: trait.trait_type,
-      content: trait.content,
-      visibility: trait.visibility,
-      seriesShared: trait.series_shared
+      traitType: trait.trait_name,
+      content: trait.trait_value,
+      visibility: trait.visibility
     });
     setShowEditModal(true);
   };
@@ -248,13 +244,12 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     const characterTraits = traits.filter(t => t.character_id === selectedCharacter);
     
     // Create CSV content
-    const headers = ['Character Name', 'Trait Type', 'Content', 'Visibility', 'Series Shared'];
+    const headers = ['Character Name', 'Trait Type', 'Content', 'Visibility'];
     const rows = characterTraits.map(trait => [
       selectedCharacterData.name,
-      getTraitTypeLabel(trait.trait_type),
-      trait.content.replace(/"/g, '""'), // Escape quotes
-      getVisibilityLabel(trait.visibility),
-      trait.series_shared ? 'Yes' : 'No'
+      getTraitTypeLabel(trait.trait_name),
+      trait.trait_value.replace(/"/g, '""'), // Escape quotes
+      getVisibilityLabel(trait.visibility)
     ]);
     
     const csvContent = [
@@ -336,6 +331,23 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
           >
             <Users className="h-4 w-4" />
             {showRelationshipView ? 'View Traits' : 'View Relationships'}
+          </Button>
+          {showRelationshipView && (
+            <Button 
+              onClick={() => setShowGraphView(!showGraphView)}
+              variant={showGraphView ? "default" : "outline"}
+              className="flex items-center gap-2"
+            >
+              <Network className="h-4 w-4" />
+              {showGraphView ? 'List View' : 'Graph View'}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => setShowImportDialog(true)}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
           </Button>
           <Button 
             onClick={handleExportCSV}
@@ -464,8 +476,8 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm font-medium">
-                            {getTraitTypeLabel(trait.trait_type)}
-                          </CardTitle>
+                          {getTraitTypeLabel(trait.trait_name)}
+                        </CardTitle>
                           <div className="flex gap-1">
                             <Button
                               size="sm"
@@ -487,15 +499,10 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                       </CardHeader>
                       <CardContent className="pt-0">
                         <p className="text-sm text-gray-700 mb-2">
-                          {trait.content}
+                          {trait.trait_value}
                         </p>
                         <div className="flex items-center justify-between text-xs text-gray-500">
                           <span>{getVisibilityLabel(trait.visibility)}</span>
-                          {trait.series_shared && (
-                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              Series Shared
-                            </span>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -505,68 +512,85 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
             </CardContent>
           </Card>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Character Relationships</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {relationships.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No relationships defined. Click "Add Relationship" to get started.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {relationships.map(relationship => (
-                      <Card key={relationship.id} className="border border-gray-200">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="font-medium">
-                                  {getCharacterName(relationship.fromCharacterId)}
-                                </span>
-                                <span className="text-gray-500">→</span>
-                                <span className="font-medium">
-                                  {getCharacterName(relationship.toCharacterId)}
-                                </span>
+            <div className="space-y-6">
+              {showGraphView ? (
+                <RelationshipGraph
+                  characters={characters}
+                  relationships={relationships}
+                  onNodeClick={(characterId) => {
+                    setSelectedCharacter(characterId);
+                    setShowRelationshipView(false);
+                  }}
+                  onRelationshipClick={(relationship) => {
+                    // Handle relationship click if needed
+                    console.log('Relationship clicked:', relationship);
+                  }}
+                />
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Character Relationships</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {relationships.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        No relationships defined. Click "Add Relationship" to get started.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {relationships.map(relationship => (
+                          <Card key={relationship.id} className="border border-gray-200">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="font-medium">
+                                      {getCharacterName(relationship.fromCharacterId)}
+                                    </span>
+                                    <span className="text-gray-500">→</span>
+                                    <span className="font-medium">
+                                      {getCharacterName(relationship.toCharacterId)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                      {getRelationshipTypeLabel(relationship.relationshipType)}
+                                    </span>
+                                    <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                                      {getStrengthLabel(relationship.strength)}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded ${
+                                      relationship.isPublic 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {relationship.isPublic ? 'Public' : 'Private'}
+                                    </span>
+                                  </div>
+                                  {relationship.description && (
+                                    <p className="text-sm text-gray-700">
+                                      {relationship.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteRelationship(relationship.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                  {getRelationshipTypeLabel(relationship.relationshipType)}
-                                </span>
-                                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                                  {getStrengthLabel(relationship.strength)}
-                                </span>
-                                <span className={`px-2 py-1 rounded ${
-                                  relationship.isPublic 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {relationship.isPublic ? 'Public' : 'Private'}
-                                </span>
-                              </div>
-                              {relationship.description && (
-                                <p className="text-sm text-gray-700">
-                                  {relationship.description}
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteRelationship(relationship.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
         </>
       )}
@@ -661,18 +685,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                 </Select>
               </div>
               
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="createSeriesShared"
-                  checked={createForm.seriesShared}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, seriesShared: e.target.checked }))}
-                  className="mr-2"
-                />
-                <label htmlFor="createSeriesShared" className="text-sm text-gray-700">
-                  Share across series
-                </label>
-              </div>
+
             </div>
             
             <div className="flex gap-2 mt-6">
@@ -691,6 +704,51 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* CSV Import Dialog */}
+       {showImportDialog && (
+         <CSVImportDialog
+           isOpen={showImportDialog}
+           onClose={() => setShowImportDialog(false)}
+           onImport={async (data, type) => {
+             try {
+               // Process imported character data
+               for (const characterData of data) {
+                 await createCharacter({
+                   name: characterData.name,
+                   description: characterData.description,
+                   visibility: characterData.visibility,
+                   series_shared: characterData.series_shared
+                 });
+                 
+                 // Add traits for the character
+                 const character = characters.find(c => c.name === characterData.name);
+                 if (character && characterData.traits) {
+                   for (const [traitName, traitValue] of Object.entries(characterData.traits)) {
+                     if (traitValue) {
+                       await createCharacterTrait({
+                           character_id: character.id,
+                           trait_name: traitName,
+                           trait_value: traitValue as string,
+                           visibility: characterData.visibility
+                         });
+                     }
+                   }
+                 }
+               }
+               
+               // Refresh the characters list
+               await loadCharacters();
+               setShowImportDialog(false);
+             } catch (error) {
+               console.error('Import failed:', error);
+               alert('Import failed. Please check the console for details.');
+             }
+           }}
+           importType="characters"
+           projectId={projectId}
+         />
+       )}
 
       {/* Edit Trait Modal */}
       {showEditModal && (
@@ -753,18 +811,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                 </Select>
               </div>
               
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="editSeriesShared"
-                  checked={editForm.seriesShared}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, seriesShared: e.target.checked }))}
-                  className="mr-2"
-                />
-                <label htmlFor="editSeriesShared" className="text-sm text-gray-700">
-                  Share across series
-                </label>
-              </div>
+
             </div>
             
             <div className="flex gap-2 mt-6">

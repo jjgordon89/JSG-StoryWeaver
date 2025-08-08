@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
-import { Sparkles, Loader2, Download } from 'lucide-react';
+import { Sparkles, Loader2, Download, Upload } from 'lucide-react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { WorldElement, CreateWorldElementRequest, UpdateWorldElementRequest } from '../../../../types/storyBible';
+import CSVImportDialog from './CSVImportDialog';
 
 interface WorldBuildingManagerProps {
   projectId: string;
@@ -48,6 +49,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [viewingElement, setViewingElement] = useState<WorldElement | null>(null);
@@ -311,6 +313,13 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
           <Button onClick={openCreateModal}>
             <span className="mr-2">➕</span>
             Add Element
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowImportDialog(true)}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Import CSV
           </Button>
         </div>
       </div>
@@ -733,6 +742,41 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
           </div>
         </div>
       )}
+
+      {/* CSV Import Dialog */}
+       {showImportDialog && (
+         <CSVImportDialog
+           isOpen={showImportDialog}
+           onClose={() => setShowImportDialog(false)}
+           onImport={async (elements, type) => {
+             try {
+               // Handle the imported elements
+               for (const element of elements) {
+                 const request: CreateWorldElementRequest = {
+                   project_id: projectId,
+                   series_id: seriesId,
+                   name: element.name,
+                   element_type: element.element_type,
+                   description: element.description,
+                   details: element.significance || '',
+                   visibility: element.visibility,
+                   series_shared: element.series_shared
+                 };
+                 await createWorldElement(request);
+               }
+               
+               // Refresh the elements list
+               await loadWorldElements();
+               setShowImportDialog(false);
+             } catch (error) {
+               console.error('Import failed:', error);
+               alert('Import failed. Please check the console for details.');
+             }
+           }}
+           importType="worldbuilding"
+           projectId={projectId}
+         />
+       )}
 
       {/* Detail View Modal */}
       {showDetailModal && viewingElement && (

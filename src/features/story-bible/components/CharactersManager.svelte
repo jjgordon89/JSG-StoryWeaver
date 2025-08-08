@@ -40,18 +40,16 @@
   // Form state
   let createForm = {
     character_id: '',
-    trait_type: '',
-    content: '',
-    visibility: 'always' as 'always' | 'chapter' | 'never',
-    series_shared: false
+    trait_name: '',
+    trait_value: '',
+    visibility: 'always' as 'always' | 'chapter' | 'never' | 'public' | 'private'
   };
   
   let editForm = {
     id: '',
-    trait_type: '',
-    content: '',
-    visibility: 'always' as 'always' | 'chapter' | 'never',
-    series_shared: false
+    trait_name: '',
+    trait_value: '',
+    visibility: 'always' as 'always' | 'chapter' | 'never' | 'public' | 'private'
   };
   
   // Available characters (mock data - in real app, this would come from characters store)
@@ -155,10 +153,9 @@
   function openCreateModal() {
     createForm = {
       character_id: characterId || '',
-      trait_type: '',
-      content: '',
-      visibility: 'always',
-      series_shared: false
+      trait_name: '',
+      trait_value: '',
+      visibility: 'always'
     };
     showCreateModal = true;
   }
@@ -167,10 +164,9 @@
     editingTrait = trait;
     editForm = {
       id: trait.id,
-      trait_type: trait.trait_type,
-      content: trait.content,
-      visibility: trait.visibility,
-      series_shared: trait.series_shared
+      trait_name: trait.trait_type,
+      trait_value: trait.content,
+      visibility: trait.visibility
     };
     showEditModal = true;
   }
@@ -182,16 +178,15 @@
   }
   
   async function handleCreateTrait() {
-    if (!createForm.character_id || !createForm.trait_type || !createForm.content) {
+    if (!createForm.character_id || !createForm.trait_name || !createForm.trait_value) {
       return;
     }
     
     const request: CreateCharacterTraitRequest = {
       character_id: createForm.character_id,
-      trait_type: createForm.trait_type,
-      content: createForm.content,
-      visibility: createForm.visibility,
-      series_shared: createForm.series_shared
+      trait_name: createForm.trait_name,
+      trait_value: createForm.trait_value,
+      visibility: createForm.visibility
     };
     
     await storyBibleActions.createCharacterTrait(request);
@@ -199,16 +194,15 @@
   }
   
   async function handleUpdateTrait() {
-    if (!editForm.id || !editForm.trait_type || !editForm.content) {
+    if (!editForm.id || !editForm.trait_name || !editForm.trait_value) {
       return;
     }
     
     const request: UpdateCharacterTraitRequest = {
       id: editForm.id,
-      trait_type: editForm.trait_type,
-      content: editForm.content,
-      visibility: editForm.visibility,
-      series_shared: editForm.series_shared
+      trait_name: editForm.trait_name,
+      trait_value: editForm.trait_value,
+      visibility: editForm.visibility
     };
     
     await storyBibleActions.updateCharacterTrait(request);
@@ -245,7 +239,7 @@
   }
   
   async function generateCharacterTraits() {
-    if (!projectId || !createForm.character_id || !createForm.trait_type) return;
+    if (!projectId || !createForm.character_id || !createForm.trait_name) return;
     
     isGeneratingTraits = true;
     
@@ -272,7 +266,7 @@
         // The response contains an array of traits, take the first one
         const generatedTraits = response.generated_content.split('\n').filter(t => t.trim());
         if (generatedTraits.length > 0) {
-          createForm.content = generatedTraits[0].trim();
+          createForm.trait_value = generatedTraits[0].trim();
         }
       }
     } catch (error) {
@@ -463,7 +457,7 @@
       <label for="create-trait-type">Trait Type:</label>
       <Select
         id="create-trait-type"
-        bind:value={createForm.trait_type}
+        bind:value={createForm.trait_name}
         options={traitTypeOptions}
       />
     </div>
@@ -475,7 +469,7 @@
           variant="outline"
           size="sm"
           on:click={generateCharacterTraits}
-          disabled={isGeneratingTraits || !createForm.trait_type}
+          disabled={isGeneratingTraits || !createForm.trait_name}
           class="ai-generate-btn"
         >
           {#if isGeneratingTraits}
@@ -488,11 +482,11 @@
       </div>
       <TextArea
         id="create-content"
-        bind:value={createForm.content}
+        bind:value={createForm.trait_value}
         placeholder="Describe this character trait..."
         rows={4}
       />
-      {#if !createForm.trait_type}
+      {#if !createForm.trait_name}
         <p class="hint-text">
           💡 Select a trait type to enable AI generation
         </p>
@@ -509,15 +503,7 @@
         />
       </div>
       
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input 
-            type="checkbox" 
-            bind:checked={createForm.series_shared}
-          />
-          Share across series
-        </label>
-      </div>
+
     </div>
   </div>
   
@@ -528,7 +514,7 @@
     <Button 
       variant="primary" 
       on:click={handleCreateTrait}
-      disabled={!createForm.character_id || !createForm.trait_type || !createForm.content}
+      disabled={!createForm.character_id || !createForm.trait_name || !createForm.trait_value}
     >
       Add Trait
     </Button>
@@ -542,7 +528,7 @@
       <label for="edit-trait-type">Trait Type:</label>
       <Select
         id="edit-trait-type"
-        bind:value={editForm.trait_type}
+        bind:value={editForm.trait_name}
         options={traitTypeOptions}
       />
     </div>
@@ -551,7 +537,7 @@
       <label for="edit-content">Content:</label>
       <TextArea
         id="edit-content"
-        bind:value={editForm.content}
+        bind:value={editForm.trait_value}
         placeholder="Describe this character trait..."
         rows={4}
       />
@@ -567,15 +553,7 @@
         />
       </div>
       
-      <div class="form-group">
-        <label class="checkbox-label">
-          <input 
-            type="checkbox" 
-            bind:checked={editForm.series_shared}
-          />
-          Share across series
-        </label>
-      </div>
+
     </div>
   </div>
   
@@ -586,7 +564,7 @@
     <Button 
       variant="primary" 
       on:click={handleUpdateTrait}
-      disabled={!editForm.trait_type || !editForm.content}
+      disabled={!editForm.trait_name || !editForm.trait_value}
     >
       Save Changes
     </Button>
