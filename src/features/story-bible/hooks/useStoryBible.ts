@@ -1,5 +1,18 @@
 import { useState, useCallback, useMemo } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
+
+// Tauri response type
+interface TauriResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+interface ValidationResponse {
+  is_validated: boolean;
+  validation_issues?: string;
+}
+
 import type {
   StoryBible,
   CharacterTrait,
@@ -21,6 +34,13 @@ import type {
   SearchWorldElementsRequest,
   SearchOutlinesRequest,
   SearchScenesRequest,
+  GenerateSynopsisRequest,
+  GenerateCharacterTraitsRequest,
+  GenerateWorldElementRequest,
+  GenerateOutlineRequest,
+  GenerateScenesRequest,
+  GenerateWorldBuildingRequest,
+  AIGenerationResponse,
   UseStoryBibleReturn
 } from '../../../types/storyBible';
 
@@ -85,7 +105,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoading: true, error: null }));
     
     try {
-      const response = await invoke('create_or_update_story_bible', { request });
+      const response = await invoke<TauriResponse<StoryBible>>('create_or_update_story_bible', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -106,7 +126,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoading: true, error: null }));
     
     try {
-      const response = await invoke('get_story_bible', { projectId });
+      const response = await invoke<TauriResponse<StoryBible>>('get_story_bible', { projectId });
       
       if (response.success) {
         setState(prevState => ({
@@ -128,7 +148,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
     
     try {
-      const response = await invoke('create_character_trait', { request });
+      const response = await invoke<TauriResponse<CharacterTrait>>('create_character_trait', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -149,7 +169,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
     
     try {
-      const response = await invoke('update_character_trait', { request });
+      const response = await invoke<TauriResponse<CharacterTrait>>('update_character_trait', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -172,7 +192,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
     
     try {
-      const response = await invoke('delete_character_trait', { id });
+      const response = await invoke<TauriResponse<void>>('delete_character_trait', { id });
       
       if (response.success) {
         setState(prevState => ({
@@ -193,7 +213,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
     
     try {
-      const response = await invoke('get_character_traits', { characterId });
+      const response = await invoke<TauriResponse<CharacterTrait[]>>('get_character_traits', { characterId });
       
       if (response.success) {
         setState(prevState => ({
@@ -215,7 +235,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
     
     try {
-      const response = await invoke('create_world_element', { request });
+      const response = await invoke<TauriResponse<WorldElement>>('create_world_element', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -236,7 +256,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
     
     try {
-      const response = await invoke('update_world_element', { request });
+      const response = await invoke<TauriResponse<WorldElement>>('update_world_element', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -259,7 +279,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
     
     try {
-      const response = await invoke('delete_world_element', { id });
+      const response = await invoke<TauriResponse<void>>('delete_world_element', { id });
       
       if (response.success) {
         setState(prevState => ({
@@ -280,7 +300,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
     
     try {
-      const response = await invoke('get_world_elements', { projectId });
+      const response = await invoke<TauriResponse<WorldElement[]>>('get_world_elements', { projectId });
       
       if (response.success) {
         setState(prevState => ({
@@ -299,7 +319,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
 
   const searchWorldElements = useCallback(async (request: SearchWorldElementsRequest): Promise<WorldElement[]> => {
     try {
-      const response = await invoke('search_world_elements', { request });
+      const response = await invoke<TauriResponse<WorldElement[]>>('search_world_elements', { request });
       return response.success ? response.data : [];
     } catch (error) {
       handleError(error, 'worldElementsError');
@@ -312,7 +332,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingOutlines: true, outlinesError: null }));
     
     try {
-      const response = await invoke('create_outline', { request });
+      const response = await invoke<TauriResponse<Outline>>('create_outline', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -333,7 +353,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingOutlines: true, outlinesError: null }));
     
     try {
-      const response = await invoke('update_outline', { request });
+      const response = await invoke<TauriResponse<Outline>>('update_outline', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -356,7 +376,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingOutlines: true, outlinesError: null }));
     
     try {
-      const response = await invoke('delete_outline', { id });
+      const response = await invoke<TauriResponse<void>>('delete_outline', { id });
       
       if (response.success) {
         setState(prevState => ({
@@ -377,7 +397,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingOutlines: true, outlinesError: null }));
     
     try {
-      const response = await invoke('get_outlines', { projectId });
+      const response = await invoke<TauriResponse<Outline[]>>('get_outlines', { projectId });
       
       if (response.success) {
         setState(prevState => ({
@@ -396,7 +416,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
 
   const searchOutlines = useCallback(async (request: SearchOutlinesRequest): Promise<Outline[]> => {
     try {
-      const response = await invoke('search_outlines', { request });
+      const response = await invoke<TauriResponse<Outline[]>>('search_outlines', { request });
       return response.success ? response.data : [];
     } catch (error) {
       handleError(error, 'outlinesError');
@@ -409,7 +429,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
     
     try {
-      const response = await invoke('create_scene', { request });
+      const response = await invoke<TauriResponse<Scene>>('create_scene', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -430,7 +450,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
     
     try {
-      const response = await invoke('update_scene', { request });
+      const response = await invoke<TauriResponse<Scene>>('update_scene', { request });
       
       if (response.success) {
         setState(prevState => ({
@@ -453,7 +473,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
     
     try {
-      const response = await invoke('delete_scene', { id });
+      const response = await invoke<TauriResponse<void>>('delete_scene', { id });
       
       if (response.success) {
         setState(prevState => ({
@@ -474,13 +494,13 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
     
     try {
-      const response = await invoke('validate_scene', { id });
+      const response = await invoke<TauriResponse<ValidationResponse>>('validate_scene', { id });
       
       if (response.success) {
         setState(prevState => ({
           ...prevState,
           scenes: prevState.scenes.map(scene => 
-            scene.id === id ? { ...scene, is_validated: true, validation_issues: response.data.issues } : scene
+            scene.id === id ? { ...scene, is_validated: response.data?.is_validated || true, validation_issues: response.data?.validation_issues } : scene
           ),
           isLoadingScenes: false,
           scenesError: null
@@ -497,7 +517,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
     
     try {
-      const response = await invoke('get_scenes', { outlineId });
+      const response = await invoke<TauriResponse<Scene[]>>('get_scenes', { outlineId });
       
       if (response.success) {
         setState(prevState => ({
@@ -516,11 +536,126 @@ export const useStoryBible = (): UseStoryBibleReturn => {
 
   const searchScenes = useCallback(async (request: SearchScenesRequest): Promise<Scene[]> => {
     try {
-      const response = await invoke('search_scenes', { request });
+      const response = await invoke<TauriResponse<Scene[]>>('search_scenes', { request });
       return response.success ? response.data : [];
     } catch (error) {
       handleError(error, 'scenesError');
       return [];
+    }
+  }, [handleError]);
+
+  // AI Generation operations
+  const generateSynopsis = useCallback(async (request: GenerateSynopsisRequest): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoading: true, error: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_synopsis', { request });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoading: false, error: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'error');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'error');
+      return null;
+    }
+  }, [handleError]);
+
+  const generateCharacterTraits = useCallback(async (request: GenerateCharacterTraitsRequest): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_character_traits', { request });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoadingTraits: false, traitsError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'traitsError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'traitsError');
+      return null;
+    }
+  }, [handleError]);
+
+  const generateWorldElement = useCallback(async (request: GenerateWorldElementRequest): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_world_element', { request });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoadingWorldElements: false, worldElementsError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'worldElementsError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'worldElementsError');
+      return null;
+    }
+  }, [handleError]);
+
+  const generateOutline = useCallback(async (request: GenerateOutlineRequest): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoadingOutlines: true, outlinesError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_outline', { request });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoadingOutlines: false, outlinesError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'outlinesError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'outlinesError');
+      return null;
+    }
+  }, [handleError]);
+
+  const generateScenes = useCallback(async (request: GenerateScenesRequest): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_scenes', { request });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoadingScenes: false, scenesError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'scenesError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'scenesError');
+      return null;
+    }
+  }, [handleError]);
+
+  const generateWorldBuilding = useCallback(async (request: GenerateWorldBuildingRequest): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_world_building', { request });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoadingWorldElements: false, worldElementsError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'worldElementsError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'worldElementsError');
+      return null;
     }
   }, [handleError]);
 
@@ -652,6 +787,14 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     validateScene,
     loadScenes,
     searchScenes,
+    
+    // AI Generation operations
+    generateSynopsis,
+    generateCharacterTraits,
+    generateWorldElement,
+    generateOutline,
+    generateScenes,
+    generateWorldBuilding,
     
     // UI state management
     setActiveTab,

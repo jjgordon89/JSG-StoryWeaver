@@ -18,6 +18,10 @@ import type {
   UpdateOutlineRequest,
   CreateSceneRequest,
   UpdateSceneRequest,
+  GenerateSynopsisRequest,
+  GenerateCharacterTraitsRequest,
+  GenerateWorldElementRequest,
+  AIGenerationResponse,
   SearchWorldElementsRequest,
   SearchOutlinesRequest,
   SearchScenesRequest
@@ -554,6 +558,64 @@ export const storyBibleActions = {
     } catch (error) {
       handleError(error, 'scenesError');
       return [];
+    }
+  },
+
+  // AI Generation operations
+  async generateSynopsis(request: GenerateSynopsisRequest): Promise<AIGenerationResponse | null> {
+    storyBibleStore.update(state => ({ ...state, isLoading: true, error: null }));
+    
+    try {
+      const response = await invoke('generate_synopsis', { request });
+      
+      if (response.success) {
+        storyBibleStore.update(state => ({ ...state, isLoading: false, error: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'error');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'error');
+      return null;
+    }
+  },
+
+  async generateCharacterTraits(request: GenerateCharacterTraitsRequest): Promise<AIGenerationResponse | null> {
+    storyBibleStore.update(state => ({ ...state, isLoadingTraits: true, traitsError: null }));
+    
+    try {
+      const response = await invoke('generate_character_traits', { request });
+      
+      if (response.success) {
+        storyBibleStore.update(state => ({ ...state, isLoadingTraits: false, traitsError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'traitsError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'traitsError');
+      return null;
+    }
+  },
+
+  async generateWorldElement(request: GenerateWorldElementRequest): Promise<AIGenerationResponse | null> {
+    storyBibleStore.update(state => ({ ...state, isLoadingWorldElements: true, worldElementsError: null }));
+    
+    try {
+      const response = await invoke('generate_world_element', { request });
+      
+      if (response.success) {
+        storyBibleStore.update(state => ({ ...state, isLoadingWorldElements: false, worldElementsError: null }));
+        return response.data;
+      } else {
+        handleError(response.error, 'worldElementsError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'worldElementsError');
+      return null;
     }
   },
 

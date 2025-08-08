@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { WorldElement, CreateWorldElementRequest, UpdateWorldElementRequest } from '../../../../types/storyBible';
 
@@ -16,7 +17,7 @@ interface CreateForm {
   name: string;
   element_type: string;
   description: string;
-  significance: string;
+  details: string;
   visibility: 'always' | 'chapter' | 'never';
   series_shared: boolean;
 }
@@ -38,14 +39,17 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
     deleteWorldElement,
     searchWorldElements,
     setWorldElementFilter,
-    clearError
+    clearError,
+    generateWorldBuilding
   } = useStoryBible();
+
+  // AI generation state
+  const [isGeneratingWorldBuilding, setIsGeneratingWorldBuilding] = useState(false);
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [editingElement, setEditingElement] = useState<WorldElement | null>(null);
   const [viewingElement, setViewingElement] = useState<WorldElement | null>(null);
 
   // Form state
@@ -63,7 +67,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
     name: '',
     element_type: '',
     description: '',
-    significance: '',
+    details: '',
     visibility: 'always',
     series_shared: false
   });
@@ -99,15 +103,15 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
   ];
 
   useEffect(() => {
-    loadWorldElements(projectId, seriesId);
-  }, [projectId, seriesId, loadWorldElements]);
+    loadWorldElements(projectId);
+  }, [projectId, loadWorldElements]);
 
   const openCreateModal = () => {
     setCreateForm({
       name: '',
       element_type: '',
       description: '',
-      significance: '',
+      details: '',
       visibility: 'always',
       series_shared: false
     });
@@ -115,13 +119,12 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
   };
 
   const openEditModal = (element: WorldElement) => {
-    setEditingElement(element);
     setEditForm({
       id: element.id,
       name: element.name,
       element_type: element.element_type,
       description: element.description,
-      significance: element.significance || '',
+      details: element.details || '',
       visibility: element.visibility,
       series_shared: element.series_shared
     });
@@ -137,7 +140,6 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
     setShowCreateModal(false);
     setShowEditModal(false);
     setShowDetailModal(false);
-    setEditingElement(null);
     setViewingElement(null);
   };
 
@@ -152,7 +154,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
       name: createForm.name,
       element_type: createForm.element_type,
       description: createForm.description,
-      significance: createForm.significance || undefined,
+      details: createForm.details || undefined,
       visibility: createForm.visibility,
       series_shared: createForm.series_shared
     };
@@ -171,7 +173,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
       name: editForm.name,
       element_type: editForm.element_type,
       description: editForm.description,
-      significance: editForm.significance || undefined,
+      details: editForm.details || undefined,
       visibility: editForm.visibility,
       series_shared: editForm.series_shared
     };
@@ -183,6 +185,32 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
   const handleDeleteElement = async (elementId: string) => {
     if (window.confirm('Are you sure you want to delete this world element?')) {
       await deleteWorldElement(elementId);
+    }
+  };
+
+  const handleGenerateWorldBuilding = async () => {
+    if (!createForm.element_type || !createForm.name) return;
+    
+    setIsGeneratingWorldBuilding(true);
+    
+    try {
+      const request = {
+        project_id: projectId,
+        element_type: createForm.element_type,
+        element_name: createForm.name,
+        story_context: storyBible?.braindump || '',
+        existing_elements: worldElements.map(el => el.name)
+      };
+      
+      const generatedContent = await generateWorldBuilding(request);
+      
+      if (generatedContent) {
+        setCreateForm(prev => ({ ...prev, description: generatedContent }));
+      }
+    } catch (err) {
+      console.error('Failed to generate worldbuilding content:', err);
+    } finally {
+      setIsGeneratingWorldBuilding(false);
     }
   };
 
@@ -468,13 +496,34 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Description:</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Description:</label>
+                  <Button
+                    onClick={handleGenerateWorldBuilding}
+                    disabled={isGeneratingWorldBuilding || !createForm.element_type || !createForm.name}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    {isGeneratingWorldBuilding ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {isGeneratingWorldBuilding ? 'Generating...' : 'Generate with AI'}
+                  </Button>
+                </div>
                 <Textarea
                   value={createForm.description}
                   onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                   placeholder="Describe this world element..."
                   rows={4}
                 />
+                {(!createForm.element_type || !createForm.name) && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    💡 Enter a name and select an element type to enable AI generation
+                  </p>
+                )}
               </div>
 
               <div>

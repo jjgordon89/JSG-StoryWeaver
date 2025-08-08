@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Sparkles, Loader2 } from 'lucide-react';
 import type { StoryBible, BraindumpEditorProps } from '../../../../types/storyBible';
 import useStoryBible from '../../hooks/useStoryBible';
 
@@ -59,12 +60,14 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
     isLoading, 
     error, 
     createOrUpdateStoryBible, 
-    loadStoryBible 
+    loadStoryBible,
+    generateSynopsis 
   } = useStoryBible();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isGeneratingSynopsis, setIsGeneratingSynopsis] = useState(false);
   const [formData, setFormData] = useState<BraindumpFormData>({
     braindump: '',
     synopsis: '',
@@ -155,6 +158,31 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
       console.error('Failed to save story bible:', err);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleGenerateSynopsis = async () => {
+    if (!projectId) return;
+    
+    setIsGeneratingSynopsis(true);
+    
+    try {
+      const request = {
+        project_id: projectId,
+        braindump: formData.braindump,
+        genre: formData.genre,
+        style: formData.style
+      };
+      
+      const generatedSynopsis = await generateSynopsis(request);
+      
+      if (generatedSynopsis) {
+        handleInputChange('synopsis', generatedSynopsis);
+      }
+    } catch (err) {
+      console.error('Failed to generate synopsis:', err);
+    } finally {
+      setIsGeneratingSynopsis(false);
     }
   };
 
@@ -331,16 +359,41 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
       {/* Synopsis */}
       <Card>
         <CardHeader>
-          <CardTitle>Synopsis</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Synopsis</CardTitle>
+            {isEditing && (
+              <Button
+                onClick={handleGenerateSynopsis}
+                disabled={isGeneratingSynopsis || !formData.braindump.trim()}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {isGeneratingSynopsis ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                {isGeneratingSynopsis ? 'Generating...' : 'Generate with AI'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {isEditing ? (
-            <Textarea
-              value={formData.synopsis}
-              onChange={(e) => handleInputChange('synopsis', e.target.value)}
-              placeholder="Write a brief synopsis of your story..."
-              rows={4}
-            />
+            <div className="space-y-2">
+              <Textarea
+                value={formData.synopsis}
+                onChange={(e) => handleInputChange('synopsis', e.target.value)}
+                placeholder="Write a brief synopsis of your story..."
+                rows={4}
+              />
+              {!formData.braindump.trim() && (
+                <p className="text-sm text-gray-500">
+                  💡 Add content to your braindump to enable AI synopsis generation
+                </p>
+              )}
+            </div>
           ) : (
             <div className="text-gray-900 whitespace-pre-wrap">
               {formData.synopsis || 'No synopsis written yet.'}

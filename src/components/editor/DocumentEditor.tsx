@@ -4,8 +4,10 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useStore } from '../../stores/documentStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useVersionStore, DocumentVersion } from '../../stores/versionStore';
+import { useStoryBible } from '../../features/story-bible/hooks/useStoryBible';
 import { invoke } from '../../utils/tauriSafe';
 import { AITextDecorationManager } from '../../utils/aiTextDecorations';
+import { StoryBibleTextDetector } from '../../utils/storyBibleTextDetection';
 import FocusMode from './FocusMode';
 import FocusModeSettings from './FocusModeSettings';
 import VersionHistory from './VersionHistory';
@@ -30,7 +32,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showQuickTools, setShowQuickTools] = useState(false);
   const [quickToolsPosition, setQuickToolsPosition] = useState({ x: 0, y: 0 });
+  const [storyBibleDetectionEnabled, setStoryBibleDetectionEnabled] = useState(true);
   const [aiDecorationManager, setAiDecorationManager] = useState<AITextDecorationManager | null>(null);
+  const [storyBibleDetector, setStoryBibleDetector] = useState<StoryBibleTextDetector | null>(null);
   const [aiMenuVisible, setAIMenuVisible] = useState(false);
   const [aiMenuPosition, setAIMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -40,6 +44,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const saveDocument = useStore((state) => state.saveDocument);
   const { focusModeEnabled } = useSettingsStore();
   const { createVersion } = useVersionStore();
+  const { storyBible } = useStoryBible();
 
   // Auto-save debouncer
   const saveDebouncer = useRef<NodeJS.Timeout | null>(null);
@@ -58,14 +63,49 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
     }
   }, []);
 
-  // Cleanup effect for AI decoration manager
+  // Cleanup effect for decoration managers
   useEffect(() => {
     return () => {
       if (aiDecorationManager) {
         aiDecorationManager.dispose();
       }
+      if (storyBibleDetector) {
+        storyBibleDetector.dispose();
+      }
     };
-  }, [aiDecorationManager]);
+  }, [aiDecorationManager, storyBibleDetector]);
+
+  // Update Story Bible detector when story bible data changes
+  useEffect(() => {
+    if (storyBibleDetector && storyBible) {
+      storyBibleDetector.updateStoryBibleData({
+        characters: storyBible.characters || [],
+        worldElements: storyBible.world_elements || [],
+        outlines: storyBible.outlines || [],
+        scenes: storyBible.scenes || []
+      });
+      
+      // Re-analyze current content with updated data
+      if (editorRef.current) {
+        storyBibleDetector.analyzeText(editorRef.current.getValue());
+      }
+    }
+  }, [storyBibleDetector, storyBible]);
+
+  // Handle Story Bible detection toggle
+  const handleToggleStoryBibleDetection = useCallback(() => {
+    setStoryBibleDetectionEnabled(prev => {
+      const newEnabled = !prev;
+      if (storyBibleDetector) {
+        storyBibleDetector.setEnabled(newEnabled);
+        if (newEnabled && editorRef.current) {
+          // Re-analyze content when re-enabling
+          storyBibleDetector.analyzeText(editorRef.current.getValue());
+        }
+      }
+      return newEnabled;
+    });
+  }, [storyBibleDetector]);
 
   // Keyboard shortcuts using react-hotkeys-hook
   useHotkeys('ctrl+k, cmd+k', (e) => {
@@ -239,12 +279,25 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
     const decorationManager = new AITextDecorationManager(editor);
     setAiDecorationManager(decorationManager);
 
+    // Initialize Story Bible text detector
+    const storyBibleDetector = new StoryBibleTextDetector(editor);
+    setStoryBibleDetector(storyBibleDetector);
+    
+    // Set initial Story Bible detection state
+    storyBibleDetector.setEnabled(storyBibleDetectionEnabled);
+
     // Set initial word count
     setWordCount(calculateWordCount(initialContent));
     
     // Set up change handler
     const changeDisposable = editor.onDidChangeModelContent(() => {
-      handleEditorChange(editor.getValue());
+      const currentContent = editor.getValue();
+      handleEditorChange(currentContent);
+      
+      // Update Story Bible detection when content changes
+      if (storyBibleDetector) {
+        storyBibleDetector.analyzeText(currentContent);
+      }
     });
 
     // Set up selection change handler
@@ -394,6 +447,21 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
                   <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
               </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleToggleStoryBibleDetection}
+                className={`text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ${
+                  storyBibleDetectionEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''
+                }`}
+                title="Toggle Story Bible Detection"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  <circle cx="12" cy="12" r="2"/>
+                </svg>
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

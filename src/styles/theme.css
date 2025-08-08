@@ -185,3 +185,101 @@ select:focus-visible {
   background-color: rgba(147, 51, 234, 0.3) !important;
   border-bottom: 1px solid rgba(147, 51, 234, 0.7) !important;
 }
+
+/* Story Bible Element Highlighting */
+/* Character elements */
+.story-bible-character {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.4) !important;
+  color: #059669 !important;
+  transition: all 0.2s ease;
+}
+
+.story-bible-character:hover {
+  background-color: rgba(16, 185, 129, 0.25) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.6) !important;
+}
+
+/* World elements */
+.story-bible-world_element {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #2563eb !important;
+  transition: all 0.2s ease;
+}
+
+.story-bible-world_element:hover {
+  background-color: rgba(59, 130, 246, 0.25) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.6) !important;
+}
+
+/* Outline elements */
+.story-bible-outline {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.4) !important;
+  color: #d97706 !important;
+  transition: all 0.2s ease;
+}
+
+.story-bible-outline:hover {
+  background-color: rgba(245, 158, 11, 0.25) !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.6) !important;
+}
+
+/* Scene elements */
+.story-bible-scene {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.4) !important;
+  color: #7c3aed !important;
+  transition: all 0.2s ease;
+}
+
+.story-bible-scene:hover {
+  background-color: rgba(139, 92, 246, 0.25) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.6) !important;
+}
+
+/* Dark theme support for Story Bible elements */
+.monaco-editor.vs-dark .story-bible-character {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.5) !important;
+  color: #34d399 !important;
+}
+
+.monaco-editor.vs-dark .story-bible-character:hover {
+  background-color: rgba(16, 185, 129, 0.3) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.7) !important;
+}
+
+.monaco-editor.vs-dark .story-bible-world_element {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.5) !important;
+  color: #60a5fa !important;
+}
+
+.monaco-editor.vs-dark .story-bible-world_element:hover {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.7) !important;
+}
+
+.monaco-editor.vs-dark .story-bible-outline {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.5) !important;
+  color: #fbbf24 !important;
+}
+
+.monaco-editor.vs-dark .story-bible-outline:hover {
+  background-color: rgba(245, 158, 11, 0.3) !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.7) !important;
+}
+
+.monaco-editor.vs-dark .story-bible-scene {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.5) !important;
+  color: #a78bfa !important;
+}
+
+.monaco-editor.vs-dark .story-bible-scene:hover {
+  background-color: rgba(139, 92, 246, 0.3) !important;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.7) !important;
+}

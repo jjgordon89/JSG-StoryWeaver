@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Label } from '../../../../components/ui/label';
 import { Badge } from '../../../../components/ui/badge';
-import { Loader2, Plus, Search, Eye, Edit, Trash2, Check } from 'lucide-react';
+import { Loader2, Plus, Search, Eye, Edit, Trash2, Check, Sparkles } from 'lucide-react';
 
 interface ScenesManagerProps {
   projectId: string;
@@ -198,8 +198,12 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
     loadScenes,
     searchScenes,
     setSceneFilter,
-    clearError
+    clearError,
+    generateScenes
   } = useStoryBible();
+
+  // AI generation state
+  const [isGeneratingScenes, setIsGeneratingScenes] = useState(false);
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -331,6 +335,36 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
       await deleteScene(sceneId);
     }
   }, [deleteScene]);
+
+  const handleGenerateScenes = useCallback(async () => {
+    if (!createForm.scene_type || !createForm.title) {
+      return;
+    }
+
+    setIsGeneratingScenes(true);
+    try {
+      const generatedContent = await generateScenes({
+        project_id: projectId,
+        scene_type: createForm.scene_type,
+        title: createForm.title,
+        chapter_number: createForm.chapter_number,
+        scene_number: createForm.scene_number,
+        character_pov: createForm.character_pov,
+        location: createForm.location,
+        mood: createForm.mood,
+        purpose: createForm.purpose
+      });
+      
+      setCreateForm(prev => ({
+        ...prev,
+        content: generatedContent
+      }));
+    } catch (error) {
+      console.error('Failed to generate scene content:', error);
+    } finally {
+      setIsGeneratingScenes(false);
+    }
+  }, [createForm, projectId, generateScenes]);
 
   const handleValidateScene = useCallback(async (sceneId: string) => {
     await validateScene(sceneId);
@@ -823,6 +857,31 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                 placeholder="Write your scene content or detailed breakdown..."
                 rows={6}
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateScenes}
+                disabled={!createForm.scene_type || !createForm.title || isGeneratingScenes}
+                className="w-full"
+              >
+                {isGeneratingScenes ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Scene Content...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Scene Content with AI
+                  </>
+                )}
+              </Button>
+              {(!createForm.scene_type || !createForm.title) && (
+                <p className="text-sm text-muted-foreground">
+                  Enter a title and select a scene type to enable AI generation
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">

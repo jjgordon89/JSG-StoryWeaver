@@ -72,7 +72,7 @@ export class AITextDecorationManager {
 
   // Check if a position is within an AI text range
   isPositionInAIText(position: monaco.IPosition): string | null {
-    for (const [id, range] of this.aiRanges) {
+    for (const [id, range] of Array.from(this.aiRanges.entries())) {
       if (this.isPositionInRange(position, range)) {
         return id;
       }
@@ -89,7 +89,7 @@ export class AITextDecorationManager {
 
     const decorations: monaco.editor.IModelDeltaDecoration[] = [];
 
-    for (const range of this.aiRanges.values()) {
+    for (const range of Array.from(this.aiRanges.values())) {
       decorations.push({
         range: new monaco.Range(
           range.startLineNumber,
@@ -135,7 +135,7 @@ export class AITextDecorationManager {
         };
 
         // Check if this change overlaps with any AI ranges
-        for (const [id, aiRange] of this.aiRanges) {
+        for (const [id, aiRange] of Array.from(this.aiRanges.entries())) {
           if (this.rangesOverlap(changeRange, aiRange)) {
             rangesToRemove.push(id);
           }

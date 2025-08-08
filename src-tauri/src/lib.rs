@@ -84,6 +84,12 @@ pub fn run() {
             commands::series_commands::add_project_to_series,
             commands::series_commands::remove_project_from_series,
             
+            // Series consistency commands
+            commands::series_consistency_commands::generate_series_consistency_report,
+            commands::series_consistency_commands::get_series_consistency_status,
+            commands::series_consistency_commands::get_series_conflicts_by_severity,
+            commands::series_consistency_commands::batch_check_series_consistency,
+            
             // Document link commands
             commands::document_link_commands::create_document_link,
             commands::document_link_commands::get_document_link,
@@ -207,7 +213,14 @@ pub fn run() {
             commands::story_bible::update_scene,
             commands::story_bible::delete_scene,
             commands::story_bible::validate_scene,
-            commands::story_bible::search_scenes
+            commands::story_bible::search_scenes,
+            
+            // Story Bible AI Generation commands
+            commands::story_bible_ai::generate_synopsis,
+            commands::story_bible_ai::generate_character_traits,
+            commands::story_bible_ai::generate_world_element,
+            commands::story_bible_ai::generate_outline_from_story_bible,
+            commands::story_bible_ai::generate_scene_content
         ])
         .setup(|app| {
             // Initialize database on startup

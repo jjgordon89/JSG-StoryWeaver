@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '../../utils/tauriSafe';
+import SeriesConsistencyWidget from '../SeriesConsistencyWidget.svelte';
+import SeriesConsistencyReport from '../SeriesConsistencyReport.svelte';
 
 interface Series {
   id: string;
@@ -30,6 +32,8 @@ const SeriesManager: React.FC<SeriesManagerProps> = ({ onSeriesSelect, onProject
   const [newSeriesName, setNewSeriesName] = useState('');
   const [newSeriesDescription, setNewSeriesDescription] = useState('');
   const [showNewSeriesForm, setShowNewSeriesForm] = useState(false);
+  const [showConsistencyReport, setShowConsistencyReport] = useState(false);
+  const [consistencyReportSeriesId, setConsistencyReportSeriesId] = useState<string | null>(null);
 
   // Fetch series data
   useEffect(() => {

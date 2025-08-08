@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
 import { Button } from '../../../../components/ui/Button';
-import { BraindumpEditor } from './BraindumpEditor';
-import { CharactersManager } from './CharactersManager';
-import { WorldbuildingManager } from './WorldbuildingManager';
-import { OutlineManager } from './OutlineManager';
-import { ScenesManager } from './ScenesManager';
+import BraindumpEditor from './BraindumpEditor';
+import CharactersManager from './CharactersManager';
+import WorldbuildingManager from './WorldbuildingManager';
+import OutlineManager from './OutlineManager';
+import ScenesManager from './ScenesManager';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { StoryBibleProps } from '../../../../types/storyBible';
 

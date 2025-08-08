@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../components
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Sparkles, Loader2 } from 'lucide-react';
 import type { CharacterTrait, CharactersManagerProps } from '../../../../types/storyBible';
 import useStoryBible from '../../hooks/useStoryBible';
 
@@ -48,7 +49,8 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     deleteCharacterTrait, 
     loadCharacterTraits,
     setSelectedCharacterId,
-    setCharacterTraitFilter
+    setCharacterTraitFilter,
+    generateCharacterTraits
   } = useStoryBible();
 
   const [selectedCharacter, setSelectedCharacter] = useState<string>('');
@@ -57,6 +59,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   const [editingTrait, setEditingTrait] = useState<CharacterTrait | null>(null);
   const [traitTypeFilter, setTraitTypeFilter] = useState<string>('');
   const [visibilityFilter, setVisibilityFilter] = useState<string>('');
+  const [isGeneratingTraits, setIsGeneratingTraits] = useState(false);
   
   const [createForm, setCreateForm] = useState<CreateTraitForm>({
     traitType: '',
@@ -175,6 +178,30 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
       seriesShared: trait.series_shared
     });
     setShowEditModal(true);
+  };
+
+  const handleGenerateTraits = async () => {
+    if (!selectedCharacter || !projectId) return;
+    
+    setIsGeneratingTraits(true);
+    
+    try {
+      const request = {
+        project_id: projectId,
+        character_id: selectedCharacter,
+        trait_type: createForm.traitType || 'personality'
+      };
+      
+      const generatedContent = await generateCharacterTraits(request);
+      
+      if (generatedContent) {
+        setCreateForm(prev => ({ ...prev, content: generatedContent }));
+      }
+    } catch (err) {
+      console.error('Failed to generate character traits:', err);
+    } finally {
+      setIsGeneratingTraits(false);
+    }
   };
 
   const getTraitTypeLabel = (value: string): string => {
@@ -375,15 +402,36 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Content
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Content
+                  </label>
+                  <Button
+                    onClick={handleGenerateTraits}
+                    disabled={isGeneratingTraits || !createForm.traitType}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    {isGeneratingTraits ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {isGeneratingTraits ? 'Generating...' : 'Generate with AI'}
+                  </Button>
+                </div>
                 <Textarea
                   value={createForm.content}
                   onChange={(e) => setCreateForm(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Describe this character trait..."
                   rows={3}
                 />
+                {!createForm.traitType && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    💡 Select a trait type to enable AI generation
+                  </p>
+                )}
               </div>
               
               <div>

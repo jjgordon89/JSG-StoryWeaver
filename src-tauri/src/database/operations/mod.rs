@@ -18,6 +18,7 @@ pub mod world_element_ops;
 pub mod outline_ops;
 pub mod outline_act_ops;
 pub mod scene_ops;
+pub mod series_consistency_ops;
 
 // Re-export for convenience
 pub use folder_ops::*;
@@ -40,6 +41,7 @@ pub use world_element_ops::*;
 pub use outline_ops::*;
 pub use outline_act_ops::*;
 pub use scene_ops::*;
+pub use series_consistency_ops::*;
 
 // Define the original operations
 pub struct ProjectOps;

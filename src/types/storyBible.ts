@@ -301,9 +301,22 @@ export interface UseStoryBibleReturn {
   loadScenes: (outlineId: string) => Promise<void>;
   searchScenes: (request: SearchScenesRequest) => Promise<Scene[]>;
   
+  // AI Generation
+  generateSynopsis: (request: GenerateSynopsisRequest) => Promise<AIGenerationResponse | null>;
+  generateCharacterTraits: (request: GenerateCharacterTraitsRequest) => Promise<AIGenerationResponse | null>;
+  generateWorldElement: (request: GenerateWorldElementRequest) => Promise<AIGenerationResponse | null>;
+  generateOutline: (request: GenerateOutlineRequest) => Promise<AIGenerationResponse | null>;
+  generateScenes: (request: GenerateScenesRequest) => Promise<AIGenerationResponse | null>;
+  generateWorldBuilding: (request: GenerateWorldBuildingRequest) => Promise<AIGenerationResponse | null>;
+  
   // Utility
   clearError: () => void;
   setActiveTab: (tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => void;
+  setSelectedCharacterId: (characterId: string | null) => void;
+  setSelectedOutlineId: (outlineId: string | null) => void;
+  setCharacterTraitFilter: (filter: { visibility?: 'always' | 'chapter' | 'never'; traitType?: string; }) => void;
+  setWorldElementFilter: (filter: { elementType?: string; visibility?: 'always' | 'chapter' | 'never'; seriesShared?: boolean; }) => void;
+  setOutlineFilter: (filter: { characterPov?: string; }) => void;
 }
 
 // Component Props Types
@@ -381,4 +394,81 @@ export interface AIGenerationRequest {
     length: 'short' | 'medium' | 'long';
     style?: string;
   };
+}
+
+// Specific AI Generation Request Types
+export interface GenerateSynopsisRequest {
+  project_id: string;
+  braindump: string;
+  genre?: string;
+  style?: string;
+  custom_prompt?: string;
+  creativity?: number;
+  length?: 'short' | 'medium' | 'long';
+}
+
+export interface GenerateCharacterTraitsRequest {
+  character_id: string;
+  character_name: string;
+  story_context: string;
+  existing_traits: string[];
+  trait_count?: number;
+  custom_prompt?: string;
+  creativity?: number;
+}
+
+export interface GenerateWorldElementRequest {
+  project_id: string;
+  element_type: string;
+  name: string;
+  story_context: string;
+  existing_elements: string[];
+  custom_prompt?: string;
+  creativity?: number;
+}
+
+export interface GenerateOutlineRequest {
+  project_id: string;
+  outline_type: string;
+  title: string;
+  chapter_number?: number;
+  scene_number?: number;
+  story_context: string;
+  existing_outlines: string[];
+  custom_prompt?: string;
+  creativity?: number;
+}
+
+export interface GenerateScenesRequest {
+  project_id: string;
+  scene_type: string;
+  title: string;
+  chapter_number?: number;
+  scene_number?: number;
+  character_pov?: string;
+  location?: string;
+  mood?: string;
+  purpose?: string;
+  story_context: string;
+  existing_scenes: string[];
+  custom_prompt?: string;
+  creativity?: number;
+}
+
+export interface GenerateWorldBuildingRequest {
+  project_id: string;
+  element_type: string;
+  element_name: string;
+  story_context: string;
+  existing_elements: string[];
+  custom_prompt?: string;
+  creativity?: number;
+}
+
+export interface AIGenerationResponse {
+  generated_content: string;
+  tokens_used: number;
+  cost_estimate: number;
+  provider: string;
+  model: string;
 }

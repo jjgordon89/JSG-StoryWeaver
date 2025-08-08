@@ -4,6 +4,7 @@ import { Card } from '../../../../components/ui/Card';
 import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select } from '../../../../components/ui/select';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { Outline, CreateOutlineRequest, UpdateOutlineRequest } from '../../../../types/storyBible';
 
@@ -37,8 +38,12 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
     loadOutlines,
     searchOutlines,
     setOutlineFilter,
-    clearError
+    clearError,
+    generateOutline
   } = useStoryBible();
+
+  // AI generation state
+  const [isGeneratingOutline, setIsGeneratingOutline] = useState(false);
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -203,6 +208,32 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
   const handleDeleteOutline = async (outlineId: string) => {
     if (window.confirm('Are you sure you want to delete this outline?')) {
       await deleteOutline(outlineId);
+    }
+  };
+
+  const handleGenerateOutline = async () => {
+    if (!createForm.outline_type || !createForm.title) return;
+    
+    setIsGeneratingOutline(true);
+    
+    try {
+      const request = {
+        project_id: projectId,
+        outline_type: createForm.outline_type,
+        title: createForm.title,
+        chapter_number: createForm.chapter_number,
+        scene_number: createForm.scene_number
+      };
+      
+      const generatedContent = await generateOutline(request);
+      
+      if (generatedContent) {
+        setCreateForm(prev => ({ ...prev, content: generatedContent }));
+      }
+    } catch (err) {
+      console.error('Failed to generate outline content:', err);
+    } finally {
+      setIsGeneratingOutline(false);
     }
   };
 
@@ -541,13 +572,34 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
               </div>
               
               <div className="form-group">
-                <label className="block text-sm font-medium mb-2">Content:</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">Content:</label>
+                  <Button
+                    onClick={handleGenerateOutline}
+                    disabled={isGeneratingOutline || !createForm.outline_type || !createForm.title}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    {isGeneratingOutline ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {isGeneratingOutline ? 'Generating...' : 'Generate with AI'}
+                  </Button>
+                </div>
                 <Textarea
                   value={createForm.content}
                   onChange={(e) => setCreateForm(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Write your outline content..."
                   rows={6}
                 />
+                {(!createForm.outline_type || !createForm.title) && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    💡 Enter a title and select an outline type to enable AI generation
+                  </p>
+                )}
               </div>
               
               <div className="form-row grid grid-cols-2 gap-4">
