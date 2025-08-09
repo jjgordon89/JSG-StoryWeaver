@@ -12,6 +12,9 @@ pub mod visualize;
 pub mod brainstorm;
 pub mod advanced_ai_manager;
 
+// Re-export commonly used types
+pub use ai_history::{AIInteraction, AIHistoryManager, AIInteractionBuilder};
+
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -179,7 +182,7 @@ pub use gemini::GeminiProvider;
 pub use prose_modes::{ProseMode, ProseModelManager, GenerationSettings};
 pub use saliency_engine::{SaliencyEngine, SaliencyContext, SelectedElements};
 pub use visualize::{VisualizeEngine, VisualizeRequest, GeneratedImage, ImageResolution};
-pub use brainstorm::{BrainstormEngine, BrainstormSession, BrainstormRequest, BrainstormIdea};
+pub use brainstorm::{BrainstormEngine, BrainstormSession, BrainstormRequest, BrainstormIdea, BrainstormCategory};
 pub use advanced_ai_manager::{AdvancedAIManager, AdvancedGenerationRequest, AdvancedGenerationResult, StyleExample, CreditUsage};
 
 pub struct AIProviderManager {

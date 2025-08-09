@@ -177,10 +177,22 @@ impl AdvancedAIManager {
         let ai_context = AIContext {
             project_id: Some(request.project_id.clone()),
             document_id: request.document_id.clone(),
-            text_context: enhanced_context,
-            story_bible_elements: Vec::new(), // Already included in saliency context
-            user_preferences: HashMap::new(),
-            feature_context: HashMap::new(),
+            preceding_text: Some(enhanced_context),
+            following_text: None,
+            selected_text: None,
+            story_context: None,
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: None,
+            feature_type: None,
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
 
         // Get appropriate AI provider based on prose mode
@@ -189,11 +201,8 @@ impl AdvancedAIManager {
             .ok_or("AI provider not available")?;
 
         // Generate text
-        let generated_text = provider.generate_text(
-            &ai_context,
-            &generation_settings.special_instructions.unwrap_or_default(),
-            generation_settings.max_words,
-        ).await?;
+        let prompt = generation_settings.special_instructions.unwrap_or_default();
+        let generated_text = provider.generate_text(&prompt, &ai_context).await?;
 
         // Perform cliché detection if ultra-creative mode
         let cliche_detection = if request.ultra_creative {
@@ -238,13 +247,11 @@ impl AdvancedAIManager {
         // Get appropriate AI provider for image generation
         if let Some(provider) = self.ai_providers.get_mut("openai") {
             // Generate the actual image
-            let image_data = provider.generate_image(
-                &generated_image.image_prompt,
-                &generated_image.resolution,
-            ).await?;
+            let image_data = provider.generate_image(&generated_image.image_prompt).await?;
 
             // Update the generated image with actual data
-            self.visualize_engine.update_image_data(&generated_image.id, image_data)?;
+            let image_bytes = image_data.into_bytes();
+            self.visualize_engine.update_image_data(&generated_image.id, image_bytes)?;
         }
 
         // Track credit usage
@@ -347,6 +354,158 @@ impl AdvancedAIManager {
             .collect()
     }
 
+    fn create_import_analysis_prompt(&self, content: &str, content_type: &str) -> String {
+        let word_count = content.split_whitespace().count();
+        let content_preview = if word_count > 120000 {
+            // Truncate to 120,000 words if content is too long
+            let words: Vec<&str> = content.split_whitespace().take(120000).collect();
+            words.join(" ")
+        } else {
+            content.to_string()
+        };
+        
+        format!(
+            r#"Analyze the following {} content for story elements that can be imported into a writing project. The content contains approximately {} words.
+
+Content to analyze:
+{}
+
+Please provide a structured analysis in the following format:
+
+## SUGGESTIONS
+[List 3-5 actionable suggestions for how this content could be used in the project]
+
+## CHARACTERS
+[Extract up to 30 character information entries in format: Name | Description | Traits]
+[Focus on main characters, supporting characters, and memorable minor characters]
+[Include personality traits, motivations, and key characteristics]
+
+## LOCATIONS
+[Extract location information in format: Name | Description | Atmosphere]
+[Include both major settings and notable minor locations]
+
+## PLOT_POINTS
+[Extract key plot elements, conflicts, story beats, and narrative turning points]
+[Include major events, conflicts, resolutions, and character developments]
+
+## THEMES
+[Identify major themes, motifs, symbolic elements, and underlying messages]
+[Include both explicit and implicit thematic content]
+
+Focus on extracting concrete, usable story elements that would be valuable for a writer to reference or build upon. Prioritize the most significant and well-developed elements."#,
+            content_type, word_count, content_preview
+        )
+    }
+
+    fn parse_import_analysis(&self, analysis_text: &str) -> Result<crate::commands::advanced_ai_commands::SmartImportAnalysisResult, Box<dyn std::error::Error>> {
+        use crate::commands::advanced_ai_commands::*;
+        
+        let mut suggestions = Vec::new();
+        let mut characters = Vec::new();
+        let mut locations = Vec::new();
+        let mut plot_points = Vec::new();
+        let mut themes = Vec::new();
+        
+        let sections: Vec<&str> = analysis_text.split("##").collect();
+        
+        for section in sections {
+            let lines: Vec<&str> = section.lines().collect();
+            if lines.is_empty() { continue; }
+            
+            let header = lines[0].trim().to_uppercase();
+            let content_lines: Vec<&str> = lines[1..].iter().filter(|line| !line.trim().is_empty()).map(|&line| line).collect();
+            
+            match header.as_str() {
+                "SUGGESTIONS" => {
+                    for line in content_lines {
+                        let clean_line = line.trim().trim_start_matches('-').trim_start_matches('*').trim();
+                        if !clean_line.is_empty() {
+                            suggestions.push(ImportSuggestion {
+                                suggestion_type: "general".to_string(),
+                                name: "General Suggestion".to_string(),
+                                description: clean_line.to_string(),
+                                confidence: 0.8,
+                                auto_apply: false,
+                                additional_data: None,
+                            });
+                        }
+                    }
+                },
+                "CHARACTERS" => {
+                    for line in content_lines {
+                        let clean_line = line.trim().trim_start_matches('-').trim_start_matches('*').trim();
+                        if !clean_line.is_empty() && characters.len() < 30 {
+                            let parts: Vec<&str> = clean_line.split('|').collect();
+                            if parts.len() >= 2 {
+                                let name = parts[0].trim().to_string();
+                                // Skip if character already exists
+                                if !characters.iter().any(|c| c.name.eq_ignore_ascii_case(&name)) {
+                                    characters.push(ExtractedCharacter {
+                                        name,
+                                        description: parts.get(1).unwrap_or(&"").trim().to_string(),
+                                        traits: if parts.len() > 2 {
+                                            parts[2].trim().split(',').map(|s| s.trim().to_string())
+                                                .filter(|s| !s.is_empty())
+                                                .collect()
+                                        } else {
+                                            Vec::new()
+                                        },
+                                        relationships: Vec::new(),
+                                        confidence: 0.8,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                },
+                "LOCATIONS" => {
+                    for line in content_lines {
+                        let clean_line = line.trim().trim_start_matches('-').trim_start_matches('*').trim();
+                        if !clean_line.is_empty() {
+                            let parts: Vec<&str> = clean_line.split('|').collect();
+                            if parts.len() >= 2 {
+                                locations.push(ExtractedLocation {
+                                    name: parts[0].trim().to_string(),
+                                    description: parts.get(1).unwrap_or(&"").trim().to_string(),
+                                    atmosphere: parts.get(2).unwrap_or(&"").trim().to_string(),
+                                    significance: "Extracted from content".to_string(),
+                                    confidence: 0.8,
+                                });
+                            }
+                        }
+                    }
+                },
+                "PLOT_POINTS" => {
+                    for line in content_lines {
+                        let clean_line = line.trim().trim_start_matches('-').trim_start_matches('*').trim();
+                        if !clean_line.is_empty() {
+                            plot_points.push(clean_line.to_string());
+                        }
+                    }
+                },
+                "THEMES" => {
+                    for line in content_lines {
+                        let clean_line = line.trim().trim_start_matches('-').trim_start_matches('*').trim();
+                        if !clean_line.is_empty() {
+                            themes.push(clean_line.to_string());
+                        }
+                    }
+                },
+                _ => {} // Ignore unknown sections
+            }
+        }
+        
+        Ok(SmartImportAnalysisResult {
+            suggestions,
+            extracted_elements: ExtractedElements {
+                characters,
+                locations,
+                plot_points,
+                themes,
+            },
+        })
+    }
+
     fn extract_common_phrases(&self, content: &str) -> Vec<String> {
         // Simple implementation - find repeated 2-3 word phrases
         let words: Vec<&str> = content.split_whitespace().collect();
@@ -414,6 +573,50 @@ impl AdvancedAIManager {
 
     pub fn get_generated_images(&self, project_id: &str) -> Vec<&GeneratedImage> {
         self.visualize_engine.list_project_images(project_id)
+    }
+
+    pub async fn analyze_content_for_import(
+        &self,
+        project_id: &str,
+        content: &str,
+        content_type: &str,
+    ) -> Result<crate::commands::advanced_ai_commands::SmartImportAnalysisResult, Box<dyn std::error::Error>> {
+        // Get AI provider for analysis
+        let provider = self.ai_providers.get("openai")
+            .or_else(|| self.ai_providers.get("claude"))
+            .or_else(|| self.ai_providers.values().next())
+            .ok_or("No AI provider available")?;
+
+        // Create analysis prompt
+        let analysis_prompt = self.create_import_analysis_prompt(content, content_type);
+        
+        // Create AI context
+        let ai_context = AIContext {
+            project_id: Some(project_id.to_string()),
+            document_id: None,
+            preceding_text: Some(content.to_string()),
+            following_text: None,
+            selected_text: None,
+            story_context: None,
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: None,
+            feature_type: None,
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
+        };
+
+        // Get AI analysis
+        let analysis_text = provider.generate_text(&analysis_prompt, &ai_context).await?;
+        
+        // Parse the AI response into structured data
+        self.parse_import_analysis(&analysis_text)
     }
 }
 

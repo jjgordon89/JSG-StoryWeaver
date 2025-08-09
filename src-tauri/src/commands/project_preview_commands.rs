@@ -60,7 +60,7 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
             "SELECT COUNT(*) FROM documents WHERE project_id = ?"
         )
         .bind(&project_id)
-        .fetch_one(&pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to count documents: {}", e)))? as i32;
         
@@ -69,7 +69,7 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
             "SELECT COUNT(*) FROM characters WHERE project_id = ?"
         )
         .bind(&project_id)
-        .fetch_one(&pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to count characters: {}", e)))? as i32;
         
@@ -78,7 +78,7 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
             "SELECT COUNT(*) FROM locations WHERE project_id = ?"
         )
         .bind(&project_id)
-        .fetch_one(&pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to count locations: {}", e)))? as i32;
         
@@ -93,16 +93,16 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
             "#,
             project_id
         )
-        .fetch_all(&pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to fetch recent documents: {}", e)))?
         .into_iter()
         .map(|row| DocumentSummary {
-            id: row.id,
+            id: row.id.to_string(),
             title: row.title,
             document_type: row.document_type,
-            word_count: row.word_count,
-            updated_at: row.updated_at,
+            word_count: row.word_count.unwrap_or(0) as i32,
+            updated_at: row.updated_at.map(|dt| DateTime::<Utc>::from_utc(dt, Utc)).unwrap_or_else(|| Utc::now()),
         })
         .collect();
         

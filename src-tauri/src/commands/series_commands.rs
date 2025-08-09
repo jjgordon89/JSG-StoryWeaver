@@ -89,7 +89,7 @@ pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> 
             series.name = name;
         }
         if let Some(description) = request.description {
-            series.description = description;
+            series.description = Some(description);
         }
         if let Some(folder_id) = request.folder_id {
             series.folder_id = Some(folder_id);

@@ -213,7 +213,7 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
         
         let element = WorldElement {
             id: String::new(), // Will be set by the operation
-            project_id: request.project_id.clone(),
+            project_id: Some(request.project_id.clone()),
             series_id: request.series_id,
             name: request.name,
             description: request.description,
@@ -345,12 +345,12 @@ pub async fn create_outline(request: CreateOutlineRequest) -> CommandResponse<Ou
         let outline = Outline {
             id: String::new(), // Will be set by the operation
             project_id: request.project_id,
-            chapter_number: request.chapter_number,
+            chapter_number: Some(request.chapter_number),
             title: request.title,
             summary: request.summary,
             pov: request.pov,
             tense: request.tense,
-            character_pov_ids: request.character_pov_ids.unwrap_or_default(),
+            character_pov_ids: serde_json::to_string(&request.character_pov_ids.unwrap_or_default())?,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -374,8 +374,8 @@ pub async fn get_outlines(project_id: String) -> CommandResponse<Vec<Outline>> {
 
 /// Get outline by ID
 #[tauri::command]
-pub async fn get_outline(id: String) -> CommandResponse<Option<Outline>> {
-    async fn get(id: String) -> Result<Option<Outline>> {
+pub async fn get_outline(id: String) -> CommandResponse<Outline> {
+    async fn get(id: String) -> Result<Outline> {
         let pool = get_pool()?;
         OutlineOps::get_by_id(&pool, &id).await
     }
@@ -399,7 +399,29 @@ pub async fn get_outline_by_chapter(project_id: String, chapter_number: i32) -> 
 pub async fn update_outline(request: UpdateOutlineRequest) -> CommandResponse<()> {
     async fn update(request: UpdateOutlineRequest) -> Result<()> {
         let pool = get_pool()?;
-        OutlineOps::update(&pool, &request.id, request.title, request.summary, request.pov, request.tense, request.character_pov_ids).await
+        
+        // Get the existing outline
+        let mut outline = OutlineOps::get_by_id(&pool, &request.id).await?;
+        
+        // Update fields from request
+        if let Some(title) = request.title {
+            outline.title = Some(title);
+        }
+        if let Some(summary) = request.summary {
+            outline.summary = Some(summary);
+        }
+        if let Some(pov) = request.pov {
+            outline.pov = Some(pov);
+        }
+        if let Some(tense) = request.tense {
+            outline.tense = Some(tense);
+        }
+        if let Some(character_pov_ids) = request.character_pov_ids {
+            outline.character_pov_ids = serde_json::to_string(&character_pov_ids)?;
+        }
+        
+        let _ = OutlineOps::update(&pool, outline).await?;
+        Ok(())
     }
     
     update(request).await.into()
@@ -473,7 +495,7 @@ pub async fn create_scene(request: CreateSceneRequest) -> CommandResponse<Scene>
             extra_instructions: request.extra_instructions,
             pov: request.pov,
             tense: request.tense,
-            character_pov_ids: request.character_pov_ids.unwrap_or_default(),
+            character_pov_ids: serde_json::to_string(&request.character_pov_ids.unwrap_or_default())?,
             word_count_estimate: request.word_count_estimate,
             credit_estimate: request.credit_estimate,
             is_validated: false,
@@ -501,8 +523,8 @@ pub async fn get_scenes(outline_id: String) -> CommandResponse<Vec<Scene>> {
 
 /// Get scene by ID
 #[tauri::command]
-pub async fn get_scene(id: String) -> CommandResponse<Option<Scene>> {
-    async fn get(id: String) -> Result<Option<Scene>> {
+pub async fn get_scene(id: String) -> CommandResponse<Scene> {
+    async fn get(id: String) -> Result<Scene> {
         let pool = get_pool()?;
         SceneOps::get_by_id(&pool, &id).await
     }
@@ -512,10 +534,24 @@ pub async fn get_scene(id: String) -> CommandResponse<Option<Scene>> {
 
 /// Update scene
 #[tauri::command]
-pub async fn update_scene(request: UpdateSceneRequest) -> CommandResponse<()> {
-    async fn update(request: UpdateSceneRequest) -> Result<()> {
+pub async fn update_scene(request: UpdateSceneRequest) -> CommandResponse<Scene> {
+    async fn update(request: UpdateSceneRequest) -> Result<Scene> {
         let pool = get_pool()?;
-        SceneOps::update(&pool, &request.id, request.title, request.summary, request.extra_instructions, request.pov, request.tense, request.character_pov_ids, request.word_count_estimate, request.credit_estimate).await
+        
+        // Get the existing scene first
+        let mut scene = SceneOps::get_by_id(&pool, &request.id).await?;
+        
+        // Update the fields from the request
+        scene.title = request.title;
+        scene.summary = request.summary;
+        scene.extra_instructions = request.extra_instructions;
+        scene.pov = request.pov;
+        scene.tense = request.tense;
+        scene.character_pov_ids = serde_json::to_string(&request.character_pov_ids.unwrap_or_default())?;
+        scene.word_count_estimate = request.word_count_estimate;
+        scene.credit_estimate = request.credit_estimate;
+        
+        SceneOps::update(&pool, scene).await
     }
     
     update(request).await.into()
@@ -537,7 +573,8 @@ pub async fn delete_scene(id: String) -> CommandResponse<()> {
 pub async fn validate_scene(id: String) -> CommandResponse<()> {
     async fn validate(id: String) -> Result<()> {
         let pool = get_pool()?;
-        SceneOps::validate(&pool, &id).await
+        SceneOps::get_validated(&pool, &id).await?;
+        Ok(())
     }
     
     validate(id).await.into()

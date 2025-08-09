@@ -2,7 +2,7 @@
 
 use crate::commands::CommandResponse;
 use crate::error::{StoryWeaverError, Result};
-use crate::ai::{AIProviderManager, AIContext};
+use crate::ai::{AIProviderManager, AIContext, WritingFeature, AIProvider};
 use crate::database::{get_pool};
 use crate::database::operations::{StoryBibleOps, CharacterTraitOps, WorldElementOps, StyleExampleOps};
 use crate::database::models::{StoryBible, CharacterTrait, WorldElement, StyleExample};
@@ -77,7 +77,7 @@ pub struct AIGenerationResponse {
 pub async fn generate_synopsis(
     request: GenerateSynopsisRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(request: GenerateSynopsisRequest, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -90,8 +90,8 @@ pub async fn generate_synopsis(
             story_context: Some(request.braindump.clone()),
             genre: request.genre.clone(),
             writing_style: request.style.clone(),
-            creativity_level: request.creativity,
-            feature_type: Some("synopsis_generation".to_string()),
+            creativity_level: request.creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
             ..Default::default()
         };
         
@@ -128,15 +128,17 @@ Synopsis:",
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate synopsis
-        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let generated_content = provider.generate_text(&prompt, &context).await
             .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
-            generated_content: response.text,
-            tokens_used: response.tokens_used,
-            cost_estimate: response.cost_estimate,
-            provider: response.provider,
-            model: response.model,
+            generated_content,
+            tokens_used: 0, // Placeholder - actual token counting would need to be implemented
+            cost_estimate: 0.0, // Placeholder - actual cost calculation would need to be implemented
+            provider: "AI".to_string(), // Placeholder - would need to get actual provider name
+            model: "unknown".to_string(), // Placeholder - would need to get actual model name
         })
     }
     
@@ -148,13 +150,13 @@ Synopsis:",
 pub async fn generate_character_traits(
     request: GenerateCharacterTraitsRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<Vec<String>> {
+) -> Result<Vec<String>> {
     async fn generate(request: GenerateCharacterTraitsRequest, ai_manager: Arc<AIProviderManager>) -> Result<Vec<String>> {
         // Build AI context
         let context = AIContext {
             story_context: Some(request.story_context.clone()),
-            creativity_level: request.creativity,
-            feature_type: Some("character_trait_generation".to_string()),
+            creativity_level: request.creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
             ..Default::default()
         };
         
@@ -184,11 +186,13 @@ Generate {} new traits (one per line):",
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate traits
-        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let response = provider.generate_text(&prompt, &context).await
             .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         // Parse response into individual traits
-        let traits: Vec<String> = response.text
+        let traits: Vec<String> = response
             .lines()
             .map(|line| line.trim())
             .filter(|line| !line.is_empty())
@@ -204,7 +208,7 @@ Generate {} new traits (one per line):",
         Ok(traits)
     }
     
-    generate(request, ai_manager.inner().clone()).await.into()
+    generate(request, ai_manager.inner().clone()).await
 }
 
 /// Generate world element description
@@ -223,8 +227,8 @@ pub async fn generate_world_element(
         let context = AIContext {
             project_id: Some(request.project_id.clone()),
             story_context: Some(request.story_context.clone()),
-            creativity_level: request.creativity,
-            feature_type: Some("world_element_generation".to_string()),
+            creativity_level: request.creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
             ..Default::default()
         };
         
@@ -268,15 +272,17 @@ Description:",
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate world element description
-        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let generated_content = provider.generate_text(&prompt, &context).await
             .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
-            generated_content: response.text,
-            tokens_used: response.tokens_used,
-            cost_estimate: response.cost_estimate,
-            provider: response.provider,
-            model: response.model,
+            generated_content,
+            tokens_used: 0, // Placeholder - actual token counting would need to be implemented
+            cost_estimate: 0.0, // Placeholder - actual cost calculation would need to be implemented
+            provider: "AI".to_string(), // Placeholder - would need to get actual provider name
+            model: "unknown".to_string(), // Placeholder - would need to get actual model name
         })
     }
     
@@ -312,7 +318,7 @@ pub async fn generate_outline_from_story_bible(
             "No characters defined.".to_string()
         } else {
             let char_list: Vec<String> = characters.iter()
-                .map(|c| format!("{}: {}", c.trait_name, c.trait_value))
+                .map(|c| format!("{}: {}", c.trait_name, c.trait_value.as_ref().unwrap_or(&"Not specified".to_string())))
                 .collect();
             format!("Characters: {}", char_list.join("; "))
         };
@@ -331,8 +337,8 @@ pub async fn generate_outline_from_story_bible(
             project_id: Some(project_id),
             story_context: Some(synopsis.clone()),
             genre,
-            creativity_level: creativity,
-            feature_type: Some("outline_generation".to_string()),
+            creativity_level: creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
             ..Default::default()
         };
         
@@ -362,15 +368,17 @@ Outline:",
         let prompt = custom_prompt.unwrap_or(base_prompt);
         
         // Generate outline
-        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let generated_content = provider.generate_text(&prompt, &context).await
             .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
-            generated_content: response.text,
-            tokens_used: response.tokens_used,
-            cost_estimate: response.cost_estimate,
-            provider: response.provider,
-            model: response.model,
+            generated_content,
+            tokens_used: 0, // Placeholder - actual token counting would need to be implemented
+            cost_estimate: 0.0, // Placeholder - actual cost calculation would need to be implemented
+            provider: "AI".to_string(), // Placeholder - would need to get actual provider name
+            model: "unknown".to_string(), // Placeholder - would need to get actual model name
         })
     }
     
@@ -398,8 +406,8 @@ pub async fn generate_scene_content(
         // Build AI context
         let context = AIContext {
             story_context: Some(scene_summary.clone()),
-            creativity_level: creativity,
-            feature_type: Some("scene_generation".to_string()),
+            creativity_level: creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
             ..Default::default()
         };
         
@@ -418,15 +426,17 @@ Write the full scene content:",
         let prompt = custom_prompt.unwrap_or(base_prompt);
         
         // Generate scene content
-        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let generated_content = provider.generate_text(&prompt, &context).await
             .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         Ok(AIGenerationResponse {
-            generated_content: response.text,
-            tokens_used: response.tokens_used,
-            cost_estimate: response.cost_estimate,
-            provider: response.provider,
-            model: response.model,
+            generated_content,
+            tokens_used: 0, // Placeholder - actual token counting would need to be implemented
+            cost_estimate: 0.0, // Placeholder - actual cost calculation would need to be implemented
+            provider: "AI".to_string(), // Placeholder - would need to get actual provider name
+            model: "unknown".to_string(), // Placeholder - would need to get actual model name
         })
     }
     
@@ -445,8 +455,8 @@ pub async fn analyze_style_example(
         // Build AI context for style analysis
         let context = AIContext {
             story_context: Some(format!("Analyzing writing style for project: {}", request.project_id)),
-            creativity_level: request.creativity,
-            feature_type: Some("style_analysis".to_string()),
+            creativity_level: request.creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
             ..Default::default()
         };
         
@@ -479,11 +489,12 @@ STYLE_PROMPT:
         let prompt = request.custom_prompt.unwrap_or(base_prompt);
         
         // Generate style analysis
-        let response = ai_manager.get_default_provider()?.generate_text(&prompt, &context).await
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let content = provider.generate_text(&prompt, &context).await
             .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
         
         // Parse the response to extract analysis and style prompt
-        let content = response.text;
         let (analysis_result, generated_style_prompt) = if let Some(analysis_start) = content.find("ANALYSIS:") {
             if let Some(prompt_start) = content.find("STYLE_PROMPT:") {
                 let analysis = content[analysis_start + 9..prompt_start].trim().to_string();
@@ -509,20 +520,22 @@ STYLE_PROMPT:
         };
         
         // Update the style example in the database with the analysis results
+        let style_example_id: i64 = request.style_example_id.parse()
+            .map_err(|_| StoryWeaverError::InvalidInput { message: "Invalid style example ID".to_string() })?;
         StyleExampleOps::update_analysis(
             &pool,
-            &request.style_example_id,
-            Some(analysis_result.clone()),
-            Some(generated_style_prompt.clone())
+            style_example_id,
+            &analysis_result,
+            Some(&generated_style_prompt)
         ).await?;
         
         Ok(StyleAnalysisResponse {
             analysis_result,
             generated_style_prompt,
-            tokens_used: response.tokens_used,
-            cost_estimate: response.cost_estimate,
-            provider: response.provider,
-            model: response.model,
+            tokens_used: 0, // Placeholder - actual token counting would need to be implemented
+            cost_estimate: 0.0, // Placeholder - actual cost calculation would need to be implemented
+            provider: "AI".to_string(), // Placeholder - would need to get actual provider name
+            model: "unknown".to_string(), // Placeholder - would need to get actual model name
         })
     }
     

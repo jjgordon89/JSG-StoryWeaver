@@ -137,7 +137,10 @@ impl super::PlotThreadOps {
         let plot_threads = Self::get_by_project(pool, project_id).await?;
         
         Ok(plot_threads.into_iter()
-            .filter(|thread| thread.characters_involved.contains(&character_id.to_string()))
+            .filter(|thread| {
+                let characters: Vec<String> = serde_json::from_str(&thread.characters_involved).unwrap_or_default();
+                characters.contains(&character_id.to_string())
+            })
             .collect())
     }
     
@@ -146,7 +149,10 @@ impl super::PlotThreadOps {
         let plot_threads = Self::get_by_project(pool, project_id).await?;
         
         Ok(plot_threads.into_iter()
-            .filter(|thread| thread.documents_involved.contains(&document_id.to_string()))
+            .filter(|thread| {
+                let documents: Vec<String> = serde_json::from_str(&thread.documents_involved).unwrap_or_default();
+                documents.contains(&document_id.to_string())
+            })
             .collect())
     }
     
@@ -251,8 +257,10 @@ impl super::PlotThreadOps {
     pub async fn add_character(pool: &Pool<Sqlite>, plot_thread_id: &str, character_id: &str) -> Result<()> {
         let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
         
-        if !plot_thread.characters_involved.contains(&character_id.to_string()) {
-            plot_thread.characters_involved.push(character_id.to_string());
+        let mut characters: Vec<String> = serde_json::from_str(&plot_thread.characters_involved).unwrap_or_default();
+        if !characters.contains(&character_id.to_string()) {
+            characters.push(character_id.to_string());
+            plot_thread.characters_involved = serde_json::to_string(&characters).unwrap_or_default();
             Self::update(pool, &plot_thread).await?;
         }
         
@@ -263,7 +271,9 @@ impl super::PlotThreadOps {
     pub async fn remove_character(pool: &Pool<Sqlite>, plot_thread_id: &str, character_id: &str) -> Result<()> {
         let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
         
-        plot_thread.characters_involved.retain(|id| id != character_id);
+        let mut characters: Vec<String> = serde_json::from_str(&plot_thread.characters_involved).unwrap_or_default();
+        characters.retain(|id| id != character_id);
+        plot_thread.characters_involved = serde_json::to_string(&characters).unwrap_or_default();
         Self::update(pool, &plot_thread).await?;
         
         Ok(())
@@ -273,8 +283,10 @@ impl super::PlotThreadOps {
     pub async fn add_document(pool: &Pool<Sqlite>, plot_thread_id: &str, document_id: &str) -> Result<()> {
         let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
         
-        if !plot_thread.documents_involved.contains(&document_id.to_string()) {
-            plot_thread.documents_involved.push(document_id.to_string());
+        let mut documents: Vec<String> = serde_json::from_str(&plot_thread.documents_involved).unwrap_or_default();
+        if !documents.contains(&document_id.to_string()) {
+            documents.push(document_id.to_string());
+            plot_thread.documents_involved = serde_json::to_string(&documents).unwrap_or_default();
             Self::update(pool, &plot_thread).await?;
         }
         
@@ -285,7 +297,9 @@ impl super::PlotThreadOps {
     pub async fn remove_document(pool: &Pool<Sqlite>, plot_thread_id: &str, document_id: &str) -> Result<()> {
         let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
         
-        plot_thread.documents_involved.retain(|id| id != document_id);
+        let mut documents: Vec<String> = serde_json::from_str(&plot_thread.documents_involved).unwrap_or_default();
+        documents.retain(|id| id != document_id);
+        plot_thread.documents_involved = serde_json::to_string(&documents).unwrap_or_default();
         Self::update(pool, &plot_thread).await?;
         
         Ok(())

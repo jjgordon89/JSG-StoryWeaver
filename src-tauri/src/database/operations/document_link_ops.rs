@@ -141,10 +141,10 @@ impl super::DocumentLinkOps {
             LinkedDocument,
             r#"
             SELECT 
-                d.id, 
+                CAST(d.id as TEXT) as id, 
                 d.title, 
                 d.document_type as "document_type: _", 
-                dl.link_order as "link_order: Option<i64>"
+                dl.link_order as "link_order?: i32"
             FROM 
                 documents d
             JOIN 
@@ -165,10 +165,10 @@ impl super::DocumentLinkOps {
             LinkedDocument,
             r#"
             SELECT 
-                d.id, 
+                CAST(d.id as TEXT) as id, 
                 d.title, 
                 d.document_type as "document_type: _", 
-                dl.link_order as "link_order: Option<i64>"
+                dl.link_order as "link_order?: i32"
             FROM 
                 documents d
             JOIN 
@@ -194,7 +194,7 @@ pub struct LinkedDocument {
     pub id: String,
     pub title: String,
     pub document_type: crate::database::models::DocumentType,
-    pub link_order: Option<i64>,
+    pub link_order: Option<i32>,
 }
 
 /// Collection of linked documents

@@ -254,11 +254,27 @@ export interface SmartImportResult {
   status: string;
   suggestions: ImportSuggestion[];
   extracted_elements: {
-    characters?: Character[];
-    locations?: Location[];
+    characters?: ExtractedCharacter[];
+    locations?: ExtractedLocation[];
     plot_points?: string[];
     themes?: string[];
   };
+}
+
+export interface ExtractedCharacter {
+  name: string;
+  description: string;
+  traits: string[];
+  relationships: string[];
+  confidence?: number;
+}
+
+export interface ExtractedLocation {
+  name: string;
+  description: string;
+  atmosphere?: string;
+  significance?: string;
+  confidence?: number;
 }
 
 export interface ImportSuggestion {

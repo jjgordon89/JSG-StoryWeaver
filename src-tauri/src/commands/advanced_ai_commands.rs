@@ -66,6 +66,48 @@ pub struct CreditUsageResponse {
     pub remaining_credits: Option<i32>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportSuggestion {
+    pub suggestion_type: String, // "character", "location", "plot_thread", "worldbuilding"
+    pub name: String,
+    pub description: String,
+    pub confidence: f32,
+    pub auto_apply: bool,
+    pub additional_data: Option<HashMap<String, serde_json::Value>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtractedElements {
+    pub characters: Vec<ExtractedCharacter>,
+    pub locations: Vec<ExtractedLocation>,
+    pub plot_points: Vec<String>,
+    pub themes: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtractedCharacter {
+    pub name: String,
+    pub description: String,
+    pub traits: Vec<String>,
+    pub relationships: Vec<String>,
+    pub confidence: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtractedLocation {
+    pub name: String,
+    pub description: String,
+    pub atmosphere: String,
+    pub significance: String,
+    pub confidence: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SmartImportAnalysisResult {
+    pub suggestions: Vec<ImportSuggestion>,
+    pub extracted_elements: ExtractedElements,
+}
+
 // Advanced Text Generation with Prose Modes
 #[tauri::command]
 pub async fn generate_with_prose_mode(
@@ -103,17 +145,15 @@ pub async fn generate_image(
     
     let visualize_request = VisualizeRequest {
         project_id: request.project_id,
-        document_id: request.document_id,
-        text_content: request.text_content,
-        style_preference: request.style_preference,
+        source_text: request.text_content,
+        style_preference: Some(request.style_preference),
         resolution: match request.resolution.as_str() {
             "1024x1024" => crate::ai::ImageResolution::Square1024,
-            "1792x1024" => crate::ai::ImageResolution::Landscape1792x1024,
-            "1024x1792" => crate::ai::ImageResolution::Portrait1024x1792,
+            "1792x1024" => crate::ai::ImageResolution::Landscape1792,
+            "1024x1792" => crate::ai::ImageResolution::Portrait1024,
             _ => crate::ai::ImageResolution::Square1024,
         },
         enhance_prompt: request.enhance_prompt,
-        custom_prompt: request.custom_prompt,
     };
     
     ai_manager
@@ -132,12 +172,12 @@ pub async fn create_brainstorm_session(
     
     let brainstorm_request = BrainstormRequest {
         project_id: request.project_id,
-        category: request.category,
-        focus_area: request.focus_area,
-        num_ideas: request.num_ideas,
-        creativity_level: request.creativity_level,
-        context: request.context,
-        constraints: request.constraints,
+        category: crate::ai::BrainstormCategory::Custom(request.category),
+        seed_prompt: Some(request.context),
+        context: None,
+        num_ideas: request.num_ideas as usize,
+        creativity_level: request.creativity_level as i32,
+        focus_areas: vec![request.focus_area],
     };
     
     ai_manager
@@ -298,6 +338,7 @@ pub async fn build_saliency_context(
     // This would access the saliency engine directly
     // For now, return a placeholder
     Ok(SaliencyContext {
+        id: "placeholder_id".to_string(),
         project_id,
         context_hash: "placeholder".to_string(),
         selected_elements: crate::ai::SelectedElements {
@@ -307,12 +348,12 @@ pub async fn build_saliency_context(
             worldbuilding: Vec::new(),
         },
         relevance_scores: HashMap::new(),
-        token_count: 0,
-        created_at: chrono::Utc::now(),
+        total_tokens: 0,
+        expires_at: Some(chrono::Utc::now()),
     })
 }
 
-// Smart Import (placeholder for future implementation)
+// Smart Import with Novel Analysis
 #[tauri::command]
 pub async fn smart_import_content(
     project_id: String,
@@ -320,10 +361,18 @@ pub async fn smart_import_content(
     content_type: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<HashMap<String, serde_json::Value>, String> {
-    // This would analyze imported content and suggest Story Bible entries
+    let ai_manager = ai_state.lock().await;
+    
+    // Analyze the content using AI to extract story elements
+    let analysis_result = ai_manager.analyze_content_for_import(&project_id, &content, &content_type).await
+        .map_err(|e| format!("Failed to analyze content: {}", e))?;
+    
     let mut result = HashMap::new();
     result.insert("status".to_string(), serde_json::Value::String("analyzed".to_string()));
-    result.insert("suggestions".to_string(), serde_json::Value::Array(Vec::new()));
+    result.insert("suggestions".to_string(), serde_json::to_value(&analysis_result.suggestions)
+        .map_err(|e| format!("Failed to serialize suggestions: {}", e))?);
+    result.insert("extracted_elements".to_string(), serde_json::to_value(&analysis_result.extracted_elements)
+        .map_err(|e| format!("Failed to serialize extracted elements: {}", e))?);
     
     Ok(result)
 }

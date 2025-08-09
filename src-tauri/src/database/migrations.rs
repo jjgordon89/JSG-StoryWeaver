@@ -8,6 +8,8 @@ use sqlx::{Pool, Sqlite};
 mod background_tasks;
 mod performance_metrics;
 mod _014_create_document_links_table;
+mod phase4_advanced_ai;
+mod fix_credit_usage_schema;
 
 /// Run all database migrations
 pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
@@ -36,6 +38,8 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("012_style_examples", |pool| Box::pin(migration_012_style_examples(pool))),
         ("013_character_series_support", |pool| Box::pin(migration_013_character_series_support(pool))),
         ("014_create_document_links_table", |pool| Box::pin(migration_014_create_document_links_table(pool))),
+        ("015_phase4_advanced_ai", |pool| Box::pin(phase4_advanced_ai::up(pool))),
+        ("016_fix_credit_usage_schema", |pool| Box::pin(fix_credit_usage_schema::up(pool))),
     ];
     
     for (name, migration_fn) in migrations {
@@ -78,7 +82,7 @@ async fn migration_012_style_examples(pool: &Pool<Sqlite>) -> Result<()> {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create style_examples index: {}", e)))?;
 
-    Ok()
+    Ok(())
 }
 
 /// Migration 013: Add series support to characters
@@ -118,7 +122,7 @@ async fn migration_013_character_series_support(pool: &Pool<Sqlite>) -> Result<(
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create characters original_project_id index: {}", e)))?;
 
-    Ok()
+    Ok(())
 }
 
 async fn migration_014_create_document_links_table(pool: &Pool<Sqlite>) -> Result<()> {

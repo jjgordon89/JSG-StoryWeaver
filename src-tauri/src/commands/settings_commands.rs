@@ -104,7 +104,7 @@ pub async fn set_preference(request: SetPreferenceRequest) -> CommandResponse<()
         };
         
         UserPreferenceOps::set_preference(
-            pool, 
+            &pool, 
             &request.category, 
             &request.key, 
             &request.value, 

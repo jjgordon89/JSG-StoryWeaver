@@ -200,9 +200,6 @@ impl BrainstormEngine {
         session_id: &str,
         request: &BrainstormRequest,
     ) -> Result<Vec<BrainstormIdea>, Box<dyn std::error::Error>> {
-        let session = self.sessions.get_mut(session_id)
-            .ok_or("Session not found")?;
-
         let mut ideas = Vec::new();
         let num_ideas = request.num_ideas.min(self.config.max_ideas_per_session);
 
@@ -219,30 +216,42 @@ impl BrainstormEngine {
             let template = &templates[i % templates.len()];
             let idea_content = self.generate_idea_from_template(template, request)?;
             
+            // Pre-compute values that require immutable borrows
+            let tags = if self.config.enable_auto_tagging {
+                self.auto_generate_tags(&idea_content)
+            } else {
+                Vec::new()
+            };
+            
+            let rating = if self.config.enable_idea_scoring {
+                Some(self.score_idea(&idea_content))
+            } else {
+                None
+            };
+            
             let idea = BrainstormIdea {
                 id: Uuid::new_v4().to_string(),
                 content: idea_content,
                 category: request.category.to_string(),
-                tags: if self.config.enable_auto_tagging {
-                    self.auto_generate_tags(&idea_content)
-                } else {
-                    Vec::new()
-                },
-                rating: if self.config.enable_idea_scoring {
-                    Some(self.score_idea(&idea_content))
-                } else {
-                    None
-                },
+                tags,
+                rating,
                 notes: String::new(),
                 is_keeper: false,
                 created_at: chrono::Utc::now(),
             };
 
             ideas.push(idea.clone());
-            session.ideas.push(idea);
         }
 
+        // Now get mutable reference to session and add all ideas
+        let session = self.sessions.get_mut(session_id)
+            .ok_or("Session not found")?;
+        
+        for idea in &ideas {
+            session.ideas.push(idea.clone());
+        }
         session.updated_at = chrono::Utc::now();
+        
         Ok(ideas)
     }
 

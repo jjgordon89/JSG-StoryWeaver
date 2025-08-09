@@ -137,10 +137,10 @@ impl super::DeletedItemOps {
             .map_err(|e| StoryWeaverError::database(format!("Failed to start transaction: {}", e)))?;
         
         // Get the project data
-        let project = sqlx::query!(
-            "SELECT * FROM projects WHERE id = ?",
-            project_id
+        let project = sqlx::query_as::<_, crate::database::models::Project>(
+            "SELECT * FROM projects WHERE id = ?"
         )
+        .bind(project_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get project: {}", e)))?
@@ -209,10 +209,10 @@ impl super::DeletedItemOps {
             .map_err(|e| StoryWeaverError::database(format!("Failed to start transaction: {}", e)))?;
         
         // Get the document data
-        let document = sqlx::query!(
-            "SELECT * FROM documents WHERE id = ?",
-            document_id
+        let document = sqlx::query_as::<_, crate::database::models::Document>(
+            "SELECT * FROM documents WHERE id = ?"
         )
+        .bind(document_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get document: {}", e)))?
@@ -277,7 +277,7 @@ impl super::DeletedItemOps {
             .map_err(|e| StoryWeaverError::database(format!("Failed to start transaction: {}", e)))?;
         
         // Get the deleted item
-        let deleted_item = Self::get_by_id(&mut *tx, deleted_item_id).await?
+        let deleted_item = Self::get_by_id(pool, deleted_item_id).await?
             .ok_or_else(|| StoryWeaverError::DeletedItemNotFound { id: deleted_item_id.to_string() })?;
         
         // Restore based on item type
@@ -392,7 +392,7 @@ impl super::DeletedItemOps {
             },
             _ => {
                 return Err(StoryWeaverError::UnsupportedOperation { 
-                    message: format!("Restore not implemented for item type: {:?}", deleted_item.item_type) 
+                    operation: format!("Restore not implemented for item type: {:?}", deleted_item.item_type) 
                 });
             }
         }

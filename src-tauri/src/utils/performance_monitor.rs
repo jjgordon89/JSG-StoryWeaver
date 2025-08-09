@@ -9,10 +9,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::collections::HashMap;
-use sqlx::QueryBuilder;
+
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
-use serde_json::json;
 use once_cell::sync::Lazy;
 
 // Global flag to enable/disable performance monitoring

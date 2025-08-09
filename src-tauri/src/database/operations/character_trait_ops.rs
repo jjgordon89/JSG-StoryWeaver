@@ -67,6 +67,25 @@ impl super::CharacterTraitOps {
         Ok(traits)
     }
     
+    /// Get all character traits for a project
+    pub async fn get_by_project(pool: &Pool<Sqlite>, project_id: &str) -> Result<Vec<CharacterTrait>> {
+        let traits = sqlx::query_as::<_, CharacterTrait>(
+            r#"
+            SELECT ct.id, ct.character_id, ct.trait_name, ct.trait_value, ct.is_visible, ct.created_at
+            FROM character_traits ct
+            JOIN characters c ON ct.character_id = c.id
+            WHERE c.project_id = ?
+            ORDER BY c.name, ct.trait_name
+            "#,
+        )
+        .bind(project_id)
+        .fetch_all(&*pool)
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get character traits for project: {}", e)))?;
+        
+        Ok(traits)
+    }
+    
     /// Get a character trait by ID
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<CharacterTrait> {
         let character_trait = sqlx::query_as::<_, CharacterTrait>(

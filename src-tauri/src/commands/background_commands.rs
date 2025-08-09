@@ -19,7 +19,7 @@ pub async fn create_background_task(
     document_id: Option<String>,
     metadata: Option<serde_json::Value>,
     task_manager: State<'_, BackgroundTaskManager>,
-) -> CommandResponse<String> {
+) -> Result<String> {
     async fn create(
         task_type: String,
         description: String,
@@ -78,7 +78,6 @@ pub async fn create_background_task(
         &task_manager,
     )
     .await
-    .into()
 }
 
 /// Get a task by ID
@@ -157,13 +156,13 @@ pub async fn get_background_tasks_by_document(document_id: String) -> CommandRes
 pub async fn cancel_background_task(
     task_id: String,
     task_manager: State<'_, BackgroundTaskManager>,
-) -> CommandResponse<bool> {
+) -> Result<bool> {
     async fn cancel(task_id: String, task_manager: &BackgroundTaskManager) -> Result<bool> {
         task_manager.cancel_task(&task_id).await?;
         Ok(true)
     }
     
-    cancel(task_id, &task_manager).await.into()
+    cancel(task_id, &task_manager).await
 }
 
 /// Clean up old tasks

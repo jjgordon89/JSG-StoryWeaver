@@ -67,10 +67,10 @@ impl AITaskProcessor {
         
         // Generate text
         let result = provider.generate_text(prompt, &context).await
-            .map_err(|e| StoryWeaverError::ai_provider(
-                provider_name, 
-                format!("AI generation failed: {}", e)
-            ))?;
+            .map_err(|e| {
+                let error_msg = format!("AI generation failed: {}", e);
+                StoryWeaverError::ai_provider(provider_name, &error_msg)
+            })?;
         
         // Store result in task metadata
         task.metadata["result"] = serde_json::Value::String(result.clone());

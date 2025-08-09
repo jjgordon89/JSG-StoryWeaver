@@ -8,6 +8,7 @@ use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
+use uuid;
 
 /// Get all character templates
 #[tauri::command]
@@ -37,14 +38,17 @@ pub async fn apply_character_template(
     trait_overrides: Option<HashMap<String, String>>,
 ) -> Result<String> {
     let pool = database::get_pool()?;
-    let character_id = CharacterTemplateOps::apply_template_to_character(
+    // First, we need to create a character and get its ID
+    // For now, we'll generate a UUID as character_id
+    let character_id = uuid::Uuid::new_v4().to_string();
+    
+    let _traits = CharacterTemplateOps::apply_template_to_character(
         &pool,
         &template_id,
-        &project_id,
-        &name,
-        description,
+        &character_id,
         trait_overrides,
     ).await?;
+    
     Ok(character_id)
 }
 

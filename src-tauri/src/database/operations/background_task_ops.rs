@@ -68,12 +68,12 @@ impl super::BackgroundTaskOps {
     
     /// Get a task by ID
     pub async fn get_task(pool: &Pool<Sqlite>, task_id: &str) -> Result<Task> {
-        let record = sqlx::query!(
+        let record = sqlx::query(
             r#"
             SELECT * FROM background_tasks WHERE id = ?
-            "#,
-            task_id
+            "#
         )
+        .bind(task_id)
         .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get task: {}", e)))?
@@ -84,10 +84,10 @@ impl super::BackgroundTaskOps {
     
     /// Get all tasks
     pub async fn get_all_tasks(pool: &Pool<Sqlite>) -> Result<Vec<Task>> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT * FROM background_tasks ORDER BY created_at DESC
-            "#,
+            "#
         )
         .fetch_all(&*pool)
         .await
@@ -111,12 +111,12 @@ impl super::BackgroundTaskOps {
             TaskStatus::Cancelled => "cancelled",
         };
         
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT * FROM background_tasks WHERE status = ? ORDER BY created_at DESC
-            "#,
-            status_str
+            "#
         )
+        .bind(status_str)
         .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks by status: {}", e)))?;
@@ -131,12 +131,12 @@ impl super::BackgroundTaskOps {
     
     /// Get tasks by project ID
     pub async fn get_tasks_by_project(pool: &Pool<Sqlite>, project_id: &str) -> Result<Vec<Task>> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT * FROM background_tasks WHERE project_id = ? ORDER BY created_at DESC
-            "#,
-            project_id
+            "#
         )
+        .bind(project_id)
         .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks by project: {}", e)))?;
@@ -151,12 +151,12 @@ impl super::BackgroundTaskOps {
     
     /// Get tasks by document ID
     pub async fn get_tasks_by_document(pool: &Pool<Sqlite>, document_id: &str) -> Result<Vec<Task>> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT * FROM background_tasks WHERE document_id = ? ORDER BY created_at DESC
-            "#,
-            document_id
+            "#
         )
+        .bind(document_id)
         .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get tasks by document: {}", e)))?;
@@ -171,12 +171,12 @@ impl super::BackgroundTaskOps {
     
     /// Delete a task
     pub async fn delete_task(pool: &Pool<Sqlite>, task_id: &str) -> Result<()> {
-        sqlx::query!(
+        sqlx::query(
             r#"
             DELETE FROM background_tasks WHERE id = ?
-            "#,
-            task_id
+            "#
         )
+        .bind(task_id)
         .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to delete task: {}", e)))?;
@@ -186,14 +186,14 @@ impl super::BackgroundTaskOps {
     
     /// Clean up old completed tasks
     pub async fn cleanup_old_tasks(pool: &Pool<Sqlite>, days: i64) -> Result<usize> {
-        let result = sqlx::query!(
+        let result = sqlx::query(
             r#"
             DELETE FROM background_tasks 
             WHERE status IN ('completed', 'failed', 'cancelled') 
             AND completed_at < datetime('now', ?)
-            "#,
-            format!("-{} days", days)
+            "#
         )
+        .bind(format!("-{} days", days))
         .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to clean up old tasks: {}", e)))?;

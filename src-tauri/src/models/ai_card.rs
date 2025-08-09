@@ -168,33 +168,34 @@ impl AIResponseCard {
         let now = chrono::Utc::now().to_rfc3339();
         
         let mut updates = Vec::new();
-        let mut bindings = Vec::new();
+        let mut binding_values = Vec::new();
         
         if let Some(is_stacked) = request.is_stacked {
             updates.push("is_stacked = ?");
-            bindings.push(if is_stacked { "1" } else { "0" });
+            binding_values.push(if is_stacked { "1".to_string() } else { "0".to_string() });
         }
         
         if let Some(is_starred) = request.is_starred {
             updates.push("is_starred = ?");
-            bindings.push(if is_starred { "1" } else { "0" });
+            binding_values.push(if is_starred { "1".to_string() } else { "0".to_string() });
         }
         
         if let Some(is_collapsed) = request.is_collapsed {
             updates.push("is_collapsed = ?");
-            bindings.push(if is_collapsed { "1" } else { "0" });
+            binding_values.push(if is_collapsed { "1".to_string() } else { "0".to_string() });
         }
         
         if let Some(stack_position) = request.stack_position {
             updates.push("stack_position = ?");
-            let stack_position_str = stack_position.to_string();
-            bindings.push(&stack_position_str);
+            binding_values.push(stack_position.to_string());
         }
         
         if let Some(tags) = &request.tags {
             updates.push("tags = ?");
-            bindings.push(tags.as_str());
+            binding_values.push(tags.clone());
         }
+        
+        let bindings: Vec<&str> = binding_values.iter().map(|s| s.as_str()).collect();
         
         if updates.is_empty() {
             return Self::get_by_id(pool, id).await;

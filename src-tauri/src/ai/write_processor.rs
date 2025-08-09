@@ -206,34 +206,33 @@ impl ContextBuilder {
             .ok_or_else(|| StoryWeaverError::database(format!("Document with id {} not found", document_id)))?;
         
         // Extract text around cursor position
-        if let Some(content) = document.content {
-            let content_chars: Vec<char> = content.chars().collect();
-            let total_len = content_chars.len();
-            
-            // Get preceding text (up to context_window characters before cursor)
-            let start = cursor_position.saturating_sub(context_window);
-            let preceding: String = content_chars[start..cursor_position.min(total_len)]
+        let content = document.content;
+        let content_chars: Vec<char> = content.chars().collect();
+        let total_len = content_chars.len();
+        
+        // Get preceding text (up to context_window characters before cursor)
+        let start = cursor_position.saturating_sub(context_window);
+        let preceding: String = content_chars[start..cursor_position.min(total_len)]
+            .iter()
+            .collect();
+        context.preceding_text = Some(preceding);
+        
+        // Get following text (up to context_window/2 characters after cursor)
+        let end = (cursor_position + context_window / 2).min(total_len);
+        if cursor_position < total_len {
+            let following: String = content_chars[cursor_position..end]
                 .iter()
                 .collect();
-            context.preceding_text = Some(preceding);
-            
-            // Get following text (up to context_window/2 characters after cursor)
-            let end = (cursor_position + context_window / 2).min(total_len);
-            if cursor_position < total_len {
-                let following: String = content_chars[cursor_position..end]
-                    .iter()
-                    .collect();
-                context.following_text = Some(following);
-            }
-            
-            // Create a story summary (simplified for now)
-            let summary = if content.len() > 500 {
-                format!("{}...", &content[..500])
-            } else {
-                content.clone()
-            };
-            context.story_context = Some(summary);
+            context.following_text = Some(following);
         }
+        
+        // Create a story summary (simplified for now)
+        let summary = if content.len() > 500 {
+            format!("{}...", &content[..500])
+        } else {
+            content.clone()
+        };
+        context.story_context = Some(summary);
         
         // Set document and project IDs
         context.document_id = Some(document_id.to_string());
@@ -266,14 +265,13 @@ impl ContextBuilder {
             context.project_id = Some(document.project_id.to_string());
             
             // Add story context if available
-            if let Some(content) = document.content {
-                let summary = if content.len() > 500 {
-                    format!("{}...", &content[..500])
-                } else {
-                    content
-                };
-                context.story_context = Some(summary);
-            }
+            let content = document.content;
+            let summary = if content.len() > 500 {
+                format!("{}...", &content[..500])
+            } else {
+                content
+            };
+            context.story_context = Some(summary);
         }
         
         Ok(context)

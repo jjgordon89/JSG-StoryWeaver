@@ -1,10 +1,9 @@
 use crate::database::{get_pool};
 use crate::database::operations::StyleExampleOps;
 use crate::database::models::StyleExample;
-use crate::error::{StoryWeaverError, Result};
+use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateStyleExampleRequest {
@@ -15,7 +14,7 @@ pub struct CreateStyleExampleRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateStyleExampleRequest {
-    pub id: String,
+    pub id: i64,
     pub example_text: Option<String>,
     pub analysis_result: Option<String>,
     pub generated_style_prompt: Option<String>,
@@ -23,15 +22,14 @@ pub struct UpdateStyleExampleRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StyleExampleResponse {
-    pub id: String,
+    pub id: i64,
     pub project_id: String,
-    pub user_id: String,
+    pub user_id: Option<String>,
     pub example_text: String,
     pub analysis_result: Option<String>,
     pub generated_style_prompt: Option<String>,
-    pub word_count: i32,
+    pub word_count: Option<i32>,
     pub created_at: String,
-    pub updated_at: String,
 }
 
 impl From<StyleExample> for StyleExampleResponse {
@@ -45,7 +43,6 @@ impl From<StyleExample> for StyleExampleResponse {
             generated_style_prompt: style_example.generated_style_prompt,
             word_count: style_example.word_count,
             created_at: style_example.created_at.to_rfc3339(),
-            updated_at: style_example.updated_at.to_rfc3339(),
         }
     }
 }
@@ -58,15 +55,12 @@ pub async fn create_style_example(
     let pool = get_pool()?;
     
     let style_example = StyleExample::new(
-        Uuid::new_v4().to_string(),
         request.project_id,
-        request.user_id,
+        Some(request.user_id),
         request.example_text,
-        None,
-        None,
     );
     
-    let created = StyleExampleOps::create(&pool, &style_example).await?;
+    let created = StyleExampleOps::create(&pool, style_example).await?;
     Ok(created.into())
 }
 
@@ -95,12 +89,12 @@ pub async fn get_analyzed_style_examples(
 /// Get a specific style example by ID
 #[command]
 pub async fn get_style_example_by_id(
-    id: String,
+    id: i64,
 ) -> Result<StyleExampleResponse> {
     let pool = get_pool()?;
     
-    let style_example = StyleExampleOps::get_by_id(&pool, &id).await?
-        .ok_or_else(|| StoryWeaverError::Internal { 
+    let style_example = StyleExampleOps::get_by_id(&pool, id).await
+        .map_err(|_| StoryWeaverError::Internal { 
             message: format!("StyleExample not found: {}", id) 
         })?;
     
@@ -114,25 +108,33 @@ pub async fn update_style_example(
 ) -> Result<StyleExampleResponse> {
     let pool = get_pool()?;
     
-    let updated = StyleExampleOps::update(
-        &pool,
-        &request.id,
-        request.example_text,
-        request.analysis_result,
-        request.generated_style_prompt,
-    ).await?;
+    // Get the existing style example
+    let mut style_example = StyleExampleOps::get_by_id(&pool, request.id).await?;
     
-    Ok(updated.into())
+    // Update fields if provided
+    if let Some(example_text) = request.example_text {
+        style_example.example_text = example_text;
+        style_example.word_count = Some(style_example.example_text.split_whitespace().count() as i32);
+    }
+    if let Some(analysis_result) = request.analysis_result {
+        style_example.analysis_result = Some(analysis_result);
+    }
+    if let Some(generated_style_prompt) = request.generated_style_prompt {
+        style_example.generated_style_prompt = Some(generated_style_prompt);
+    }
+    
+    StyleExampleOps::update(&pool, &style_example).await?;
+    Ok(style_example.into())
 }
 
 /// Delete a style example
 #[command]
 pub async fn delete_style_example(
-    id: String,
+    id: i64,
 ) -> Result<()> {
     let pool = get_pool()?;
     
-    StyleExampleOps::delete(&pool, &id).await?;
+    StyleExampleOps::delete(&pool, id).await?;
     Ok(())
 }
 

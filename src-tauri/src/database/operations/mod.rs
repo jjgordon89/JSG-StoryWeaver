@@ -24,6 +24,15 @@ pub mod ai_history_ops;
 pub mod character_template_ops;
 pub mod worldbuilding_template_ops;
 
+// Phase 4 Advanced AI Features
+pub mod ai_provider_ops;
+pub mod ai_model_configuration_ops;
+pub mod prose_mode_ops;
+pub mod generated_image_ops;
+pub mod brainstorm_session_ops;
+pub mod credit_usage_ops;
+pub mod streaming_session_ops;
+
 // Re-export for convenience
 pub use folder_ops::*;
 pub use series_ops::*;
@@ -51,6 +60,15 @@ pub use ai_history_ops::*;
 pub use character_template_ops::*;
 pub use worldbuilding_template_ops::*;
 
+// Phase 4 Advanced AI Features
+pub use ai_provider_ops::*;
+pub use ai_model_configuration_ops::*;
+pub use prose_mode_ops::*;
+pub use generated_image_ops::*;
+pub use brainstorm_session_ops::*;
+pub use credit_usage_ops::*;
+pub use streaming_session_ops::*;
+
 // Struct definitions for operations
 pub struct FolderOps;
 pub struct SeriesOps;
@@ -77,3 +95,12 @@ pub struct StyleExampleOps;
 pub struct AIHistoryOps;
 pub struct CharacterTemplateOps;
 pub struct WorldBuildingTemplateOps;
+
+// Phase 4 Advanced AI Features
+pub struct AIProviderOps;
+pub struct AIModelConfigurationOps;
+pub struct ProseModeOps;
+pub struct GeneratedImageOps;
+pub struct BrainstormSessionOps;
+pub struct CreditUsageOps;
+pub struct StreamingSessionOps;

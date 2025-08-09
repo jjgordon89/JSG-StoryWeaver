@@ -480,17 +480,18 @@ impl BackgroundTaskManager {
                             
                             let processor_clone = Arc::clone(processor);
                             let task_queue_clone = Arc::clone(&task_queue);
+                            let task_id_clone = task_id.clone();
                             
                             // Process task in a separate task
                             tokio::spawn(async move {
                                 let result = processor_clone.process_task(Arc::clone(&task)).await;
                                 
                                 if let Err(e) = result {
-                                    if let Err(e2) = task_queue_clone.complete_task(&task_id, false, Some(e.to_string())).await {
+                                    if let Err(e2) = task_queue_clone.complete_task(&task_id_clone, false, Some(e.to_string())).await {
                                         eprintln!("Error completing task: {}", e2);
                                     }
                                 } else {
-                                    if let Err(e) = task_queue_clone.complete_task(&task_id, true, None).await {
+                                    if let Err(e) = task_queue_clone.complete_task(&task_id_clone, true, None).await {
                                         eprintln!("Error completing task: {}", e);
                                     }
                                 }

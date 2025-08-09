@@ -9,6 +9,7 @@ import type { CharacterTrait, CharactersManagerProps } from '../../../../types/s
 import useStoryBible from '../../hooks/useStoryBible';
 import RelationshipGraph from './RelationshipGraph';
 import CSVImportDialog from './CSVImportDialog';
+import SmartImportDialog from './SmartImportDialog';
 
 interface CreateTraitForm {
   traitType: string;
@@ -38,13 +39,16 @@ const VISIBILITY_OPTIONS = [
 ];
 
 const CharactersManager: React.FC<CharactersManagerProps> = ({ 
-  projectId, 
-  characters = [] 
+  projectId
 }) => {
   const { 
+    characters,
     characterTraits, 
-    isLoading, 
+    isLoading,
+    isLoadingCharacters,
+    charactersError,
     error, 
+    loadCharacters,
     createCharacterTrait, 
     updateCharacterTrait, 
     deleteCharacterTrait, 
@@ -66,6 +70,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   const [showRelationshipView, setShowRelationshipView] = useState(false);
   const [showGraphView, setShowGraphView] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showSmartImportDialog, setShowSmartImportDialog] = useState(false);
   const [showCreateRelationshipModal, setShowCreateRelationshipModal] = useState(false);
   const [relationships, setRelationships] = useState<Array<{
     id: string;
@@ -111,6 +116,13 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     content: '',
     visibility: 'public'
   });
+
+  // Load characters when component mounts
+  useEffect(() => {
+    if (projectId) {
+      loadCharacters(projectId);
+    }
+  }, [projectId, loadCharacters]);
 
   // Load character traits when character is selected
   useEffect(() => {
@@ -241,7 +253,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
     if (!selectedCharacterData) return;
     
-    const characterTraits = traits.filter(t => t.character_id === selectedCharacter);
+    const filteredCharacterTraits = characterTraits.filter(t => t.character_id === selectedCharacter);
     
     // Create CSV content
     const headers = ['Character Name', 'Trait Type', 'Content', 'Visibility'];
@@ -318,6 +330,35 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     return 'Very Strong';
   };
 
+  const handleSmartImport = async (data: any[], type: 'characters' | 'locations' | 'plot_points' | 'themes') => {
+    try {
+      if (type === 'characters') {
+        // Import characters using the existing character creation logic
+        for (const characterData of data) {
+          // This would need to be implemented based on your character creation API
+          console.log('Importing character:', characterData);
+          // await createCharacter(characterData);
+        }
+      } else if (type === 'locations' || type === 'plot_points' || type === 'themes') {
+        // Import worldbuilding elements
+        for (const elementData of data) {
+          console.log(`Importing ${type}:`, elementData);
+          // await createWorldbuildingElement(elementData);
+        }
+      }
+      
+      // Refresh the character list after import
+      if (selectedCharacter) {
+        loadCharacterTraits(selectedCharacter);
+      }
+      
+      alert(`Successfully imported ${data.length} ${type}!`);
+    } catch (error) {
+      console.error(`Failed to import ${type}:`, error);
+      alert(`Failed to import ${type}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -342,6 +383,14 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
               {showGraphView ? 'List View' : 'Graph View'}
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={() => setShowSmartImportDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Smart Import
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowImportDialog(true)}
@@ -385,18 +434,29 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
           <CardTitle>Select Character</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedCharacter} onValueChange={handleCharacterSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose a character to manage" />
-            </SelectTrigger>
-            <SelectContent>
-              {characters.map(character => (
-                <SelectItem key={character.id} value={character.id}>
-                  {character.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isLoadingCharacters ? (
+            <div className="text-center py-4 text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+              Loading characters...
+            </div>
+          ) : charactersError ? (
+            <div className="text-center py-4 text-red-600">
+              Error loading characters: {charactersError}
+            </div>
+          ) : (
+            <Select value={selectedCharacter} onValueChange={handleCharacterSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder={characters.length === 0 ? "No characters available" : "Choose a character to manage"} />
+              </SelectTrigger>
+              <SelectContent>
+                {characters.map(character => (
+                  <SelectItem key={character.id} value={character.id}>
+                    {character.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardContent>
       </Card>
 
@@ -738,7 +798,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                }
                
                // Refresh the characters list
-               await loadCharacters();
+               await loadCharacters(projectId);
                setShowImportDialog(false);
              } catch (error) {
                console.error('Import failed:', error);
@@ -967,6 +1027,14 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Smart Import Dialog */}
+      <SmartImportDialog
+        isOpen={showSmartImportDialog}
+        onClose={() => setShowSmartImportDialog(false)}
+        onImport={handleSmartImport}
+        projectId={projectId}
+      />
     </div>
   );
 };

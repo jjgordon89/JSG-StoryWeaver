@@ -109,8 +109,8 @@ impl super::DocumentVersionOps {
         let version = DocumentVersion {
             id: Uuid::new_v4().to_string(),
             document_id: document_id.to_string(),
-            content: document.content,
-            word_count: document.word_count,
+            content: document.content.unwrap_or_default(),
+            word_count: document.word_count.unwrap_or(0) as i32,
             version_number,
             created_at: Utc::now(),
             created_by,
@@ -149,7 +149,7 @@ impl super::DocumentVersionOps {
             .map_err(|e| StoryWeaverError::database(format!("Failed to start transaction: {}", e)))?;
         
         // Get the version
-        let version = Self::get_by_id(&mut *tx, version_id).await?
+        let version = Self::get_by_id(pool, version_id).await?
             .ok_or_else(|| StoryWeaverError::VersionNotFound { id: version_id.to_string() })?;
         
         // Update the document with the version content
@@ -182,12 +182,12 @@ impl super::DocumentVersionOps {
             r#"
             SELECT 
                 v.id,
-                v.version_number,
-                v.word_count,
-                v.created_at,
+                v.version_number as "version_number: i32",
+                v.word_count as "word_count: i32",
+                v.created_at as "created_at: chrono::NaiveDateTime",
                 v.created_by,
                 v.comment,
-                (v.word_count - COALESCE(prev.word_count, 0)) as word_count_change
+                (v.word_count - COALESCE(prev.word_count, 0)) as "word_count_change: i32"
             FROM 
                 document_versions v
             LEFT JOIN 
@@ -211,10 +211,10 @@ impl super::DocumentVersionOps {
 /// Version history item with metadata
 #[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
 pub struct VersionHistoryItem {
-    pub id: String,
+    pub id: Option<String>,
     pub version_number: i32,
     pub word_count: i32,
-    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub created_at: chrono::NaiveDateTime,
     pub created_by: Option<String>,
     pub comment: Option<String>,
     pub word_count_change: i32,

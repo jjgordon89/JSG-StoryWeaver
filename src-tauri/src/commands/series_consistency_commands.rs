@@ -10,7 +10,7 @@ use tauri::command;
 pub async fn generate_series_consistency_report(
     series_id: String,
 ) -> Result<CommandResponse<SeriesConsistencyReport>, String> {
-    let pool = get_pool().await.map_err(|e| e.to_string())?;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     match SeriesConsistencyOps::generate_consistency_report(&pool, &series_id).await {
         Ok(report) => Ok(CommandResponse::success(report)),
@@ -23,7 +23,7 @@ pub async fn generate_series_consistency_report(
 pub async fn get_series_consistency_status(
     series_id: String,
 ) -> Result<CommandResponse<(f64, usize)>, String> {
-    let pool = get_pool().await.map_err(|e| e.to_string())?;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     match SeriesConsistencyOps::get_consistency_status(&pool, &series_id).await {
         Ok(status) => Ok(CommandResponse::success(status)),
@@ -37,7 +37,7 @@ pub async fn get_series_conflicts_by_severity(
     series_id: String,
     severity: String, // "Critical", "High", "Medium", "Low"
 ) -> Result<CommandResponse<Vec<ConsistencyConflict>>, String> {
-    let pool = get_pool().await.map_err(|e| e.to_string())?;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     
     let severity_enum = match severity.as_str() {
         "Critical" => ConflictSeverity::Critical,
@@ -58,7 +58,7 @@ pub async fn get_series_conflicts_by_severity(
 pub async fn batch_check_series_consistency(
     series_ids: Vec<String>,
 ) -> Result<CommandResponse<Vec<(String, f64, usize)>>, String> {
-    let pool = get_pool().await.map_err(|e| e.to_string())?;
+    let pool = get_pool().map_err(|e| e.to_string())?;
     let mut results = Vec::new();
     
     for series_id in series_ids {

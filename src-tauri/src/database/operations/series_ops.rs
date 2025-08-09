@@ -142,12 +142,12 @@ impl super::SeriesOps {
             SeriesWithCount,
             r#"
             SELECT 
-                s.id as "id: i64",
+                s.id,
                 s.name,
                 s.description,
-                s.folder_id as "folder_id: i64", 
-                s.created_at as "created_at!: _",
-                CAST(COUNT(p.id) AS INTEGER) as "project_count: i64"
+                s.folder_id, 
+                s.created_at as "created_at!: chrono::DateTime<chrono::Utc>",
+                CAST(COUNT(p.id) AS INTEGER) as project_count
             FROM 
                 series s
             LEFT JOIN 

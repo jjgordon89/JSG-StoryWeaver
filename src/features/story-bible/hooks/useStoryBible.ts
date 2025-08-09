@@ -15,6 +15,7 @@ interface ValidationResponse {
 
 import type {
   StoryBible,
+  Character,
   CharacterTrait,
   WorldElement,
   Outline,
@@ -48,6 +49,7 @@ import type {
 const initialState: StoryBibleState = {
   // Data
   storyBible: null,
+  characters: [],
   characterTraits: [],
   worldElements: [],
   outlines: [],
@@ -56,6 +58,7 @@ const initialState: StoryBibleState = {
   
   // Loading states
   isLoading: false,
+  isLoadingCharacters: false,
   isLoadingTraits: false,
   isLoadingWorldElements: false,
   isLoadingOutlines: false,
@@ -63,6 +66,7 @@ const initialState: StoryBibleState = {
   
   // Error states
   error: null,
+  charactersError: null,
   traitsError: null,
   worldElementsError: null,
   outlinesError: null,
@@ -91,6 +95,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       ...prevState,
       [errorType]: message,
       isLoading: false,
+      isLoadingCharacters: false,
       isLoadingTraits: false,
       isLoadingWorldElements: false,
       isLoadingOutlines: false,
@@ -140,6 +145,28 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       }
     } catch (error) {
       handleError(error, 'error');
+    }
+  }, [handleError]);
+
+  // Character operations
+  const loadCharacters = useCallback(async (projectId: string): Promise<void> => {
+    setState(prevState => ({ ...prevState, isLoadingCharacters: true, charactersError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<Character[]>>('get_characters', { projectId });
+      
+      if (response.success) {
+        setState(prevState => ({
+          ...prevState,
+          characters: response.data || [],
+          isLoadingCharacters: false,
+          charactersError: null
+        }));
+      } else {
+        handleError(response.error, 'charactersError');
+      }
+    } catch (error) {
+      handleError(error, 'charactersError');
     }
   }, [handleError]);
 
@@ -747,6 +774,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
   return {
     // Data
     storyBible: state.storyBible,
+    characters: state.characters,
     characterTraits: filteredCharacterTraits,
     worldElements: filteredWorldElements,
     outlines: filteredOutlines,
@@ -754,6 +782,8 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     
     // Loading states
     isLoading: state.isLoading,
+    isLoadingCharacters: state.isLoadingCharacters,
+    charactersError: state.charactersError,
     error: state.error,
     
     // Core operations
@@ -761,6 +791,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     loadStoryBible,
     
     // Character operations
+    loadCharacters,
     createCharacterTrait,
     updateCharacterTrait,
     deleteCharacterTrait,

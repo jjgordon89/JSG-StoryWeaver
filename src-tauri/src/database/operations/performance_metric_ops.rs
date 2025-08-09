@@ -378,8 +378,8 @@ impl super::PerformanceMetricOps {
             .fetch_optional(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get retention period: {}", e)))? {
-                Some(val) => val.parse::<i64>().unwrap_or(30),
-                None => 30, // Default: 30 days
+                Some(Some(val)) => val.parse().unwrap_or(30),
+                _ => 30, // Default: 30 days
             };
         
         // Delete old metrics

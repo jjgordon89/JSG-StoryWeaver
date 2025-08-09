@@ -15,6 +15,26 @@ export interface StoryBible {
   updated_at: string;
 }
 
+export interface Character {
+  id: string;
+  project_id: string;
+  series_id?: string;
+  name: string;
+  description?: string;
+  role: 'protagonist' | 'antagonist' | 'supporting' | 'minor';
+  age?: number;
+  appearance?: string;
+  personality?: string;
+  background?: string;
+  goals?: string;
+  relationships: string;
+  visibility: 'public' | 'private' | 'series';
+  original_project_id?: string;
+  created_at: string;
+  updated_at: string;
+  metadata: string;
+}
+
 export interface CharacterTrait {
   id: string;
   character_id: string;
@@ -213,6 +233,7 @@ export interface ValidateSceneRequest {
 export interface StoryBibleState {
   // Data
   storyBible: StoryBible | null;
+  characters: Character[];
   characterTraits: CharacterTrait[];
   worldElements: WorldElement[];
   outlines: Outline[];
@@ -221,6 +242,7 @@ export interface StoryBibleState {
   
   // Loading states
   isLoading: boolean;
+  isLoadingCharacters: boolean;
   isLoadingTraits: boolean;
   isLoadingWorldElements: boolean;
   isLoadingOutlines: boolean;
@@ -228,6 +250,7 @@ export interface StoryBibleState {
   
   // Error states
   error: string | null;
+  charactersError: string | null;
   traitsError: string | null;
   worldElementsError: string | null;
   outlinesError: string | null;
@@ -257,6 +280,7 @@ export interface StoryBibleState {
 export interface UseStoryBibleReturn {
   // Data
   storyBible: StoryBible | null;
+  characters: Character[];
   characterTraits: CharacterTrait[];
   worldElements: WorldElement[];
   outlines: Outline[];
@@ -269,6 +293,9 @@ export interface UseStoryBibleReturn {
   // Actions
   createOrUpdateStoryBible: (request: CreateStoryBibleRequest | UpdateStoryBibleRequest) => Promise<void>;
   loadStoryBible: (projectId: string) => Promise<void>;
+  
+  // Characters
+  loadCharacters: (projectId: string) => Promise<void>;
   
   // Character traits
   createCharacterTrait: (request: CreateCharacterTraitRequest) => Promise<void>;

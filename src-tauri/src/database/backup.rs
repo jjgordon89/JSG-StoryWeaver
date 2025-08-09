@@ -1,5 +1,5 @@
 use crate::error::{Result, StoryWeaverError};
-use sqlx::{Pool, Sqlite};
+use sqlx;
 use std::path::{Path, PathBuf};
 use chrono::{Utc, DateTime};
 use tokio::fs;
@@ -156,11 +156,7 @@ impl BackupManager {
         
         let backups = sqlx::query_as!(
             BackupRecord,
-            r#"
-            SELECT id, filename, created_at, is_auto, comment
-            FROM backups
-            ORDER BY created_at DESC
-            "#,
+            r#"SELECT id, filename, created_at, is_auto, comment FROM backups ORDER BY created_at DESC"#
         )
         .fetch_all(&*pool)
         .await
@@ -334,7 +330,9 @@ impl BackupManager {
         
         // Delete old backups
         for backup in backups_to_delete {
-            Self::delete_backup(app_handle, &backup.id).await?;
+            if let Some(id) = &backup.id {
+                Self::delete_backup(app_handle, id).await?;
+            }
         }
         
         Ok(())
