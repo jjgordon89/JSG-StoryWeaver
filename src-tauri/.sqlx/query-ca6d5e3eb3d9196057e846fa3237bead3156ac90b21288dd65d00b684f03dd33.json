@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO plugin_templates (\n            name, description, category, template_data, is_official,\n            created_at\n        )\n        VALUES (?, ?, ?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "ca6d5e3eb3d9196057e846fa3237bead3156ac90b21288dd65d00b684f03dd33"
+}

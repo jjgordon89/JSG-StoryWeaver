@@ -9,23 +9,28 @@
 CREATE TABLE IF NOT EXISTS shared_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document_id INTEGER NOT NULL,
+    project_id INTEGER NOT NULL,
     share_token TEXT UNIQUE NOT NULL,
     share_settings TEXT NOT NULL, -- JSON: {"allow_comments": true, "allow_editing": false, "expires_at": "2024-12-31T23:59:59Z"}
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_at DATETIME,
     created_by TEXT,
+    current_uses INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT 1,
-    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+    FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
 -- Collaboration Sessions Table
 CREATE TABLE IF NOT EXISTS collaboration_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT UNIQUE NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
     document_id INTEGER NOT NULL,
     host_user TEXT NOT NULL,
     participants TEXT, -- JSON array of participant info
     session_data TEXT, -- JSON: cursor positions, selections, etc.
+    current_participants INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT 1,
@@ -39,10 +44,13 @@ CREATE TABLE IF NOT EXISTS document_comments (
     thread_id TEXT, -- For grouping related comments
     parent_comment_id INTEGER, -- For replies
     author_name TEXT NOT NULL,
+    author_identifier TEXT NOT NULL,
     author_email TEXT,
     content TEXT NOT NULL,
     position_data TEXT, -- JSON: {"start": 100, "end": 150, "line": 5}
     status TEXT DEFAULT 'open', -- 'open', 'resolved', 'deleted'
+    user_name TEXT,
+    is_resolved BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     resolved_at DATETIME,
@@ -166,10 +174,10 @@ CREATE TABLE IF NOT EXISTS canvas (
     project_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
-    canvas_data TEXT, -- JSON: canvas configuration, zoom, pan, etc.
-    background_color TEXT DEFAULT '#ffffff',
-    grid_enabled BOOLEAN DEFAULT 1,
-    grid_size INTEGER DEFAULT 20,
+    canvas_data TEXT NOT NULL DEFAULT '{}',
+    canvas_type TEXT NOT NULL DEFAULT 'story_map',
+    is_active BOOLEAN DEFAULT 1,
+    settings TEXT DEFAULT '{}', -- JSON: canvas settings and configuration
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -209,9 +217,10 @@ CREATE TABLE IF NOT EXISTS outline_templates (
 CREATE TABLE IF NOT EXISTS canvas_snapshots (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     canvas_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
+    snapshot_name TEXT NOT NULL,
     snapshot_data TEXT NOT NULL, -- JSON: complete canvas state
+    description TEXT,
+    created_by TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (canvas_id) REFERENCES canvas(id) ON DELETE CASCADE
 );
@@ -220,12 +229,16 @@ CREATE TABLE IF NOT EXISTS canvas_snapshots (
 CREATE TABLE IF NOT EXISTS canvas_collaboration_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     canvas_id INTEGER NOT NULL,
-    session_id TEXT UNIQUE NOT NULL,
+    session_token TEXT UNIQUE NOT NULL,
     host_user TEXT NOT NULL,
-    participants TEXT, -- JSON array of participants
+    participants TEXT DEFAULT '[]',
     session_data TEXT, -- JSON: real-time collaboration data
+    max_participants INTEGER,
+    current_participants INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME,
     is_active BOOLEAN DEFAULT 1,
     FOREIGN KEY (canvas_id) REFERENCES canvas(id) ON DELETE CASCADE
 );

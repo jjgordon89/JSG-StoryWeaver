@@ -296,8 +296,8 @@ pub struct CanvasSnapshot {
 /// Canvas collaboration session for real-time editing
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CanvasCollaborationSession {
-    pub id: i32,
-    pub canvas_id: i32,
+    pub id: i64,
+    pub canvas_id: i64,
     pub session_token: String,
     pub host_user: String,
     pub participants: String, // JSON array of participants

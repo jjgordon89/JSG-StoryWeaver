@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE plugins SET rating_average = ?, rating_count = ?, updated_at = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "5f4fb0388a0e844e5a2be3486edccee96eedc42eb3d609389680c743cef6f8ab"
+}

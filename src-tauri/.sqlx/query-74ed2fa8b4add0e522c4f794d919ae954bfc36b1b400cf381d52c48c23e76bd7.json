@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE shared_documents\n        SET is_active = false, updated_at = ?\n        WHERE share_token = ?\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "74ed2fa8b4add0e522c4f794d919ae954bfc36b1b400cf381d52c48c23e76bd7"
+}

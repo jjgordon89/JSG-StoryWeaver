@@ -1,17 +1,17 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT id, project_id, title, content, document_type as \"document_type: DocumentType\",\n               order_index, word_count, parent_id, created_at, updated_at, metadata, folder_id\n        FROM documents\n        WHERE id = ?\n        ",
+  "query": "\n        SELECT id, project_id, title, content, document_type,\n               order_index, word_count, parent_id, created_at, updated_at, metadata, folder_id\n        FROM documents\n        WHERE id = ?\n        ",
   "describe": {
     "columns": [
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Int64"
+        "type_info": "Text"
       },
       {
         "name": "project_id",
         "ordinal": 1,
-        "type_info": "Int64"
+        "type_info": "Text"
       },
       {
         "name": "title",
@@ -24,7 +24,7 @@
         "type_info": "Text"
       },
       {
-        "name": "document_type: DocumentType",
+        "name": "document_type",
         "ordinal": 4,
         "type_info": "Text"
       },
@@ -41,7 +41,7 @@
       {
         "name": "parent_id",
         "ordinal": 7,
-        "type_info": "Int64"
+        "type_info": "Text"
       },
       {
         "name": "created_at",
@@ -61,26 +61,26 @@
       {
         "name": "folder_id",
         "ordinal": 11,
-        "type_info": "Int64"
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
+      true,
+      false,
       false,
       false,
       false,
-      true,
+      false,
       false,
       true,
-      true,
-      true,
-      true,
-      true,
-      true,
+      false,
+      false,
+      false,
       true
     ]
   },
-  "hash": "bb5ec7eea096d66540322cee3078109bcfa63667b8d213b6b6ad445e038bfc62"
+  "hash": "163337f3ae3b8f59ac4dc397756063bf9c518f19324af1195ac6c43433fffad9"
 }

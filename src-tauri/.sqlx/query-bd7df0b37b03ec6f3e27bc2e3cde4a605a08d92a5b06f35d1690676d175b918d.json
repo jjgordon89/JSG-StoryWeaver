@@ -76,7 +76,7 @@
       {
         "name": "cost_credits",
         "ordinal": 14,
-        "type_info": "Float"
+        "type_info": "Int64"
       },
       {
         "name": "metadata",

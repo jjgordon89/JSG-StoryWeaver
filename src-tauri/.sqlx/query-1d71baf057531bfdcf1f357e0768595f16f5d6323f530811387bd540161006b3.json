@@ -1,0 +1,98 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, task_type, description, status, priority, progress,\n                   created_at, started_at, completed_at, error_message,\n                   user_initiated, project_id, document_id, metadata\n             FROM background_tasks ORDER BY created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "task_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "status",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "priority",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "progress",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "started_at",
+        "ordinal": 7,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "completed_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "error_message",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_initiated",
+        "ordinal": 10,
+        "type_info": "Bool"
+      },
+      {
+        "name": "project_id",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "document_id",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "metadata",
+        "ordinal": 13,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "1d71baf057531bfdcf1f357e0768595f16f5d6323f530811387bd540161006b3"
+}

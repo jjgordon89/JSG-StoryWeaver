@@ -6,7 +6,7 @@
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Int64"
+        "type_info": "Text"
       },
       {
         "name": "name",
@@ -21,7 +21,7 @@
       {
         "name": "folder_id",
         "ordinal": 3,
-        "type_info": "Int64"
+        "type_info": "Text"
       },
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
@@ -38,11 +38,11 @@
       "Right": 0
     },
     "nullable": [
+      true,
       false,
+      true,
+      true,
       false,
-      true,
-      true,
-      true,
       false
     ]
   },

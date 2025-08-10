@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT id, document_id, notification_type, message, recipient_token, is_read, created_at\n        FROM collaboration_notifications\n        WHERE recipient_token = ?\n        ORDER BY created_at DESC\n        LIMIT ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "document_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notification_type",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "message",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "recipient_token",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_read",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "d79eec1504f7a34338aef49cd400f644643fcb38017dbd34ea214c5837f79b64"
+}

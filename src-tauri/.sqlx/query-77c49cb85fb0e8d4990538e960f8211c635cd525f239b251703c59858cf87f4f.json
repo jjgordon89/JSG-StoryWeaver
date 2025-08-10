@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT OR REPLACE INTO plugin_ratings (\n            plugin_id, user_identifier, rating, review, created_at, updated_at\n        )\n        VALUES (?, ?, ?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "77c49cb85fb0e8d4990538e960f8211c635cd525f239b251703c59858cf87f4f"
+}

@@ -94,6 +94,15 @@ impl OptimizationManager {
         let db_stats = self.index_manager.get_database_stats().await?;
         let memory_stats = self.memory_optimizer.get_cache_stats().await;
         
+        let recommendations = [
+            if db_stats.unused_indexes > 5 { Some("Remove unused indexes") } else { None },
+            if db_stats.avg_query_time_ms > 100.0 { Some("Optimize slow queries") } else { None },
+            if memory_stats.total_memory_usage_mb > 512.0 { Some("Reduce memory usage") } else { None }
+        ]
+        .into_iter()
+        .filter_map(|x| x)
+        .collect::<Vec<_>>();
+        
         let analysis = serde_json::json!({
             "database": {
                 "total_tables": db_stats.total_tables,
@@ -104,16 +113,9 @@ impl OptimizationManager {
             },
             "memory": {
                 "total_usage_mb": memory_stats.total_memory_usage_mb,
-                "cache_efficiency": memory_stats.total_memory_usage_mb / 256.0 // Efficiency ratio
+                "cache_efficiency": memory_stats.total_memory_usage_mb / 256.0
             },
-            "recommendations": [
-                if db_stats.unused_indexes > 5 { Some("Remove unused indexes") } else { None },
-                if db_stats.avg_query_time_ms > 100.0 { Some("Optimize slow queries") } else { None },
-                if memory_stats.total_memory_usage_mb > 512.0 { Some("Reduce memory usage") } else { None }
-            ]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
+            "recommendations": recommendations
         });
         
         Ok(analysis)

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO collaboration_sessions (\n            document_id, session_token, max_participants, expires_at, created_at\n        )\n        VALUES (?, ?, ?, ?, ?)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c48d1e14a90d54fd8570ea1d00c5f3f4a6e9c853d85cb363684743357cb2ea61"
+}

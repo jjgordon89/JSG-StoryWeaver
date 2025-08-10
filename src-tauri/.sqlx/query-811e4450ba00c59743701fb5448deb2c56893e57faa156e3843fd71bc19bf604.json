@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO canvas_collaboration_sessions (\n            canvas_id, session_token, is_active, max_participants, expires_at, created_at\n        )\n        VALUES (?, ?, ?, ?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "811e4450ba00c59743701fb5448deb2c56893e57faa156e3843fd71bc19bf604"
+}

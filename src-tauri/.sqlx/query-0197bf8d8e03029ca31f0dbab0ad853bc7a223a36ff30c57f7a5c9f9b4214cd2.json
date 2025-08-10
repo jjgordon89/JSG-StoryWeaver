@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE outline_templates SET usage_count = usage_count + 1, updated_at = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0197bf8d8e03029ca31f0dbab0ad853bc7a223a36ff30c57f7a5c9f9b4214cd2"
+}

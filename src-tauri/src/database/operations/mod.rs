@@ -21,6 +21,7 @@ pub mod scene_ops;
 pub mod series_consistency_ops;
 pub mod style_example_ops;
 pub mod ai_history_ops;
+pub mod ai_card_ops;
 pub mod character_template_ops;
 pub mod worldbuilding_template_ops;
 
@@ -62,6 +63,7 @@ pub use scene_ops::*;
 pub use series_consistency_ops::*;
 pub use style_example_ops::*;
 pub use ai_history_ops::*;
+pub use ai_card_ops::*;
 pub use character_template_ops::*;
 pub use worldbuilding_template_ops::*;
 

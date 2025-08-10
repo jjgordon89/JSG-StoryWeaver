@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,\n                   operation_details, session_id, created_at\n            FROM credit_usage ORDER BY created_at DESC LIMIT ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "project_id",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "operation_type",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "model_used",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "tokens_used",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "credits_consumed",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "operation_details",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "session_id",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 8,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "afe0fc6fcd720d6ec5571c22d0b86508023b40ca893c861a84be0ccd61369eca"
+}

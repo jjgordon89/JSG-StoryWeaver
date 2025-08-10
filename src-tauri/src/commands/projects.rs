@@ -50,7 +50,7 @@ pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Pr
 /// Get all projects
 #[tauri::command]
 pub async fn get_projects() -> CommandResponse<Vec<Project>> {
-    async fn get(()) -> Result<Vec<Project>> {
+    async fn get(_: ()) -> Result<Vec<Project>> {
         let pool = get_pool()?;
         ProjectOps::get_all(&pool).await
     }

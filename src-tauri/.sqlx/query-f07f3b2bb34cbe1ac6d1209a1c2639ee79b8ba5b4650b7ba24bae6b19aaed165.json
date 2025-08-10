@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO shared_documents (\n            document_id, project_id, share_token, share_type,\n            expires_at, max_uses, current_uses, is_active, created_by, created_at, updated_at\n        )\n        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f07f3b2bb34cbe1ac6d1209a1c2639ee79b8ba5b4650b7ba24bae6b19aaed165"
+}

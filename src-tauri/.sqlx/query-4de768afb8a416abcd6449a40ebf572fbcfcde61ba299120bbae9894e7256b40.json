@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE document_comments \n        SET is_resolved = 1, status = 'resolved', resolved_by = ?, resolved_at = ?, updated_at = ?\n        WHERE id = ?\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "4de768afb8a416abcd6449a40ebf572fbcfcde61ba299120bbae9894e7256b40"
+}

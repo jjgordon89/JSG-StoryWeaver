@@ -28,10 +28,10 @@
       "Right": 1
     },
     "nullable": [
+      true,
       false,
       false,
-      false,
-      true
+      false
     ]
   },
   "hash": "2aa9b7c2e12a38c486c92c750e8a643525c409735b071aa8d203b66856c0bdf1"

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM canvas_elements WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "b66d254dc287d6e1e4d147f0cd5d6c2eaa590db04fda7e7252dbe0e60f94e30d"
+}

@@ -151,7 +151,7 @@ pub async fn create_canvas_element(
     style: Option<Value>,
 ) -> Result<CanvasElement, sqlx::Error> {
     let now = Utc::now();
-    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
 
     let result = sqlx::query!(
         r#"
@@ -428,7 +428,7 @@ pub async fn create_canvas_snapshot(
     name: &str,
     snapshot_data: Value,
 ) -> Result<CanvasSnapshot, sqlx::Error> {
-    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
     let now = Utc::now();
     let canvas_data_str = serde_json::to_string(&snapshot_data).unwrap_or_default();
 
@@ -463,7 +463,7 @@ pub async fn get_canvas_snapshots(
     pool: &SqlitePool,
     canvas_id: &str,
 ) -> Result<Vec<CanvasSnapshot>, sqlx::Error> {
-    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
     
     let results = sqlx::query!(
         r#"
@@ -586,7 +586,7 @@ pub async fn get_canvas_collaboration_session_by_canvas(
     pool: &SqlitePool,
     canvas_id: &str,
 ) -> Result<Option<CanvasCollaborationSession>, sqlx::Error> {
-    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
     
     let result = sqlx::query_as!(
         CanvasCollaborationSession,

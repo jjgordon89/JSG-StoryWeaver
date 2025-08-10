@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE canvas_collaboration_sessions SET participants = ?, updated_at = CURRENT_TIMESTAMP WHERE session_token = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "2be9a0ce703407c4e6002ecb3b2b07d43694fbdc1d2edb45953a65295b29de80"
+}
