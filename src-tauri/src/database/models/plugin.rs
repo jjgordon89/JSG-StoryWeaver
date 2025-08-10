@@ -271,6 +271,13 @@ impl std::fmt::Display for PluginCategory {
             PluginCategory::Brainstorming => write!(f, "brainstorming"),
             PluginCategory::Research => write!(f, "research"),
             PluginCategory::Formatting => write!(f, "formatting"),
+            PluginCategory::TextProcessing => write!(f, "text_processing"),
+            PluginCategory::AIIntegration => write!(f, "ai_integration"),
+            PluginCategory::Export => write!(f, "export"),
+            PluginCategory::Import => write!(f, "import"),
+            PluginCategory::Theme => write!(f, "theme"),
+            PluginCategory::Workflow => write!(f, "workflow"),
+            PluginCategory::Collaboration => write!(f, "collaboration"),
             PluginCategory::Other => write!(f, "other"),
         }
     }
@@ -280,6 +287,7 @@ impl std::fmt::Display for PluginVisibility {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PluginVisibility::Published => write!(f, "published"),
+            PluginVisibility::Public => write!(f, "public"),
             PluginVisibility::Unlisted => write!(f, "unlisted"),
             PluginVisibility::Private => write!(f, "private"),
         }

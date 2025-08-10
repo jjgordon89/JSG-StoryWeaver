@@ -73,8 +73,8 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm session: {}", e)))?;
 
         Ok(row.map(|r| BrainstormSession {
-            id: Some(r.id as i32),
-            project_id: r.project_id as i32,
+            id: r.id.map(|id| id as i32),
+            project_id: r.project_id.parse().unwrap_or(0),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -107,8 +107,8 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by project: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: Some(r.id as i32),
-            project_id: r.project_id as i32,
+            id: r.id.map(|id| id as i32),
+            project_id: r.project_id.parse().unwrap_or(0),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -141,8 +141,8 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by type: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: Some(r.id as i32),
-            project_id: r.project_id as i32,
+            id: r.id.map(|id| id as i32),
+            project_id: r.project_id.parse().unwrap_or(0),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -175,8 +175,8 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by status: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: Some(r.id as i32),
-            project_id: r.project_id as i32,
+            id: r.id.map(|id| id as i32),
+            project_id: r.project_id.parse().unwrap_or(0),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -208,8 +208,8 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list brainstorm sessions: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: Some(r.id as i32),
-            project_id: r.project_id as i32,
+            id: r.id.map(|id| id as i32),
+            project_id: r.project_id.parse().unwrap_or(0),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -338,8 +338,8 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent brainstorm sessions: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: Some(r.id as i32),
-            project_id: r.project_id as i32,
+            id: r.id.map(|id| id as i32),
+            project_id: r.project_id.parse().unwrap_or(0),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,

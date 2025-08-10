@@ -1,10 +1,11 @@
 //! AI Generation Commands for Story Bible Elements
 
-use crate::commands::CommandResponse;
 use crate::error::{Result};
-use crate::ai::{AIProviderManager, AIContext, WritingFeature, AIProvider, TokenCounter};
-use crate::database::{get_pool};
-use crate::database::operations::{StoryBibleOps, CharacterTraitOps, StyleExampleOps, OutlineOps};
+use crate::database::get_pool;
+
+use crate::database::operations::StoryBibleOps;
+use crate::database::operations::OutlineOps;
+use crate::ai::{AIProviderManager, AIProvider, AIContext, WritingFeature, TokenCounter};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::collections::HashMap;
@@ -92,7 +93,7 @@ pub struct AIGenerationResponse {
 pub async fn generate_synopsis(
     request: GenerateSynopsisRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(request: GenerateSynopsisRequest, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -130,8 +131,8 @@ pub async fn generate_synopsis(
         let total_tokens = input_tokens + output_tokens;
         
         let cost_estimate = TOKEN_COUNTER.estimate_cost(
-            &ai_manager.get_provider_name(),
-            &ai_manager.get_model_name(),
+            ai_manager.get_provider_name(),
+            ai_manager.get_model_name(),
             input_tokens,
             output_tokens,
         );
@@ -145,7 +146,7 @@ pub async fn generate_synopsis(
         })
     }
     
-    generate(request, ai_manager.inner().clone()).await.into()
+    generate(request, ai_manager.inner().clone()).await
 }
 
 /// Generate character traits
@@ -153,7 +154,7 @@ pub async fn generate_synopsis(
 pub async fn generate_character_traits(
     request: GenerateCharacterTraitsRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<Vec<String>> {
+) -> Result<Vec<String>> {
     async fn generate(request: GenerateCharacterTraitsRequest, ai_manager: Arc<AIProviderManager>) -> Result<Vec<String>> {
         let pool = get_pool()?;
         
@@ -166,7 +167,7 @@ pub async fn generate_character_traits(
         let story_bible = StoryBibleOps::get_by_project(&pool, &character.project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
+        let context = AIContext {
             project_id: Some(character.project_id),
             document_id: None,
             preceding_text: Some(request.story_context.clone()),
@@ -207,7 +208,7 @@ pub async fn generate_character_traits(
         Ok(traits)
     }
     
-    generate(request, ai_manager.inner().clone()).await.into()
+    generate(request, ai_manager.inner().clone()).await
 }
 
 /// Generate world element
@@ -215,7 +216,7 @@ pub async fn generate_character_traits(
 pub async fn generate_world_element(
     request: GenerateWorldElementRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(request: GenerateWorldElementRequest, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -223,7 +224,7 @@ pub async fn generate_world_element(
         let story_bible = StoryBibleOps::get_by_project(&pool, &request.project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
+        let context = AIContext {
             project_id: Some(request.project_id.clone()),
             document_id: None,
             preceding_text: Some(request.story_context.clone()),
@@ -254,8 +255,8 @@ pub async fn generate_world_element(
         let total_tokens = input_tokens + output_tokens;
         
         let cost_estimate = TOKEN_COUNTER.estimate_cost(
-            &ai_manager.get_provider_name(),
-            &ai_manager.get_model_name(),
+            ai_manager.get_provider_name(),
+            ai_manager.get_model_name(),
             input_tokens,
             output_tokens,
         );
@@ -269,7 +270,7 @@ pub async fn generate_world_element(
         })
     }
     
-    generate(request, ai_manager.inner().clone()).await.into()
+    generate(request, ai_manager.inner().clone()).await
 }
 
 /// Generate outline from story bible
@@ -279,7 +280,7 @@ pub async fn generate_outline_from_story_bible(
     custom_prompt: Option<String>,
     creativity: Option<f32>,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(project_id: String, custom_prompt: Option<String>, creativity: Option<f32>, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -287,7 +288,7 @@ pub async fn generate_outline_from_story_bible(
         let story_bible = StoryBibleOps::get_by_project(&pool, &project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
+        let context = AIContext {
             project_id: Some(project_id.clone()),
             document_id: None,
             preceding_text: None,
@@ -318,8 +319,8 @@ pub async fn generate_outline_from_story_bible(
         let total_tokens = input_tokens + output_tokens;
         
         let cost_estimate = TOKEN_COUNTER.estimate_cost(
-            &ai_manager.get_provider_name(),
-            &ai_manager.get_model_name(),
+            ai_manager.get_provider_name(),
+            ai_manager.get_model_name(),
             input_tokens,
             output_tokens,
         );
@@ -333,7 +334,7 @@ pub async fn generate_outline_from_story_bible(
         })
     }
     
-    generate(project_id, custom_prompt, creativity, ai_manager.inner().clone()).await.into()
+    generate(project_id, custom_prompt, creativity, ai_manager.inner().clone()).await
 }
 
 /// Generate scene content
@@ -345,11 +346,11 @@ pub async fn generate_scene_content(
     custom_prompt: Option<String>,
     creativity: Option<f32>,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(
         outline_id: String,
         scene_title: String,
-        scene_summary: String,
+        _scene_summary: String,
         custom_prompt: Option<String>,
         creativity: Option<f32>,
         ai_manager: Arc<AIProviderManager>
@@ -392,8 +393,8 @@ pub async fn generate_scene_content(
         let total_tokens = input_tokens + output_tokens;
         
         let cost_estimate = TOKEN_COUNTER.estimate_cost(
-            &ai_manager.get_provider_name(),
-            &ai_manager.get_model_name(),
+            ai_manager.get_provider_name(),
+            ai_manager.get_model_name(),
             input_tokens,
             output_tokens,
         );
@@ -407,7 +408,7 @@ pub async fn generate_scene_content(
         })
     }
     
-    generate(outline_id, scene_title, scene_summary, custom_prompt, creativity, ai_manager.inner().clone()).await.into()
+    generate(outline_id, scene_title, scene_summary, custom_prompt, creativity, ai_manager.inner().clone()).await
 }
 
 /// Analyze style example
@@ -415,7 +416,7 @@ pub async fn generate_scene_content(
 pub async fn analyze_style_example(
     request: GenerateStyleAnalysisRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<StyleAnalysisResponse> {
+) -> Result<StyleAnalysisResponse> {
     async fn analyze(request: GenerateStyleAnalysisRequest, ai_manager: Arc<AIProviderManager>) -> Result<StyleAnalysisResponse> {
         let pool = get_pool()?;
         
@@ -454,8 +455,8 @@ pub async fn analyze_style_example(
         let total_tokens = input_tokens + output_tokens;
         
         let cost_estimate = TOKEN_COUNTER.estimate_cost(
-            &ai_manager.get_provider_name(),
-            &ai_manager.get_model_name(),
+            ai_manager.get_provider_name(),
+            ai_manager.get_model_name(),
             input_tokens,
             output_tokens,
         );
@@ -470,7 +471,7 @@ pub async fn analyze_style_example(
         })
     }
     
-    analyze(request, ai_manager.inner().clone()).await.into()
+    analyze(request, ai_manager.inner().clone()).await
 }
 
 /// Generate outline from text
@@ -478,7 +479,7 @@ pub async fn analyze_style_example(
 pub async fn generate_outline_from_text(
     request: GenerateOutlineFromTextRequest,
     ai_manager: State<'_, Arc<AIProviderManager>>,
-) -> CommandResponse<AIGenerationResponse> {
+) -> Result<AIGenerationResponse> {
     async fn generate(request: GenerateOutlineFromTextRequest, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
         let pool = get_pool()?;
         
@@ -517,8 +518,8 @@ pub async fn generate_outline_from_text(
         let total_tokens = input_tokens + output_tokens;
         
         let cost_estimate = TOKEN_COUNTER.estimate_cost(
-            &ai_manager.get_provider_name(),
-            &ai_manager.get_model_name(),
+            ai_manager.get_provider_name(),
+            ai_manager.get_model_name(),
             input_tokens,
             output_tokens,
         );
@@ -532,5 +533,5 @@ pub async fn generate_outline_from_text(
         })
     }
     
-    generate(request, ai_manager.inner().clone()).await.into()
+    generate(request, ai_manager.inner().clone()).await
 }

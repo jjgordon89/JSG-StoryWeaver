@@ -180,6 +180,12 @@ pub enum OutlineTemplateType {
     RomanceOutline,
     #[sqlx(rename = "three_act")]
     ThreeAct,
+    #[sqlx(rename = "save_the_cat")]
+    SaveTheCat,
+    #[sqlx(rename = "snowflake")]
+    Snowflake,
+    #[sqlx(rename = "seven_point")]
+    SevenPoint,
     #[sqlx(rename = "custom")]
     Custom,
 }
@@ -192,6 +198,9 @@ impl std::fmt::Display for OutlineTemplateType {
             OutlineTemplateType::StoryCircle => "story_circle",
             OutlineTemplateType::RomanceOutline => "romance_outline",
             OutlineTemplateType::ThreeAct => "three_act",
+            OutlineTemplateType::SaveTheCat => "save_the_cat",
+            OutlineTemplateType::Snowflake => "snowflake",
+            OutlineTemplateType::SevenPoint => "seven_point",
             OutlineTemplateType::Custom => "custom",
         };
         write!(f, "{}", s)
@@ -371,4 +380,19 @@ pub enum CanvasOperationType {
     CreateConnection,
     DeleteConnection,
     UpdateCanvas,
+}
+
+impl std::fmt::Display for CanvasOperationType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CanvasOperationType::CreateElement => write!(f, "create_element"),
+            CanvasOperationType::UpdateElement => write!(f, "update_element"),
+            CanvasOperationType::DeleteElement => write!(f, "delete_element"),
+            CanvasOperationType::MoveElement => write!(f, "move_element"),
+            CanvasOperationType::ResizeElement => write!(f, "resize_element"),
+            CanvasOperationType::CreateConnection => write!(f, "create_connection"),
+            CanvasOperationType::DeleteConnection => write!(f, "delete_connection"),
+            CanvasOperationType::UpdateCanvas => write!(f, "update_canvas"),
+        }
+    }
 }

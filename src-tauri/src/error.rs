@@ -284,6 +284,13 @@ impl StoryWeaverError {
         }
     }
     
+    /// Create a system error
+    pub fn system<S: Into<String>>(message: S) -> Self {
+        Self::Internal {
+            message: message.into(),
+        }
+    }
+    
     /// Check if the error is recoverable (can be retried)
     pub fn is_recoverable(&self) -> bool {
         matches!(

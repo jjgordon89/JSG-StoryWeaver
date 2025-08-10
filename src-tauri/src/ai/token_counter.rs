@@ -89,7 +89,7 @@ impl TokenCounter {
     /// Estimate cost for a given token usage and model
     pub fn estimate_cost(
         &self,
-        provider: &str,
+        _provider: &str,
         model: &str,
         input_tokens: u32,
         output_tokens: u32,
@@ -207,8 +207,9 @@ mod tests {
     #[test]
     fn test_unknown_model() {
         let counter = TokenCounter::new();
-        let result = counter.estimate_cost(100, 50, "unknown-model");
+        let cost = counter.estimate_cost("unknown", "unknown-model", 100, 50);
         
-        assert!(result.is_err());
+        // For unknown models, should return 0.0 as fallback
+        assert_eq!(cost, 0.0);
     }
 }

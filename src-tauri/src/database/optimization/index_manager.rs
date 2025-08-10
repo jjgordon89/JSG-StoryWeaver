@@ -394,7 +394,11 @@ impl IndexManager {
         if let Some(stats) = self.index_usage_stats.get_mut(index_name) {
             stats.usage_count += 1;
             stats.last_used = chrono::Utc::now();
-            stats.effectiveness_score = self.calculate_effectiveness_score(stats);
+            
+            // Calculate effectiveness score without borrowing self
+            let days_since_last_use = (chrono::Utc::now() - stats.last_used).num_days() as f64;
+            let usage_frequency = stats.usage_count as f64;
+            stats.effectiveness_score = (usage_frequency * 10.0) / (1.0 + days_since_last_use);
         }
     }
     

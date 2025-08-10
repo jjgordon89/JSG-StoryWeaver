@@ -195,7 +195,7 @@ impl AIResponseCard {
             binding_values.push(tags.clone());
         }
         
-        let bindings: Vec<&str> = binding_values.iter().map(|s| s.as_str()).collect();
+        let mut bindings: Vec<&str> = binding_values.iter().map(|s| s.as_str()).collect();
         
         if updates.is_empty() {
             return Self::get_by_id(pool, id).await;

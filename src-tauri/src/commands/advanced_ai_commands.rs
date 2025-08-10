@@ -115,7 +115,7 @@ pub struct SmartImportAnalysisResult {
 pub async fn generate_with_prose_mode(
     request: ProseGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> CommandResponse<AdvancedGenerationResult> {
+) -> Result<AdvancedGenerationResult, StoryWeaverError> {
     async fn generate(
         request: ProseGenerationRequest,
         ai_state: AdvancedAIState,

@@ -81,18 +81,18 @@ pub async fn get_shared_document_by_token(
     if let Some(row) = result {
         Ok(Some(SharedDocument {
             id: row.id as i32,
-            document_id: row.document_id,
-            project_id: row.project_id,
+            document_id: row.document_id.to_string(),
+            project_id: row.project_id.to_string(),
             share_token: row.share_token,
-            share_type: row.share_type,
+            share_type: row.share_type.unwrap_or_default(),
             password_hash: row.password_hash,
             expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-            max_uses: row.max_uses,
+            max_uses: row.max_uses.map(|v| v as i32),
             current_uses: row.current_uses.unwrap_or(0) as i32,
             is_active: row.is_active.unwrap_or(false),
             created_by: row.created_by,
-            created_at: DateTime::from_naive_utc_and_offset(row.created_at, Utc),
-            updated_at: DateTime::from_naive_utc_and_offset(row.updated_at, Utc),
+            created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap_or_default(), Utc),
+            updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap_or_default(), Utc),
         }))
     } else {
         Ok(None)
@@ -194,7 +194,7 @@ pub async fn get_document_comments(
 
     let comments = rows.into_iter().map(|row| Comment {
         id: row.id as i32,
-        document_id: row.document_id,
+        document_id: row.document_id.to_string(),
         parent_comment_id: row.parent_comment_id.map(|id| id as i32),
         author_name: row.author_name,
         author_identifier: row.author_identifier,
@@ -202,13 +202,13 @@ pub async fn get_document_comments(
         position_start: row.position_start.map(|p| p as i32),
         position_end: row.position_end.map(|p| p as i32),
         selected_text: row.selected_text,
-        comment_type: row.comment_type,
-        status: row.status,
-        is_resolved: row.is_resolved,
+        comment_type: row.comment_type.unwrap_or_default(),
+        status: row.status.unwrap_or_default(),
+        is_resolved: row.is_resolved.unwrap_or(false),
         resolved_by: row.resolved_by,
         resolved_at: row.resolved_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-        created_at: DateTime::from_naive_utc_and_offset(row.created_at, Utc),
-        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at, Utc),
+        created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap_or_default(), Utc),
+        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap_or_default(), Utc),
     }).collect();
 
     Ok(comments)
