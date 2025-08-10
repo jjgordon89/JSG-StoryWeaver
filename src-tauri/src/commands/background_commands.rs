@@ -19,7 +19,7 @@ pub async fn create_background_task(
     document_id: Option<String>,
     metadata: Option<serde_json::Value>,
     task_manager: State<'_, BackgroundTaskManager>,
-) -> CommandResponse<String> {
+) -> Result<CommandResponse<String>> {
     async fn create(
         task_type: String,
         description: String,
@@ -78,42 +78,42 @@ pub async fn create_background_task(
         &task_manager,
     )
     .await
-    .into()
+    .map_err(|e| e.into())
 }
 
 /// Get a task by ID
 #[tauri::command]
-pub async fn get_background_task(task_id: String) -> CommandResponse<TaskResponse> {
+pub async fn get_background_task(task_id: String) -> Result<CommandResponse<TaskResponse>> {
     async fn get(task_id: String) -> Result<TaskResponse> {
         let pool = get_pool()?;
         let task = BackgroundTaskOps::get_task(&*pool, &task_id).await?;
         Ok(TaskResponse::from(task))
     }
     
-    get(task_id).await.into()
+    get(task_id).await.map_err(|e| e.into())
 }
 
 /// Get all tasks
 #[tauri::command]
-pub async fn get_all_background_tasks() -> CommandResponse<Vec<TaskResponse>> {
+pub async fn get_all_background_tasks() -> Result<CommandResponse<Vec<TaskResponse>>> {
     async fn get_all() -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
         let tasks = BackgroundTaskOps::get_all_tasks(&*pool).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_all().await.into()
+    get_all().await.map_err(|e| e.into())
 }
 
 /// Get tasks by status
 #[tauri::command]
-pub async fn get_background_tasks_by_status(status: String) -> CommandResponse<Vec<TaskResponse>> {
+pub async fn get_background_tasks_by_status(status: String) -> Result<CommandResponse<Vec<TaskResponse>>> {
     async fn get_by_status(status: String) -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
         
         // Convert status string to enum
         let status_enum = match status.as_str() {
-            "pending" => TaskStatus::Pending,
+            "pending" => TaskStatus::Queued,
             "running" => TaskStatus::Running,
             "completed" => TaskStatus::Completed,
             "failed" => TaskStatus::Failed,
@@ -125,31 +125,31 @@ pub async fn get_background_tasks_by_status(status: String) -> CommandResponse<V
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_by_status(status).await.into()
+    get_by_status(status).await.map_err(|e| e.into())
 }
 
 /// Get tasks by project ID
 #[tauri::command]
-pub async fn get_background_tasks_by_project(project_id: String) -> CommandResponse<Vec<TaskResponse>> {
+pub async fn get_background_tasks_by_project(project_id: String) -> Result<CommandResponse<Vec<TaskResponse>>> {
     async fn get_by_project(project_id: String) -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
         let tasks = BackgroundTaskOps::get_tasks_by_project(&*pool, &project_id).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_by_project(project_id).await.into()
+    get_by_project(project_id).await.map_err(|e| e.into())
 }
 
 /// Get tasks by document ID
 #[tauri::command]
-pub async fn get_background_tasks_by_document(document_id: String) -> CommandResponse<Vec<TaskResponse>> {
+pub async fn get_background_tasks_by_document(document_id: String) -> Result<CommandResponse<Vec<TaskResponse>>> {
     async fn get_by_document(document_id: String) -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
         let tasks = BackgroundTaskOps::get_tasks_by_document(&*pool, &document_id).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_by_document(document_id).await.into()
+    get_by_document(document_id).await.map_err(|e| e.into())
 }
 
 /// Cancel a task
@@ -157,25 +157,25 @@ pub async fn get_background_tasks_by_document(document_id: String) -> CommandRes
 pub async fn cancel_background_task(
     task_id: String,
     task_manager: State<'_, BackgroundTaskManager>,
-) -> CommandResponse<bool> {
+) -> Result<CommandResponse<bool>> {
     async fn cancel(task_id: String, task_manager: &BackgroundTaskManager) -> Result<bool> {
         let cancelled = task_manager.cancel_task(&task_id).await?;
         Ok(cancelled)
     }
     
-    cancel(task_id, &task_manager).await.into()
+    cancel(task_id, &task_manager).await.map_err(|e| e.into())
 }
 
 /// Clean up old tasks
 #[tauri::command]
-pub async fn cleanup_old_background_tasks(days: i64) -> CommandResponse<usize> {
+pub async fn cleanup_old_background_tasks(days: i64) -> Result<CommandResponse<usize>> {
     async fn cleanup(days: i64) -> Result<usize> {
         let pool = get_pool()?;
         let count = BackgroundTaskOps::cleanup_old_tasks(&*pool, days).await?;
         Ok(count)
     }
     
-    cleanup(days).await.into()
+    cleanup(days).await.map_err(|e| e.into())
 }
 
 /// Task response for frontend
