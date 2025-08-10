@@ -1,11 +1,10 @@
 //! AI Generation Commands for Story Bible Elements
 
 use crate::commands::CommandResponse;
-use crate::error::{StoryWeaverError, Result};
+use crate::error::{Result};
 use crate::ai::{AIProviderManager, AIContext, WritingFeature, AIProvider};
 use crate::database::{get_pool};
-use crate::database::operations::{StoryBibleOps, CharacterTraitOps, WorldElementOps, StyleExampleOps};
-use crate::database::models::{StoryBible, CharacterTrait, WorldElement, StyleExample};
+use crate::database::operations::{StoryBibleOps, CharacterTraitOps, StyleExampleOps};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::collections::HashMap;
@@ -117,7 +116,7 @@ pub async fn generate_synopsis(
         })
     }
     
-    generate(request, ai_manager.into_inner()).await.into()
+    generate(request, ai_manager.inner().clone()).await.into()
 }
 
 /// Generate character traits
@@ -162,7 +161,7 @@ pub async fn generate_character_traits(
         Ok(traits)
     }
     
-    generate(request, ai_manager.into_inner()).await.into()
+    generate(request, ai_manager.inner().clone()).await.into()
 }
 
 /// Generate world element
@@ -199,7 +198,7 @@ pub async fn generate_world_element(
         })
     }
     
-    generate(request, ai_manager.into_inner()).await.into()
+    generate(request, ai_manager.inner().clone()).await.into()
 }
 
 /// Generate outline from story bible
@@ -238,7 +237,7 @@ pub async fn generate_outline_from_story_bible(
         })
     }
     
-    generate(project_id, custom_prompt, creativity, ai_manager.into_inner()).await.into()
+    generate(project_id, custom_prompt, creativity, ai_manager.inner().clone()).await.into()
 }
 
 /// Generate scene content
@@ -287,7 +286,7 @@ pub async fn generate_scene_content(
         })
     }
     
-    generate(outline_id, scene_title, scene_summary, custom_prompt, creativity, ai_manager.into_inner()).await.into()
+    generate(outline_id, scene_title, scene_summary, custom_prompt, creativity, ai_manager.inner().clone()).await.into()
 }
 
 /// Analyze style example
@@ -312,7 +311,7 @@ pub async fn analyze_style_example(
         };
         
         // Analyze style
-        let prompt = custom_prompt.unwrap_or_else(|| "Analyze the writing style and generate a style prompt".to_string());
+        let prompt = request.custom_prompt.unwrap_or_else(|| "Analyze the writing style and generate a style prompt".to_string());
         let result = ai_manager.generate_text(&context, &prompt).await?;
         
         Ok(StyleAnalysisResponse {
@@ -325,7 +324,7 @@ pub async fn analyze_style_example(
         })
     }
     
-    analyze(request, ai_manager.into_inner()).await.into()
+    analyze(request, ai_manager.inner().clone()).await.into()
 }
 
 /// Generate outline from text
@@ -350,7 +349,7 @@ pub async fn generate_outline_from_text(
         };
         
         // Generate outline
-        let prompt = custom_prompt.unwrap_or_else(|| "Generate an outline from the provided text".to_string());
+        let prompt = request.custom_prompt.unwrap_or_else(|| "Generate an outline from the provided text".to_string());
         let result = ai_manager.generate_text(&context, &prompt).await?;
         
         Ok(AIGenerationResponse {
@@ -362,5 +361,5 @@ pub async fn generate_outline_from_text(
         })
     }
     
-    generate(request, ai_manager.into_inner()).await.into()
+    generate(request, ai_manager.inner().clone()).await.into()
 }

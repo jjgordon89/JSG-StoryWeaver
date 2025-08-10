@@ -250,7 +250,7 @@ impl MemoryOptimizedProcessor {
     /// Get a cached document
     async fn get_cached_document(&self, document_id: &str) -> Option<CachedDocument> {
         let mut cache = self.document_cache.write().await;
-        if let Some(mut cached_doc) = cache.get_mut(document_id) {
+        if let Some(cached_doc) = cache.get_mut(document_id) {
             cached_doc.last_accessed = chrono::Utc::now();
             cached_doc.access_count += 1;
             Some(cached_doc.clone())
@@ -285,7 +285,7 @@ impl MemoryOptimizedProcessor {
     /// Get a cached embedding
     pub async fn get_cached_embedding(&self, content_hash: &str) -> Option<CachedEmbedding> {
         let mut cache = self.embedding_cache.write().await;
-        if let Some(mut cached_embedding) = cache.get_mut(content_hash) {
+        if let Some(cached_embedding) = cache.get_mut(content_hash) {
             cached_embedding.last_accessed = chrono::Utc::now();
             cached_embedding.access_count += 1;
             Some(cached_embedding.clone())
@@ -441,17 +441,17 @@ impl MemoryMonitor {
                 "Get-Process -Id $PID | Select-Object -ExpandProperty WorkingSet64"
             ])
             .output()
-            .map_err(|e| StoryWeaverError::system(format!("Failed to get memory usage: {}", e)))?;
+            .map_err(|e| StoryWeaverError::internal(format!("Failed to get memory usage: {}", e)))?;
         
         if output.status.success() {
             let memory_bytes = String::from_utf8_lossy(&output.stdout)
                 .trim()
                 .parse::<u64>()
-                .map_err(|e| StoryWeaverError::system(format!("Failed to parse memory usage: {}", e)))?;
+                .map_err(|e| StoryWeaverError::internal(format!("Failed to parse memory usage: {}", e)))?;
             
             Ok(memory_bytes as f64 / 1024.0 / 1024.0) // Convert to MB
         } else {
-            Err(StoryWeaverError::system("Failed to execute memory usage command".to_string()))
+            Err(StoryWeaverError::internal("Failed to execute memory usage command".to_string()))
         }
     }
     
@@ -460,20 +460,20 @@ impl MemoryMonitor {
         use std::fs;
         
         let status = fs::read_to_string("/proc/self/status")
-            .map_err(|e| StoryWeaverError::system(format!("Failed to read /proc/self/status: {}", e)))?;
+            .map_err(|e| StoryWeaverError::internal(format!("Failed to read /proc/self/status: {}", e)))?;
         
         for line in status.lines() {
             if line.starts_with("VmRSS:") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 2 {
                     let memory_kb = parts[1].parse::<f64>()
-                        .map_err(|e| StoryWeaverError::system(format!("Failed to parse memory usage: {}", e)))?;
+                        .map_err(|e| StoryWeaverError::internal(format!("Failed to parse memory usage: {}", e)))?;
                     return Ok(memory_kb / 1024.0); // Convert KB to MB
                 }
             }
         }
         
-        Err(StoryWeaverError::system("Could not find memory usage in /proc/self/status".to_string()))
+        Err(StoryWeaverError::internal("Could not find memory usage in /proc/self/status".to_string()))
     }
     
     /// Record memory usage for a specific component

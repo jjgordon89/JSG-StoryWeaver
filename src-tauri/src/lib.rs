@@ -310,7 +310,6 @@ pub fn run() {
             commands::plugin::get_plugin_ratings,
             commands::plugin::record_plugin_execution,
             commands::plugin::get_plugin_execution_history,
-            commands::plugin::update_plugin_usage_stats,
             commands::plugin::get_plugin_usage_stats,
             commands::plugin::create_plugin_template,
             commands::plugin::get_plugin_templates,
@@ -319,7 +318,7 @@ pub fn run() {
             // Phase 5 Canvas commands
             commands::canvas::create_canvas,
             commands::canvas::get_canvas,
-            commands::canvas::get_canvases,
+            commands::canvas::get_project_canvases,
             commands::canvas::update_canvas,
             commands::canvas::delete_canvas,
             commands::canvas::create_canvas_element,

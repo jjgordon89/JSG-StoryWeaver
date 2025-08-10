@@ -1,13 +1,13 @@
 //! AI Response Cache for intelligent caching and retrieval of AI responses
 //! Implements similarity-based matching and efficient storage using DashMap
 
-use crate::error::{Result, StoryWeaverError};
+use crate::error::{Result};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug, warn};
+use tracing::{info, debug};
 use sha2::{Sha256, Digest};
 
 /// Intelligent cache for AI responses with similarity-based retrieval

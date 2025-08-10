@@ -47,7 +47,7 @@ impl super::AIProviderOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI provider: {}", e)))?;
 
         Ok(row.map(|r| AIProvider {
-            id: Some(r.id as i32),
+            id: r.id.map(|id| id as i32),
             name: r.name,
             display_name: r.display_name,
             api_endpoint: r.api_endpoint,
@@ -86,7 +86,7 @@ impl super::AIProviderOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list AI providers: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| AIProvider {
-            id: Some(r.id as i32),
+            id: r.id.map(|id| id as i32),
             name: r.name,
             display_name: r.display_name,
             api_endpoint: r.api_endpoint,
@@ -105,7 +105,7 @@ impl super::AIProviderOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list active AI providers: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| AIProvider {
-            id: Some(r.id as i32),
+            id: r.id.map(|id| id as i32),
             name: r.name,
             display_name: r.display_name,
             api_endpoint: r.api_endpoint,

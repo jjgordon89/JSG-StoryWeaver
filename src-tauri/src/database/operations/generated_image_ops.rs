@@ -76,15 +76,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated image: {}", e)))?;
 
         Ok(row.map(|r| GeneratedImage {
-            id: r.id.and_then(|id| id.parse().ok()),
-            project_id: r.project_id.parse().unwrap_or(0),
+            id: Some(r.id.unwrap_or_default() as i32),
+            project_id: r.project_id.unwrap_or_default() as i32,
             prompt: r.prompt.unwrap_or_default(),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_default(),
             image_url: r.image_url.unwrap_or_default(),
             local_path: r.local_path,
-            width: r.width.unwrap_or(0) as i32,
-            height: r.height.unwrap_or(0) as i32,
+            width: r.width.unwrap_or_default() as i32,
+            height: r.height.unwrap_or_default() as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -111,15 +111,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated images by project: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: r.id.and_then(|id| id.parse().ok()),
-            project_id: r.project_id.parse().unwrap_or(0),
+            id: Some(r.id.unwrap_or_default() as i32),
+            project_id: r.project_id.unwrap_or_default() as i32,
             prompt: r.prompt.unwrap_or_default(),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_default(),
             image_url: r.image_url.unwrap_or_default(),
             local_path: r.local_path,
-            width: r.width.unwrap_or(0) as i32,
-            height: r.height.unwrap_or(0) as i32,
+            width: r.width.unwrap_or_default() as i32,
+            height: r.height.unwrap_or_default() as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -145,15 +145,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list generated images: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: r.id.and_then(|id| id.parse().ok()),
-            project_id: r.project_id.parse().unwrap_or(0),
+            id: Some(r.id.unwrap_or_default() as i32),
+            project_id: r.project_id.unwrap_or_default() as i32,
             prompt: r.prompt.unwrap_or_default(),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_default(),
             image_url: r.image_url.unwrap_or_default(),
             local_path: r.local_path,
-            width: r.width.unwrap_or(0) as i32,
-            height: r.height.unwrap_or(0) as i32,
+            width: r.width.unwrap_or_default() as i32,
+            height: r.height.unwrap_or_default() as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -238,15 +238,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated images by model: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: r.id.and_then(|id| id.parse().ok()),
-            project_id: r.project_id.parse().unwrap_or(0),
+            id: Some(r.id.unwrap_or_default() as i32),
+            project_id: r.project_id.unwrap_or_default() as i32,
             prompt: r.prompt.unwrap_or_default(),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_default(),
             image_url: r.image_url.unwrap_or_default(),
             local_path: r.local_path,
-            width: r.width.unwrap_or(0) as i32,
-            height: r.height.unwrap_or(0) as i32,
+            width: r.width.unwrap_or_default() as i32,
+            height: r.height.unwrap_or_default() as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -273,15 +273,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent generated images: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: r.id.and_then(|id| id.parse().ok()),
-            project_id: r.project_id.parse().unwrap_or(0),
+            id: Some(r.id.unwrap_or_default() as i32),
+            project_id: r.project_id.unwrap_or_default() as i32,
             prompt: r.prompt.unwrap_or_default(),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_default(),
             image_url: r.image_url.unwrap_or_default(),
             local_path: r.local_path,
-            width: r.width.unwrap_or(0) as i32,
-            height: r.height.unwrap_or(0) as i32,
+            width: r.width.unwrap_or_default() as i32,
+            height: r.height.unwrap_or_default() as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,

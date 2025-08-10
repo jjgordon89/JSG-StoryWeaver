@@ -1,18 +1,16 @@
 //! AI Response Card management commands
 
 use crate::database::{get_pool, operations::AICardOps};
-use crate::error::{Result, StoryWeaverError};
+use crate::error::Result;
 use crate::commands::CommandResponse;
-use crate::models::ai_card::{AIResponseCard, CreateAIResponseCardRequest, UpdateAIResponseCardRequest};
-use serde::{Deserialize, Serialize};
-use tauri::State;
+use crate::models::ai_card::{AIResponseCard, CreateAICardRequest, UpdateAICardRequest};
 
 /// Create a new AI response card
 #[tauri::command]
 pub async fn create_ai_response_card(
-    request: CreateAIResponseCardRequest,
+    request: CreateAICardRequest,
 ) -> CommandResponse<AIResponseCard> {
-    async fn create(request: CreateAIResponseCardRequest) -> Result<AIResponseCard> {
+    async fn create(request: CreateAICardRequest) -> Result<AIResponseCard> {
         let pool = get_pool()?;
         AICardOps::create(&pool, request).await
     }
@@ -25,8 +23,7 @@ pub async fn create_ai_response_card(
 pub async fn get_ai_response_card(id: String) -> CommandResponse<AIResponseCard> {
     async fn get(id: String) -> Result<AIResponseCard> {
         let pool = get_pool()?;
-        let card = AICardOps::get(&pool, &id).await?;
-        card.ok_or_else(|| StoryWeaverError::NotFound { resource: "AI Response Card".to_string(), id })
+        AICardOps::get(&pool, &id).await
     }
     
     get(id).await.into()
@@ -47,9 +44,9 @@ pub async fn get_ai_response_cards_by_project(project_id: String) -> CommandResp
 #[tauri::command]
 pub async fn update_ai_response_card(
     id: String,
-    request: UpdateAIResponseCardRequest,
+    request: UpdateAICardRequest,
 ) -> CommandResponse<AIResponseCard> {
-    async fn update(id: String, request: UpdateAIResponseCardRequest) -> Result<AIResponseCard> {
+    async fn update(id: String, request: UpdateAICardRequest) -> Result<AIResponseCard> {
         let pool = get_pool()?;
         AICardOps::update(&pool, &id, request).await
     }

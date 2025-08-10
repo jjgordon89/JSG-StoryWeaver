@@ -230,6 +230,13 @@ impl StoryWeaverError {
             message: message.into(),
         }
     }
+
+    /// Create an AI generation error from a message
+    pub fn ai<S: Into<String>>(message: S) -> Self {
+        Self::AIGenerationError {
+            message: message.into(),
+        }
+    }
     
     /// Create an internal error
     pub fn internal<S: Into<String>>(message: S) -> Self {
