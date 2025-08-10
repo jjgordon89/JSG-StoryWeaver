@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE prose_modes \n            SET name = ?, description = ?, model_configuration_id = ?, creativity_level = ?, temperature = ?, top_p = ?,\n                frequency_penalty = ?, presence_penalty = ?, special_instructions = ?, is_experimental = ?,\n                max_context_words = ?, max_generation_words = ?, supports_streaming = ?, supports_unfiltered = ?, is_active = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 16
+    },
+    "nullable": []
+  },
+  "hash": "c2feee3fa5422001deb03db0c4763da964fd74b254a13f5db947a2f8fb1258fa"
+}

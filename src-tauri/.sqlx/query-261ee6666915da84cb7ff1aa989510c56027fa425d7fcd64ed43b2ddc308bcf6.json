@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT model_used, \n                   COALESCE(SUM(credits_consumed), 0.0) as total_credits,\n                   COUNT(*) as usage_count\n            FROM credit_usage \n            GROUP BY model_used \n            ORDER BY total_credits DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "model_used",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "total_credits",
+        "ordinal": 1,
+        "type_info": "Float"
+      },
+      {
+        "name": "usage_count",
+        "ordinal": 2,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "261ee6666915da84cb7ff1aa989510c56027fa425d7fcd64ed43b2ddc308bcf6"
+}

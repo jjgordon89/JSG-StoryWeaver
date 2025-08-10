@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE brainstorm_sessions \n            SET generated_ideas = ?, selected_ideas = ?, updated_at = CURRENT_TIMESTAMP\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "e9feba438fcfc9495e44355cfa0a1e80b9d09e2f3e5a880f794e60f583a03f18"
+}

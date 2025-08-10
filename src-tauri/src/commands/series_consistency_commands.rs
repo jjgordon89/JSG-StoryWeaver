@@ -3,14 +3,15 @@
 use crate::database::{get_pool, operations::SeriesConsistencyOps};
 use crate::database::operations::series_consistency_ops::*;
 use crate::commands::CommandResponse;
+use crate::error::StoryWeaverError;
 use tauri::command;
 
 /// Generate a comprehensive consistency report for a series
 #[command]
 pub async fn generate_series_consistency_report(
     series_id: String,
-) -> Result<CommandResponse<SeriesConsistencyReport>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<CommandResponse<SeriesConsistencyReport>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     match SeriesConsistencyOps::generate_consistency_report(&pool, &series_id).await {
         Ok(report) => Ok(CommandResponse::success(report)),
@@ -22,8 +23,8 @@ pub async fn generate_series_consistency_report(
 #[command]
 pub async fn get_series_consistency_status(
     series_id: String,
-) -> Result<CommandResponse<(f64, usize)>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<CommandResponse<(f64, usize)>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     match SeriesConsistencyOps::get_consistency_status(&pool, &series_id).await {
         Ok(status) => Ok(CommandResponse::success(status)),
@@ -36,8 +37,8 @@ pub async fn get_series_consistency_status(
 pub async fn get_series_conflicts_by_severity(
     series_id: String,
     severity: String, // "Critical", "High", "Medium", "Low"
-) -> Result<CommandResponse<Vec<ConsistencyConflict>>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<CommandResponse<Vec<ConsistencyConflict>>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     let severity_enum = match severity.as_str() {
         "Critical" => ConflictSeverity::Critical,
@@ -57,8 +58,8 @@ pub async fn get_series_conflicts_by_severity(
 #[command]
 pub async fn batch_check_series_consistency(
     series_ids: Vec<String>,
-) -> Result<CommandResponse<Vec<(String, f64, usize)>>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<CommandResponse<Vec<(String, f64, usize)>>, StoryWeaverError> {
+    let pool = get_pool()?;
     let mut results = Vec::new();
     
     for series_id in series_ids {

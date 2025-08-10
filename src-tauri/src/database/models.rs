@@ -14,6 +14,9 @@ mod document_version;
 mod deleted_item;
 mod app_settings;
 mod performance_metric;
+mod collaboration;
+mod plugin;
+mod canvas;
 
 // Re-export all models
 pub use folder::*;
@@ -23,6 +26,9 @@ pub use document_version::*;
 pub use deleted_item::*;
 pub use app_settings::*;
 pub use performance_metric::*;
+pub use collaboration::*;
+pub use plugin::*;
+pub use canvas::*;
 
 /// Project model - represents a writing project
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

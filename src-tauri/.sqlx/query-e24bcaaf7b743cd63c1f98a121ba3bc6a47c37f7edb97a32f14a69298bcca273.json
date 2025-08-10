@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM ai_generation_history WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "e24bcaaf7b743cd63c1f98a121ba3bc6a47c37f7edb97a32f14a69298bcca273"
+}

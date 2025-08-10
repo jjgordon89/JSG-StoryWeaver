@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE ai_model_configurations SET is_active = NOT is_active WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "c3c81a176bab9cd4d854a3013ccbbabb6e6f6c1a5800302bd4c516dd4c95ba00"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO generated_images (\n                project_id, prompt, negative_prompt, model_used, image_url, local_path,\n                width, height, seed, steps, cfg_scale, style, generation_time, cost_credits, metadata\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 15
+    },
+    "nullable": []
+  },
+  "hash": "ac7bc42d2892c5050b43a177d7d3b4cc809d5a2ec2f4dc116b998a02025d5517"
+}

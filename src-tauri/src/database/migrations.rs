@@ -10,6 +10,9 @@ mod performance_metrics;
 mod _014_create_document_links_table;
 mod phase4_advanced_ai;
 mod fix_credit_usage_schema;
+mod phase5_collaboration_plugins;
+mod add_folder_support;
+mod _015_phase6_optimization;
 
 /// Run all database migrations
 pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
@@ -40,6 +43,9 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("014_create_document_links_table", |pool| Box::pin(migration_014_create_document_links_table(pool))),
         ("015_phase4_advanced_ai", |pool| Box::pin(phase4_advanced_ai::up(pool))),
         ("016_fix_credit_usage_schema", |pool| Box::pin(fix_credit_usage_schema::up(pool))),
+        ("017_phase5_collaboration_plugins", |pool| Box::pin(phase5_collaboration_plugins::up(pool))),
+        ("018_add_folder_support", |pool| Box::pin(add_folder_support::up(pool))),
+        ("019_phase6_optimization", |pool| Box::pin(_015_phase6_optimization::up(pool))),
     ];
     
     for (name, migration_fn) in migrations {

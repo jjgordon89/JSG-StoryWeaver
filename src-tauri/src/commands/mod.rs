@@ -34,6 +34,14 @@ pub mod series_consistency_commands;
 pub mod templates;
 pub mod advanced_ai_commands;
 
+// Phase 5 Collaboration & Plugins
+pub mod collaboration;
+pub mod plugin;
+pub mod canvas;
+
+// Phase 6 Polish & Optimization
+pub mod optimization_commands;
+
 /// Response wrapper for Tauri commands
 #[derive(Debug, Serialize)]
 pub struct CommandResponse<T> {

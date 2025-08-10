@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO ai_generation_history (\n                id, project_id, document_id, generation_type, provider, model,\n                prompt, response, token_count, cost_estimate, context_used, created_at\n            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 12
+    },
+    "nullable": []
+  },
+  "hash": "cd700acb51d03fd8e8d50e5a51c6cc128ae14b8771426a65bddfefc838f92d3c"
+}

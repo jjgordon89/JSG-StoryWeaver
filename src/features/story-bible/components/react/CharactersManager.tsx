@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Input } from '../../../../components/ui/input';
 import { Textarea } from '../../../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
 import { Sparkles, Loader2, Download, Users, Plus, Trash2, Network, Upload } from 'lucide-react';
@@ -45,7 +44,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     characters,
     characterTraits, 
     isLoading,
-    isLoadingCharacters,
+    isLoading,
     charactersError,
     error, 
     loadCharacters,
@@ -61,7 +60,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   const [selectedCharacter, setSelectedCharacter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTrait, setEditingTrait] = useState<CharacterTrait | null>(null);
+// Removed unused state variable editingTrait
   const [traitTypeFilter, setTraitTypeFilter] = useState<string>('');
   const [visibilityFilter, setVisibilityFilter] = useState<string>('');
   const [isGeneratingTraits, setIsGeneratingTraits] = useState(false);
@@ -136,7 +135,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   useEffect(() => {
     setCharacterTraitFilter({
       traitType: traitTypeFilter || undefined,
-      visibility: visibilityFilter as 'public' | 'private' | undefined
+      visibility: visibilityFilter as 'always' | 'chapter' | 'never' | undefined
     });
   }, [traitTypeFilter, visibilityFilter, setCharacterTraitFilter]);
 
@@ -218,7 +217,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
       id: trait.id,
       traitType: trait.trait_name,
       content: trait.trait_value,
-      visibility: trait.visibility
+      visibility: trait.visibility as 'public' | 'private'
     });
     setShowEditModal(true);
   };
@@ -229,16 +228,33 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     setIsGeneratingTraits(true);
     
     try {
-      const request = {
+      await generateCharacterTraits({
         project_id: projectId,
         character_id: selectedCharacter,
         trait_type: createForm.traitType || 'personality'
       };
       
-      const generatedContent = await generateCharacterTraits(request);
+      const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
+      if (!selectedCharacterData) return;
+
+      const existingTraits = characterTraits
+        .filter(t => t.character_id === selectedCharacter)
+        .map(t => ({
+          trait_type: t.trait_name,
+          trait_value: t.trait_value
+        }));
+
+      const generatedContent = await generateCharacterTraits({
+        project_id: projectId,
+        character_id: selectedCharacter,
+        character_name: selectedCharacterData.name,
+        trait_type: createForm.traitType,
+        story_context: "", // Add story context if available
+        existing_traits: existingTraits.map(trait => trait.trait_value)
+      });
       
       if (generatedContent) {
-        setCreateForm(prev => ({ ...prev, content: generatedContent }));
+        setCreateForm(prev => ({ ...prev, content: generatedContent.toString() }));
       }
     } catch (err) {
       console.error('Failed to generate character traits:', err);
@@ -253,7 +269,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
     if (!selectedCharacterData) return;
     
-    const filteredCharacterTraits = characterTraits.filter(t => t.character_id === selectedCharacter);
+const filteredTraits = characterTraits.filter(t => t.character_id === selectedCharacter);
     
     // Create CSV content
     const headers = ['Character Name', 'Trait Type', 'Content', 'Visibility'];
@@ -434,7 +450,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
           <CardTitle>Select Character</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoadingCharacters ? (
+          {isLoading ? (
             <div className="text-center py-4 text-gray-500">
               <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
               Loading characters...
@@ -770,11 +786,11 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
          <CSVImportDialog
            isOpen={showImportDialog}
            onClose={() => setShowImportDialog(false)}
-           onImport={async (data, type) => {
+           onImport={async (data) => {
              try {
                // Process imported character data
                for (const characterData of data) {
-                 await createCharacter({
+                 await createCharacterTrait({
                    name: characterData.name,
                    description: characterData.description,
                    visibility: characterData.visibility,

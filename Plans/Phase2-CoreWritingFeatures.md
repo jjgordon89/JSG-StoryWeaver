@@ -1,9 +1,11 @@
 # Phase 2: Core Writing Features (Weeks 6-10)
 
 ## Overview
+
 Implement the fundamental AI-powered writing tools that form the core of StoryWeaver's functionality. This phase focuses on AI API integrations, a highly responsive text editor, essential writing assistance features, and the foundational systems for context management, credit tracking, and robust error handling.
 
 ## Key Objectives
+
 - **AI Integration:** Implement a flexible provider system for OpenAI, Claude, Gemini, and OpenAI-compatible endpoints with full streaming support.
 - **Advanced Editor:** Enhance the editor with an intelligent selection menu, a responsive three-column layout, and real-time UI updates for streaming generation.
 - **Core Writing Tools:** Build the main writing and editing tools, including Write, Rewrite, Expand, Describe, Brainstorm, and Visualize.
@@ -15,6 +17,7 @@ Implement the fundamental AI-powered writing tools that form the core of StoryWe
 ## Technical Tasks
 
 ### Week 6: AI & Systems Foundation
+
 - **AI Provider Framework:**
   - [ ] Implement AI provider abstraction layer with support for streaming and embeddings.
   - [ ] Create integrations for OpenAI, Claude, Gemini, and OpenAI-compatible endpoints.
@@ -26,6 +29,7 @@ Implement the fundamental AI-powered writing tools that form the core of StoryWe
   - [ ] **Error Handling:** Create the error recovery manager with strategies for network timeouts, API rate limits, and content filtering.
 
 ### Week 7: Enhanced & Responsive Editor
+
 - **UI Framework:**
   - [ ] **Three-Column Layout:** Implement the responsive layout manager with collapsible side panels.
   - [ ] Implement column resizing logic with saved user preferences.
@@ -38,6 +42,7 @@ Implement the fundamental AI-powered writing tools that form the core of StoryWe
   - [ ] Implement a distraction-free Focus Mode.
 
 ### Week 8: Core Writing & Creative Tools
+
 - **Writing Tools:**
   - [ ] Implement **Write** feature with multiple modes (Auto, Guided, Tone Shift).
   - [ ] Build **Rewrite** tool with multiple styles (Rephrase, Shorter, More Descriptive, etc.).
@@ -50,6 +55,7 @@ Implement the fundamental AI-powered writing tools that form the core of StoryWe
   - [ ] **Card Stacking System:** Implement the UI for organizing AI responses into collapsible, stackable cards with prompt context.
 
 ### Week 9: Quick Tools & Contextual Systems
+
 - **Quick Tools:**
   - [ ] Implement Quick Edit and Quick Chat functionality accessible via `Ctrl/Cmd+K`.
   - [ ] Integrate **High Quality Mode** with credit system warnings.
@@ -62,6 +68,7 @@ Implement the fundamental AI-powered writing tools that form the core of StoryWe
   - [ ] Build background processing queue for non-critical AI operations.
 
 ### Week 10: Collaboration & Final Touches
+
 - **Collaboration Features:**
   - [ ] Implement the basic commenting system with threading and replies.
   - [ ] Add author vs. reader comment distinction and visibility controls.
@@ -74,6 +81,7 @@ Implement the fundamental AI-powered writing tools that form the core of StoryWe
 ## AI Provider Implementation
 
 ### Provider Architecture
+
 ```rust
 pub trait AIProvider {
     async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String>;
@@ -93,6 +101,7 @@ pub struct AIProviderManager {
 ```
 
 ### OpenAI Integration
+
 ```rust
 pub struct OpenAIProvider {
     client: reqwest::Client,
@@ -128,6 +137,7 @@ impl AIProvider for OpenAIProvider {
 ## Writing Tools Implementation
 
 ### Write Feature
+
 ```rust
 pub struct WriteProcessor {
     ai_provider: Arc<dyn AIProvider>,
@@ -189,6 +199,7 @@ impl WriteProcessor {
 ```
 
 ### Selection Menu System
+
 ```typescript
 interface SelectionMenuProps {
   selectedText: string;
@@ -234,6 +245,7 @@ export const SelectionMenu: React.FC<SelectionMenuProps> = ({
 ## Database Schema Extensions
 
 ### AI History and Responses
+
 ```sql
 -- AI History
 CREATE TABLE ai_history (
@@ -293,6 +305,7 @@ CREATE TABLE ai_generated_ranges (
 ## Frontend Components
 
 ### Quick Tools Interface
+
 ```typescript
 interface QuickToolsProps {
   documentId: number;
@@ -365,6 +378,7 @@ export const QuickTools: React.FC<QuickToolsProps> = ({
 ```
 
 ## Success Criteria
+
 - [ ] All AI providers (OpenAI, Claude, Gemini) integrate successfully
 - [ ] Write tools generate contextually appropriate content
 - [ ] Selection menu adapts based on text selection length
@@ -377,6 +391,7 @@ export const QuickTools: React.FC<QuickToolsProps> = ({
 - [ ] Card system organizes AI responses effectively
 
 ## Risk Mitigation
+
 - **API Rate Limits**: Implement robust rate limiting and queuing
 - **Token Management**: Accurate token counting for cost control
 - **Context Building**: Efficient context assembly without exceeding limits
@@ -384,7 +399,9 @@ export const QuickTools: React.FC<QuickToolsProps> = ({
 - **Performance**: Optimize AI response rendering and storage
 
 ## Dependencies
+
 ### Rust
+
 - reqwest = { version = "0.11", features = ["json", "stream"] }
 - tokio-stream = "0.1"
 - serde = { version = "1.0", features = ["derive"] }
@@ -392,6 +409,7 @@ export const QuickTools: React.FC<QuickToolsProps> = ({
 - tiktoken-rs = "0.5" # Token counting
 
 ### Frontend
+
 - @monaco-editor/react = "^4.6.0"
 - react-markdown = "^9.0.0"
 - framer-motion = "^10.16.0"
@@ -399,4 +417,5 @@ export const QuickTools: React.FC<QuickToolsProps> = ({
 - react-hotkeys-hook = "^4.4.0"
 
 ## Next Phase
+
 Phase 3 will focus on implementing the comprehensive Story Bible system, building upon the writing tools established in this phase.

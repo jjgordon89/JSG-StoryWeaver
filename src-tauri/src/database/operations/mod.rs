@@ -33,6 +33,11 @@ pub mod brainstorm_session_ops;
 pub mod credit_usage_ops;
 pub mod streaming_session_ops;
 
+// Phase 5 Collaboration & Plugins
+pub mod collaboration;
+pub mod plugin;
+pub mod canvas;
+
 // Re-export for convenience
 pub use folder_ops::*;
 pub use series_ops::*;
@@ -69,6 +74,11 @@ pub use brainstorm_session_ops::*;
 pub use credit_usage_ops::*;
 pub use streaming_session_ops::*;
 
+// Phase 5 Collaboration & Plugins
+pub use collaboration::*;
+pub use plugin::*;
+pub use canvas::*;
+
 // Struct definitions for operations
 pub struct FolderOps;
 pub struct SeriesOps;
@@ -104,3 +114,8 @@ pub struct GeneratedImageOps;
 pub struct BrainstormSessionOps;
 pub struct CreditUsageOps;
 pub struct StreamingSessionOps;
+
+// Phase 5 Collaboration & Plugins
+pub struct CollaborationOps;
+pub struct PluginOps;
+pub struct CanvasOps;

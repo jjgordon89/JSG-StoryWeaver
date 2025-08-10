@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT status, \n                   COUNT(*) as session_count,\n                   COALESCE(SUM(credits_consumed), 0.0) as total_credits\n            FROM streaming_sessions \n            GROUP BY status \n            ORDER BY session_count DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "status",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "session_count",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "total_credits",
+        "ordinal": 2,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "62b6a694827a43e9d055981c05b59de280016e8c21eb6dbbbcd4ecf659cb01a3"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE generated_images \n            SET project_id = ?, prompt = ?, negative_prompt = ?, model_used = ?, image_url = ?, local_path = ?,\n                width = ?, height = ?, seed = ?, steps = ?, cfg_scale = ?, style = ?, generation_time = ?, \n                cost_credits = ?, metadata = ?\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 16
+    },
+    "nullable": []
+  },
+  "hash": "58ae851e30512744b64e383087f5baa2a790ac75130f85b586e25e8267380616"
+}

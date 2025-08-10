@@ -204,7 +204,8 @@ impl BrainstormEngine {
         let num_ideas = request.num_ideas.min(self.config.max_ideas_per_session);
 
         // Generate base prompt
-        let base_prompt = self.build_generation_prompt(request)?;
+let base_prompt = self.build_generation_prompt(request)?;
+// TODO: Use base_prompt with AI provider when implemented
         
         // For now, we'll generate template-based ideas
         // In a real implementation, this would call the AI provider

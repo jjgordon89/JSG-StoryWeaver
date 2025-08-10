@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                s.id,\n                s.name,\n                s.description,\n                s.folder_id, \n                s.created_at as \"created_at!: chrono::DateTime<chrono::Utc>\",\n                CAST(COUNT(p.id) AS INTEGER) as project_count\n            FROM \n                series s\n            LEFT JOIN \n                projects p ON s.id = p.series_id\n            GROUP BY \n                s.id, s.name, s.description, s.folder_id, s.created_at\n            ORDER BY \n                s.name\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "description",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "folder_id",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "project_count",
+        "ordinal": 5,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "40e0505b3061e1be3cac18dae14484eb976eec00b25d2c5843b381910d3ed219"
+}

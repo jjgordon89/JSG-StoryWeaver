@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO credit_usage (\n                project_id, operation_type, model_used, tokens_used, credits_consumed,\n                operation_details, session_id\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "14c47375795c9b02c5d3a09929f2233ea3947a70c434768254a0092525563a80"
+}

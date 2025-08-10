@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO prose_modes (\n                name, description, model_configuration_id, creativity_level, temperature, top_p,\n                frequency_penalty, presence_penalty, special_instructions, is_experimental,\n                max_context_words, max_generation_words, supports_streaming, supports_unfiltered, is_active\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 15
+    },
+    "nullable": []
+  },
+  "hash": "9dd19b1fa2d38ad8820c0e5284401aabeb5ce4b83d20d21b47afd0b6a7a34dd7"
+}

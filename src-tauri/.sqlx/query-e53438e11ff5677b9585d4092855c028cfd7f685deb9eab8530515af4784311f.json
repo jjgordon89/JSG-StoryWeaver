@@ -1,0 +1,104 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, provider_id, model_name, display_name, context_window, max_output_tokens,\n                   supports_streaming, supports_images, cost_per_input_token, cost_per_output_token,\n                   cost_per_image, quality_tier, specializations, is_active, created_at\n            FROM ai_model_configurations WHERE model_name = ? AND provider_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "provider_id",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "model_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "display_name",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "context_window",
+        "ordinal": 4,
+        "type_info": "Int64"
+      },
+      {
+        "name": "max_output_tokens",
+        "ordinal": 5,
+        "type_info": "Int64"
+      },
+      {
+        "name": "supports_streaming",
+        "ordinal": 6,
+        "type_info": "Bool"
+      },
+      {
+        "name": "supports_images",
+        "ordinal": 7,
+        "type_info": "Bool"
+      },
+      {
+        "name": "cost_per_input_token",
+        "ordinal": 8,
+        "type_info": "Float"
+      },
+      {
+        "name": "cost_per_output_token",
+        "ordinal": 9,
+        "type_info": "Float"
+      },
+      {
+        "name": "cost_per_image",
+        "ordinal": 10,
+        "type_info": "Float"
+      },
+      {
+        "name": "quality_tier",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "specializations",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 13,
+        "type_info": "Bool"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 14,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "e53438e11ff5677b9585d4092855c028cfd7f685deb9eab8530515af4784311f"
+}

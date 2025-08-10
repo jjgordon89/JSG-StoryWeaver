@@ -49,7 +49,7 @@ impl super::CreditUsageOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: i32) -> Result<Option<CreditUsage>> {
         let row = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage WHERE id = ?
             "#,
@@ -60,12 +60,12 @@ impl super::CreditUsageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage record: {}", e)))?;
 
         Ok(row.map(|r| CreditUsage {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             project_id: r.project_id as i32,
             operation_type: r.operation_type,
             model_used: r.model_used.unwrap_or_default(),
             tokens_used: r.tokens_used.map(|t| t as i32),
-            credits_consumed: r.credits_consumed.unwrap_or(0.0),
+            credits_consumed: r.credits_consumed,
             operation_details: r.operation_details,
             session_id: r.session_id,
             created_at: r.created_at.map(|dt| dt.to_string()),
@@ -76,7 +76,7 @@ impl super::CreditUsageOps {
     pub async fn get_by_project(pool: &Pool<Sqlite>, project_id: i32) -> Result<Vec<CreditUsage>> {
         let rows = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage WHERE project_id = ? ORDER BY created_at DESC
             "#,
@@ -87,12 +87,12 @@ impl super::CreditUsageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage by project: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| CreditUsage {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             project_id: r.project_id as i32,
             operation_type: r.operation_type,
             model_used: r.model_used.unwrap_or_default(),
             tokens_used: r.tokens_used.map(|t| t as i32),
-            credits_consumed: r.credits_consumed.unwrap_or(0.0),
+            credits_consumed: r.credits_consumed,
             operation_details: r.operation_details,
             session_id: r.session_id,
             created_at: r.created_at.map(|dt| dt.to_string()),
@@ -103,7 +103,7 @@ impl super::CreditUsageOps {
     pub async fn get_by_operation_type(pool: &Pool<Sqlite>, operation_type: &str) -> Result<Vec<CreditUsage>> {
         let rows = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage WHERE operation_type = ? ORDER BY created_at DESC
             "#,
@@ -114,12 +114,12 @@ impl super::CreditUsageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage by operation type: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| CreditUsage {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             project_id: r.project_id as i32,
             operation_type: r.operation_type,
             model_used: r.model_used.unwrap_or_default(),
             tokens_used: r.tokens_used.map(|t| t as i32),
-            credits_consumed: r.credits_consumed.unwrap_or(0.0),
+            credits_consumed: r.credits_consumed,
             operation_details: r.operation_details,
             session_id: r.session_id,
             created_at: r.created_at.map(|dt| dt.to_string()),
@@ -130,7 +130,7 @@ impl super::CreditUsageOps {
     pub async fn get_by_session(pool: &Pool<Sqlite>, session_id: &str) -> Result<Vec<CreditUsage>> {
         let rows = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage WHERE session_id = ? ORDER BY created_at DESC
             "#,
@@ -141,12 +141,12 @@ impl super::CreditUsageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage by session: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| CreditUsage {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             project_id: r.project_id as i32,
             operation_type: r.operation_type,
             model_used: r.model_used.unwrap_or_default(),
             tokens_used: r.tokens_used.map(|t| t as i32),
-            credits_consumed: r.credits_consumed.unwrap_or(0.0),
+            credits_consumed: r.credits_consumed,
             operation_details: r.operation_details,
             session_id: r.session_id,
             created_at: r.created_at.map(|dt| dt.to_string()),
@@ -157,7 +157,7 @@ impl super::CreditUsageOps {
     pub async fn list_all(pool: &Pool<Sqlite>) -> Result<Vec<CreditUsage>> {
         let rows = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage ORDER BY created_at DESC
             "#
@@ -167,12 +167,12 @@ impl super::CreditUsageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list credit usage records: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| CreditUsage {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             project_id: r.project_id as i32,
             operation_type: r.operation_type,
             model_used: r.model_used.unwrap_or_default(),
             tokens_used: r.tokens_used.map(|t| t as i32),
-            credits_consumed: r.credits_consumed.unwrap_or(0.0),
+            credits_consumed: r.credits_consumed,
             operation_details: r.operation_details,
             session_id: r.session_id,
             created_at: r.created_at.map(|dt| dt.to_string()),
@@ -192,7 +192,7 @@ impl super::CreditUsageOps {
     /// Get total credits consumed by project
     pub async fn get_total_by_project(pool: &Pool<Sqlite>, project_id: i32) -> Result<f64> {
         let row = sqlx::query!(
-            "SELECT COALESCE(SUM(credits_consumed), 0.0) as total_credits! FROM credit_usage WHERE project_id = ?",
+            "SELECT COALESCE(SUM(credits_consumed), 0.0) as total_credits FROM credit_usage WHERE project_id = ?",
             project_id
         )
         .fetch_one(pool)
@@ -219,7 +219,7 @@ impl super::CreditUsageOps {
     pub async fn get_daily_usage(pool: &Pool<Sqlite>, project_id: i32, date: &str) -> Result<f64> {
         let row = sqlx::query!(
             r#"
-            SELECT COALESCE(SUM(credits_consumed), 0.0) as daily_credits! 
+            SELECT COALESCE(SUM(credits_consumed), 0.0) as daily_credits 
             FROM credit_usage 
             WHERE project_id = ? AND DATE(created_at) = ?
             "#,
@@ -237,7 +237,7 @@ impl super::CreditUsageOps {
     pub async fn get_usage_in_range(pool: &Pool<Sqlite>, project_id: i32, start_date: &str, end_date: &str) -> Result<Vec<CreditUsage>> {
         let rows = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage 
             WHERE project_id = ? AND DATE(created_at) BETWEEN ? AND ?
@@ -268,7 +268,7 @@ impl super::CreditUsageOps {
     pub async fn get_recent(pool: &Pool<Sqlite>, limit: i32) -> Result<Vec<CreditUsage>> {
         let rows = sqlx::query!(
             r#"
-            SELECT id, project_id!, operation_type!, model_used, tokens_used, credits_consumed,
+            SELECT id, project_id, operation_type, model_used, tokens_used, credits_consumed,
                    operation_details, session_id, created_at
             FROM credit_usage ORDER BY created_at DESC LIMIT ?
             "#,

@@ -12,6 +12,7 @@ pub type DbPool = Pool<Sqlite>;
 pub mod models;
 pub mod migrations;
 pub mod operations;
+pub mod optimization;
 pub mod backup;
 
 /// Database connection pool

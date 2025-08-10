@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COALESCE(SUM(credits_consumed), 0.0) as total_credits FROM credit_usage WHERE operation_type = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "total_credits",
+        "ordinal": 0,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "26f625ff8da01380b197ef0138625511351bb9a564b017ff3ff89fd070960cc0"
+}

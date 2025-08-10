@@ -7,6 +7,7 @@ StoryWeaver is a comprehensive AI-powered desktop application for novelists that
 ## Technology Stack
 
 ### Core Framework
+
 - **Tauri 2.0** - Cross-platform desktop app framework with Rust backend
   - Required plugins: `tauri-plugin-fs`, `tauri-plugin-dialog`, `tauri-plugin-notification`, `tauri-plugin-window-state`
   - Security features: CSP configuration, allowlist restrictions, secure IPC communication
@@ -21,6 +22,7 @@ StoryWeaver is a comprehensive AI-powered desktop application for novelists that
   - Required plugins: `@vitejs/plugin-react`, `vite-plugin-tauri`
 
 ### Database & Storage
+
 - **SQLite 3.40+** - Primary database for structured data
   - Required features: JSON support, FTS5 for full-text search, WAL mode for performance
   - Connection pooling, prepared statements, transaction management
@@ -35,6 +37,7 @@ StoryWeaver is a comprehensive AI-powered desktop application for novelists that
   - Support for multiple file formats (.docx, .txt, .rtf, .odt, .csv)
 
 ### AI Integration
+
 - **OpenAI API Integration**
   - Models: GPT-4o, GPT-4o-mini, GPT-4.1, GPT-3.5-turbo
   - Features: Chat completions, embeddings (text-embedding-3-small/large)
@@ -78,6 +81,7 @@ StoryWeaver is a comprehensive AI-powered desktop application for novelists that
   - Content policy compliance, safety filtering
 
 ### Core Rust Dependencies
+
 ```toml
 [dependencies]
 # Core Framework
@@ -298,6 +302,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 ```
 
 ### Frontend Dependencies
+
 ```json
 {
   "dependencies": {
@@ -627,6 +632,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 ### Feature-Specific Technical Requirements
 
 #### AI Writing Tools
+
 - **Token Management**: Precise token counting for all AI models, context window optimization
 - **Streaming Support**: Real-time text generation with cancellation capabilities
 - **Context Assembly**: Intelligent context building from Story Bible, document history, and user selections
@@ -634,6 +640,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Error Recovery**: Graceful handling of API failures, automatic retries with exponential backoff
 
 #### Plugin System
+
 - **WASM Runtime**: Secure sandboxed execution environment using Wasmtime
 - **Variable Injection**: Dynamic template processing with Story Bible data
 - **Multi-Stage Execution**: Sequential prompt processing with intermediate result handling
@@ -641,6 +648,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Marketplace Integration**: Plugin discovery, installation, and update mechanisms
 
 #### Document Management
+
 - **Real-time Collaboration**: Operational Transform (OT) for conflict resolution
 - **Version Control**: Git-like versioning with branching and merging capabilities
 - **Auto-save**: Debounced saving with conflict detection and resolution
@@ -648,6 +656,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Search & Indexing**: Full-text search with fuzzy matching and relevance scoring
 
 #### Canvas/Visual Planning
+
 - **Rendering Engine**: Hardware-accelerated 2D graphics using Canvas API
 - **Interaction System**: Multi-touch support, gesture recognition, keyboard shortcuts
 - **Layout Algorithms**: Automatic node positioning, force-directed graphs
@@ -655,6 +664,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Performance Optimization**: Viewport culling, level-of-detail rendering
 
 #### Story Bible System
+
 - **Relationship Mapping**: Graph-based character and world element relationships
 - **Visibility Engine**: Fine-grained access control with inheritance rules
 - **Template System**: Extensible card templates with custom field types
@@ -662,6 +672,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Series Synchronization**: Cross-project data sharing with conflict resolution
 
 ### Security & Privacy
+
 - **Local-First Architecture**: All data stored locally, no cloud dependencies
 - **Encryption**: AES-256-GCM for sensitive data at rest
 - **API Key Security**: Secure storage using OS keychain/credential manager
@@ -670,6 +681,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Audit Logging**: Comprehensive activity logging for debugging and security
 
 ### Performance Optimization
+
 - **Database Optimization**: Query optimization, connection pooling, prepared statements
 - **Memory Management**: Efficient data structures, lazy loading, garbage collection tuning
 - **Caching Strategy**: Multi-level caching (memory, disk, network)
@@ -677,6 +689,7 @@ sysinfo = "0.29"      # System information for performance monitoring
 - **Resource Monitoring**: Memory usage tracking, performance metrics collection
 
 ### Development Tools & Infrastructure
+
 - **Build System**: Cargo workspaces, conditional compilation, feature flags
 - **Testing Framework**: Unit tests (Rust), integration tests, E2E tests (Playwright)
 - **CI/CD Pipeline**: Automated testing, cross-platform builds, release automation
@@ -686,7 +699,31 @@ sysinfo = "0.29"      # System information for performance monitoring
 ## Application Architecture
 
 ### Backend (Rust/Tauri)
-```
+
+StoryWeaver: A Comprehensive AI Writing Toolkit
+==============================================
+==============================================
+
+## Project Overview
+
+StoryWeaver is a comprehensive AI-powered desktop application for novelists that provides planning, writing, editing, and organizational tools. This single-user Windows desktop application will be built using Tauri with Rust backend, modern web frontend, SQLite for local data storage, and LanceDB for AI vectorization capabilities.
+
+## Technology Stack
+
+### Core Framework
+
+- **Tauri 2.0** - Cross-platform desktop app framework with Rust backend
+  - Required plugins: `tauri-plugin-fs`, `tauri-plugin-dialog`, `tauri-plugin-notification`, `tauri-plugin-window-state`
+  - Security features: CSP configuration, allowlist restrictions, secure IPC communication
+  - Build targets: Windows MSI installer, portable executable
+- **Rust 1.70+** - Backend logic, database operations, AI integrations
+  - Required for async/await support, advanced type system, memory safety
+  - Cargo workspace configuration for modular development
+- **TypeScript 5.0+** - Frontend user interface with strict type checking
+  - Required for advanced type inference, template literal types, const assertions
+- **Vite 4.5+** - Frontend build tool and development server
+  - Hot module replacement, optimized bundling, TypeScript support
+  - Required plugins: `@vitejs/plugin-react`, `vite-plugin-tauri`
 src-tauri/
 ├── src/
 │   ├── main.rs
@@ -720,10 +757,13 @@ src-tauri/
 │   │   ├── file_ops.rs
 │   │   └── export.rs
 │   └── error.rs          # Error handling
+
 ```
 
 ### Frontend (React/TypeScript)
+
 ```
+
 src/
 ├── components/           # Reusable UI components
 │   ├── ui/              # Base UI components
@@ -743,11 +783,13 @@ src/
 ├── types/               # TypeScript type definitions
 ├── utils/               # Utility functions
 └── styles/              # Global styles
+
 ```
 
 ## Core Features Implementation
 
 ### 1. Project Management
+
 - **Hierarchical Organization**: Projects, folders, and series support with shared Story Bible data
 - **Document Management**: Create, edit, organize multiple documents per project
 - **Chapter Continuity**: Link documents to create continuous story flow for AI context
@@ -761,6 +803,7 @@ src/
 - **Backup System**: Automatic local backups
 
 ### 2. Story Bible System
+
 - **Centralized Story Management**: Single source of truth for all story elements
 - **Braindump**: Free-form text area for core story ideas and vision (influences synopsis)
 - **Genre & Style**: Define writing style and genre preferences with style examples
@@ -776,6 +819,7 @@ src/
 ### 3. AI Writing Tools
 
 #### Write Features
+
 - **Auto Write**: Context-aware text continuation (uses up to 1000 words of context, outputs 150-200 words)
 - **Guided Write**: Directed writing with user prompts and AI-generated story ideas with suggestions mode
 - **Tone Shift**: Style-specific writing variations with preset tones (Ominous, Fantastical, Fast-Paced, Upbeat, Authoritative, Conflicted, Romantic, Sensual)
@@ -783,6 +827,7 @@ src/
 - **Write Settings**: Configurable creativity levels, card count (1-5), length settings (~50-500 words), and Key Details for project-level context
 
 #### Editing Tools
+
 - **Rewrite**: Multiple rewriting styles (Rephrase, Shorter, More descriptive, Show-Not-Tell, More Inner Conflict, More Intense) with custom options (max 6,000 words) and configurable card generation count
 - **Describe**: Sensory detail generation with toggleable senses (sight, sound, touch, taste, smell) and metaphors (considers paragraph + 200 preceding words)
 - **Expand**: Detailed expansion of brief passages (minimum 3 words, maximum 1,000 words) that reads both preceding and following text
@@ -793,16 +838,19 @@ src/
 - **Visualize**: Generate images from text descriptions (minimum 10 words, maximum 3000 words, 2500 credits, 1024x1024 resolution)
 
 #### AI Model Selection & Control
+
 - **Multiple Prose Modes**: Muse, Excellent, Basic and experimental models
 - **Saliency Engine**: Intelligent exposure of relevant story information to AI
 - **Visibility Settings**: Control AI access to specific Story Bible elements
 
 #### Analysis Tools
+
 - **Content Analysis**: Character consistency, plot holes
 - **Style Analysis**: Writing pattern recognition
 - **Pacing Analysis**: Scene rhythm and flow
 
 ### 4. Plugin System
+
 - **Custom AI Functions**: User-created AI tools with access to Story Bible data for writing, editing, and analysis tasks
 - **Plugin Builder**: Visual interface with Basic and Advanced editors for creating plugins with prompts and variables
 - **Available Variables**: Access to `highlighted_text`, `preceding_text`, `user_text_input`, `previous_document_text`, `braindump`, `genre`, `style`, `synopsis`, `characters`, `characters_raw`, `outline`, `scene_summary`, `is_story_bible_active`, `chapter_scenes`, `chapter_scenes_extra_instructions`, `worldbuilding`, `worldbuilding_raw`
@@ -818,6 +866,7 @@ src/
 - **Profile Management**: Creator name display and plugin attribution system
 
 ### 5. Canvas/Visual Planning
+
 - **Digital Whiteboard**: Drag-and-drop story planning with cards, text, and outlines
 - **Outline Templates**: Hero's Journey, Hollywood Beats, Story Circle, Romance Outline with distinct visuals
 - **Visual Story Mapping**: Character arcs and plot threads
@@ -827,6 +876,7 @@ src/
 - **Copy to Clipboard**: Export canvas outlines to documents or Story Bible
 
 ### 6. Advanced Editor
+
 - **Rich Text Editing**: Full-featured writing environment with purple highlighting for AI content
 - **Selection Menu**: Context-sensitive tools that appear when text is highlighted
 - **Focus Mode**: Distraction-free writing environment
@@ -840,6 +890,7 @@ src/
 - **Document Duplication**: Easy document copying for versioning and experimentation
 
 ### 7. User Interface
+
 - **Modern Design**: Clean, distraction-free writing environment
 - **Customizable Layout**: Adjustable panels and workspace
 - **Dark/Light Themes**: Multiple theme options
@@ -849,6 +900,7 @@ src/
 - **Keyboard Shortcuts**: Comprehensive shortcut system for all major functions
 
 ### 8. Advanced AI Features
+
 - **Chapter Continuity**: AI awareness of linked documents for seamless story flow
 - **Saliency Engine**: Intelligent selection of relevant Story Bible information for AI
 - **Multiple AI Models**: Support for various models (Muse, Claude, GPT) with different capabilities
@@ -866,6 +918,7 @@ src/
 ## Database Schema
 
 ### Additional Implementation Notes
+
 - **Template System**: Predefined templates for Story Bible cards (character archetypes, worldbuilding categories)
 - **Outline Acts**: Support for named dividers in outlines (Part, Book, Episode, Section)
 - **Document Linking**: Automatic bidirectional linking between outline chapters and documents
@@ -873,6 +926,7 @@ src/
 - **Word Limits**: Enforce specific word limits across all AI features for optimal performance
 
 ### SQLite Tables
+
 ```sql
 -- Projects and Organization
 CREATE TABLE projects (
@@ -1622,6 +1676,7 @@ END;
 ```
 
 ### LanceDB Schema
+
 ```rust
 // Document embeddings for semantic search
 struct DocumentEmbedding {
@@ -1647,6 +1702,7 @@ struct CharacterEmbedding {
 ## Development Phases
 
 ### Phase 1: Foundation (Weeks 1-5)
+
 - Set up Tauri project structure
 - Implement basic SQLite database operations
 - Create core UI components and layout
@@ -1656,6 +1712,7 @@ struct CharacterEmbedding {
 - Document linking for chapter continuity
 
 ### Phase 2: Core Writing Features (Weeks 6-10)
+
 - Implement AI API integrations (OpenAI/Claude)
 - Document editor with selection menu
 - Core writing tools (Write modes, Rewrite, Expand, Describe)
@@ -1664,6 +1721,7 @@ struct CharacterEmbedding {
 - Basic commenting system
 
 ### Phase 3: Story Bible System (Weeks 11-15)
+
 - Story Bible foundation (Braindump, Synopsis, Genre, Style)
 - Characters and Worldbuilding with visibility controls
 - Outline system with document linking
@@ -1672,6 +1730,7 @@ struct CharacterEmbedding {
 - **Embedding Generation**: Implement the generation and storage of vector embeddings in LanceDB for all new and updated Story Bible elements (characters, worldbuilding, etc.) to support the Phase 4 Saliency Engine.
 
 ### Phase 4: Advanced AI Features (Weeks 16-19)
+
 - Multiple AI models and prose modes
 - Saliency Engine implementation
 - Chapter continuity and style examples
@@ -1681,6 +1740,7 @@ struct CharacterEmbedding {
 - Smart import with character extraction
 
 ### Phase 5: Collaboration & Plugins (Weeks 20-22)
+
 - Document sharing with Clean Copy commenting
 - Plugin system with builder interface
 - Plugin testing environment and marketplace
@@ -1688,6 +1748,7 @@ struct CharacterEmbedding {
 - Visual story planning tools
 
 ### Phase 6: Polish & Optimization (Weeks 23-24)
+
 - Performance optimization
 - UI/UX refinements
 - Comprehensive testing
@@ -1697,6 +1758,7 @@ struct CharacterEmbedding {
 ## Technical Workflow Details
 
 ### Document Processing Pipeline
+
 ```rust
 // Document processing workflow
 pub struct DocumentProcessor {
@@ -2326,6 +2388,7 @@ impl StreamingManager {
 ### Advanced Feature Workflows
 
 #### Style Examples Processing
+
 ```rust
 pub struct StyleAnalyzer {
     ai_provider: Arc<dyn AIProvider>,
@@ -2363,6 +2426,7 @@ impl StyleAnalyzer {
 ```
 
 #### Related Words Processing
+
 ```rust
 pub struct RelatedWordsProcessor {
     ai_provider: Arc<dyn AIProvider>,
@@ -2414,6 +2478,7 @@ impl RelatedWordsProcessor {
 ## Technical Implementation Details
 
 ### AI Integration Strategy
+
 ```rust
 // AI service abstraction
 pub trait AIProvider {
@@ -2712,6 +2777,7 @@ impl RateLimiter {
 ```
 
 ### Vector Database Operations
+
 ```rust
 // Semantic search implementation
 pub async fn semantic_search(
@@ -2731,6 +2797,7 @@ pub async fn semantic_search(
 ```
 
 ### Plugin System Architecture
+
 ```rust
 // Plugin execution environment
 pub struct PluginEngine {
@@ -2802,7 +2869,8 @@ This comprehensive plan provides a roadmap for building a feature-rich AI toolki
 
 After reviewing all reference files, the following features have been added to ensure comprehensive coverage:
 
-### New Core Features Added:
+### New Core Features Added
+
 - **Point of View (POV) & Tense Settings**: Global and per-chapter control with character-specific POV assignment
 - **Series Support**: Share Characters, Worldbuilding, and Outlines across multiple projects with series timeline management
 - **Chapter Continuity**: Link documents for seamless AI context across chapters (up to 25 documents, 20,000 words)
@@ -2849,9 +2917,10 @@ After reviewing all reference files, the following features have been added to e
 - **Document Preview**: Quick preview of recent projects in folders without opening
 - **File Path Navigation**: Breadcrumb navigation for nested folder structures
 
-### Critical Missing Features Identified from Reference Review:
+### Critical Missing Features Identified from Reference Review
 
 #### Interface & User Experience
+
 - **Three-Column Layout**: Left project navigation, center editor, right history/cards with responsive design and toolbar spanning all columns
 - **Hover Menu System**: Context-aware tool access when selecting text with adaptive options based on selection length and content type
 - **Selection Menu**: Smart menu that appears when highlighting text, changing options based on what's selected (single word vs paragraph vs longer text)
@@ -2863,6 +2932,7 @@ After reviewing all reference files, the following features have been added to e
 - **Document Preview**: Quick preview of recent projects in folders without opening full project
 
 #### Quick Tools System
+
 - **Quick Edit & Quick Chat**: Instant access via Ctrl+K (PC) / ⌘+K (Mac) with inline editing capabilities
 - **High Quality Mode**: Toggle for Quick Tools that uses credits for more complex tasks vs free default mode
 - **Story-Aware Context**: Quick Tools have full access to Story Bible and document context without briefing
@@ -2871,7 +2941,8 @@ After reviewing all reference files, the following features have been added to e
 - **Free Quick Tools**: Default free usage without credit consumption for basic operations
 
 #### Advanced AI Features
-- **Muse-Specific Advanced Features**: 
+
+- **Muse-Specific Advanced Features**:
   - Creativity Level 11 (special ultra-creative mode with different algorithms from standard 1-10 scale)
   - Up to 10,000 words generation in Draft tool (significantly higher than other models)
   - 128,000 words context reading capability with pause/resume functionality
@@ -2884,6 +2955,7 @@ After reviewing all reference files, the following features have been added to e
 - **Streaming Generation**: Real-time text generation with pause/resume capabilities, progress indicators, and cancellation options
 
 #### Brainstorm System
+
 - **Category-Specific Brainstorming**: Predefined categories (Dialogue, Characters, World building, Plot points, Names, Places, Objects, Descriptions, Article ideas, Tweets, Something else)
 - **Thumbs Up/Down System**: Voting system with Keepers List functionality for saving preferred suggestions
 - **Save & Exit Workflow**: Session management with persistent Keepers List across brainstorm sessions
@@ -2891,11 +2963,12 @@ After reviewing all reference files, the following features have been added to e
 - **History Integration**: Brainstorm results automatically saved to History panel as organized cards
 
 #### Community & Learning
+
 - **Community Integration**: Discord community features, learning resources integration, and user-generated content sharing
 - **Prose Quality Guidelines**: Built-in system to avoid vagueness, conflicting information, and confusing wording with real-time suggestions
 - **Laser Tools**: Community term for targeted AI features like Rewrite, Describe, Expand with precision editing capabilities
 - **Kitbashing Workflow**: Advanced feature for combining multiple AI generations and drafts with merge capabilities and version tracking
-- **Muse-Specific Advanced Features**: 
+- **Muse-Specific Advanced Features**:
   - Creativity Level 11 (special ultra-creative mode with different algorithms)
   - Up to 10,000 words generation in Draft tool
   - 128,000 words context reading capability with pause/resume
@@ -2938,12 +3011,13 @@ After reviewing all reference files, the following features have been added to e
 - **Document Organization**: Left sidebar with Add New, Import, and folder creation options
 - **Homepage Integration**: Project cards on main homepage with direct project access
 
-### Additional Features Identified from Reference Review:
+### Additional Features Identified from Reference Review
+
 - **Laser Tools**: Community term for targeted AI features like Rewrite, Describe, Expand
 - **Kitbashing Workflow**: Advanced feature for combining multiple AI generations and drafts
 - **Prose Quality Guidelines**: Built-in system to avoid vagueness, conflicting information, and confusing wording
 - **Community Integration**: Discord community features and learning resources
-- **Muse-Specific Features**: 
+- **Muse-Specific Features**:
   - Creativity Level 11 (special ultra-creative mode)
   - Up to 10,000 words generation in Draft
   - 128,000 words context reading capability
@@ -2967,7 +3041,8 @@ After reviewing all reference files, the following features have been added to e
 - **Accessibility Features**: Screen reader support and keyboard navigation
 - **Internationalization Support**: Framework for future multi-language support
 
-### Enhanced Database Schema:
+### Enhanced Database Schema
+
 - Added POV and Tense settings to `story_bible` and `outlines` tables.
 - Added series support with shared Story Bible data
 - Document linking for chapter continuity
@@ -2976,12 +3051,14 @@ After reviewing all reference files, the following features have been added to e
 - AI model settings and credit usage tracking
 - Enhanced plugin system with testing capabilities
 
-### Extended Timeline:
+### Extended Timeline
+
 - Increased from 20 to 24 weeks to accommodate additional features
 - Reorganized phases to better reflect feature complexity
 - Added dedicated phase for collaboration and plugin features
 
-### Dependency Updates:
+### Dependency Updates
+
 - Added `csv`, `zip`, `diffy`, `mammoth-rs`, and `html-to-docx-rs` to Rust dependencies for file operations and version control.
 - Added `reactflow`, `jspdf`, and `html2canvas` to frontend dependencies for visual planning and PDF export.
 
@@ -2990,6 +3067,7 @@ The plan now comprehensively covers all features found in the reference document
 ## Dependencies Summary
 
 ### Rust Dependencies (Cargo.toml)
+
 ```toml
 [dependencies]
 tauri = { version = "2.0", features = ["api-all"] }
@@ -3016,6 +3094,7 @@ html-to-docx-rs = "0.1"
 ```
 
 ### Frontend Dependencies (package.json)
+
 ```json
 {
   "dependencies": {

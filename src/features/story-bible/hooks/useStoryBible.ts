@@ -19,7 +19,6 @@ import type {
   CharacterTrait,
   WorldElement,
   Outline,
-  OutlineAct,
   Scene,
   StoryBibleState,
   CreateStoryBibleRequest,
@@ -115,7 +114,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          storyBible: response.data,
+          storyBible: response.data || null,
           isLoading: false,
           error: null
         }));
@@ -136,7 +135,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          storyBible: response.data,
+          storyBible: response.data || null,
           isLoading: false,
           error: null
         }));
@@ -180,7 +179,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          characterTraits: [...prevState.characterTraits, response.data],
+          characterTraits: [...prevState.characterTraits, response.data as CharacterTrait],
           isLoadingTraits: false,
           traitsError: null
         }));
@@ -202,7 +201,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
         setState(prevState => ({
           ...prevState,
           characterTraits: prevState.characterTraits.map(trait => 
-            trait.id === request.id ? response.data : trait
+            trait.id === request.id ? (response.data as CharacterTrait) : trait
           ),
           isLoadingTraits: false,
           traitsError: null
@@ -245,7 +244,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          characterTraits: response.data,
+          characterTraits: response.data || [],
           isLoadingTraits: false,
           traitsError: null
         }));
@@ -267,7 +266,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          worldElements: [...prevState.worldElements, response.data],
+          worldElements: [...prevState.worldElements, response.data as WorldElement],
           isLoadingWorldElements: false,
           worldElementsError: null
         }));
@@ -289,7 +288,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
         setState(prevState => ({
           ...prevState,
           worldElements: prevState.worldElements.map(element => 
-            element.id === request.id ? response.data : element
+            element.id === request.id ? (response.data as WorldElement) : element
           ),
           isLoadingWorldElements: false,
           worldElementsError: null
@@ -332,7 +331,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          worldElements: response.data,
+          worldElements: response.data || [], // Ensure worldElements is always an array
           isLoadingWorldElements: false,
           worldElementsError: null
         }));
@@ -347,7 +346,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
   const searchWorldElements = useCallback(async (request: SearchWorldElementsRequest): Promise<WorldElement[]> => {
     try {
       const response = await invoke<TauriResponse<WorldElement[]>>('search_world_elements', { request });
-      return response.success ? response.data : [];
+      return response.success && response.data ? response.data : [];
     } catch (error) {
       handleError(error, 'worldElementsError');
       return [];
@@ -364,7 +363,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          outlines: [...prevState.outlines, response.data],
+          outlines: [...prevState.outlines, response.data as Outline],
           isLoadingOutlines: false,
           outlinesError: null
         }));
@@ -386,7 +385,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
         setState(prevState => ({
           ...prevState,
           outlines: prevState.outlines.map(outline => 
-            outline.id === request.id ? response.data : outline
+            outline.id === request.id ? (response.data as Outline) : outline
           ),
           isLoadingOutlines: false,
           outlinesError: null
@@ -429,7 +428,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          outlines: response.data,
+          outlines: response.data || [], // Ensure outlines is always an array
           isLoadingOutlines: false,
           outlinesError: null
         }));
@@ -444,7 +443,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
   const searchOutlines = useCallback(async (request: SearchOutlinesRequest): Promise<Outline[]> => {
     try {
       const response = await invoke<TauriResponse<Outline[]>>('search_outlines', { request });
-      return response.success ? response.data : [];
+      return response.success && response.data ? response.data : [];
     } catch (error) {
       handleError(error, 'outlinesError');
       return [];
@@ -461,7 +460,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          scenes: [...prevState.scenes, response.data],
+          scenes: [...prevState.scenes, response.data as Scene],
           isLoadingScenes: false,
           scenesError: null
         }));
@@ -483,7 +482,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
         setState(prevState => ({
           ...prevState,
           scenes: prevState.scenes.map(scene => 
-            scene.id === request.id ? response.data : scene
+            scene.id === request.id ? (response.data as Scene) : scene
           ),
           isLoadingScenes: false,
           scenesError: null
@@ -549,7 +548,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       if (response.success) {
         setState(prevState => ({
           ...prevState,
-          scenes: response.data,
+          scenes: response.data || [], // Ensure scenes is always an array
           isLoadingScenes: false,
           scenesError: null
         }));
@@ -564,7 +563,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
   const searchScenes = useCallback(async (request: SearchScenesRequest): Promise<Scene[]> => {
     try {
       const response = await invoke<TauriResponse<Scene[]>>('search_scenes', { request });
-      return response.success ? response.data : [];
+      return response.success && response.data ? response.data : [];
     } catch (error) {
       handleError(error, 'scenesError');
       return [];
@@ -580,7 +579,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       
       if (response.success) {
         setState(prevState => ({ ...prevState, isLoading: false, error: null }));
-        return response.data;
+        return response.data || null;
       } else {
         handleError(response.error, 'error');
         return null;
@@ -599,7 +598,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       
       if (response.success) {
         setState(prevState => ({ ...prevState, isLoadingTraits: false, traitsError: null }));
-        return response.data;
+        return response.data || null;
       } else {
         handleError(response.error, 'traitsError');
         return null;
@@ -618,7 +617,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       
       if (response.success) {
         setState(prevState => ({ ...prevState, isLoadingWorldElements: false, worldElementsError: null }));
-        return response.data;
+        return response.data || null;
       } else {
         handleError(response.error, 'worldElementsError');
         return null;
@@ -637,7 +636,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       
       if (response.success) {
         setState(prevState => ({ ...prevState, isLoadingOutlines: false, outlinesError: null }));
-        return response.data;
+        return response.data || null;
       } else {
         handleError(response.error, 'outlinesError');
         return null;
@@ -656,7 +655,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       
       if (response.success) {
         setState(prevState => ({ ...prevState, isLoadingScenes: false, scenesError: null }));
-        return response.data;
+        return response.data || null;
       } else {
         handleError(response.error, 'scenesError');
         return null;
@@ -675,7 +674,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       
       if (response.success) {
         setState(prevState => ({ ...prevState, isLoadingWorldElements: false, worldElementsError: null }));
-        return response.data;
+        return response.data || null;
       } else {
         handleError(response.error, 'worldElementsError');
         return null;

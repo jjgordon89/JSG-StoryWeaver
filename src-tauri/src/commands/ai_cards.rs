@@ -2,61 +2,52 @@
 
 use crate::models::ai_card::{AIResponseCard, CreateAICardRequest, UpdateAICardRequest, AICardFilter};
 use crate::database::get_pool;
+use crate::error::StoryWeaverError;
 
 #[tauri::command]
 pub async fn create_ai_card(
     request: CreateAICardRequest,
-) -> std::result::Result<AIResponseCard, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<AIResponseCard, StoryWeaverError> {
+    let pool = get_pool()?;
     
-    AIResponseCard::create(&pool, request)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::create(&pool, request).await
 }
 
 #[tauri::command]
 pub async fn get_ai_card(
     id: String,
-) -> std::result::Result<AIResponseCard, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<AIResponseCard, StoryWeaverError> {
+    let pool = get_pool()?;
     
-    AIResponseCard::get_by_id(&pool, &id)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::get_by_id(&pool, &id).await
 }
 
 #[tauri::command]
 pub async fn get_ai_cards(
     filter: AICardFilter,
-) -> std::result::Result<Vec<AIResponseCard>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<Vec<AIResponseCard>, StoryWeaverError> {
+    let pool = get_pool()?;
     
-    AIResponseCard::get_filtered(&pool, filter)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::get_filtered(&pool, filter).await
 }
 
 #[tauri::command]
 pub async fn update_ai_card(
     id: String,
     request: UpdateAICardRequest,
-) -> std::result::Result<AIResponseCard, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<AIResponseCard, StoryWeaverError> {
+    let pool = get_pool()?;
     
-    AIResponseCard::update(&pool, &id, request)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::update(&pool, &id, request).await
 }
 
 #[tauri::command]
 pub async fn delete_ai_card(
     id: String,
-) -> std::result::Result<(), String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<(), StoryWeaverError> {
+    let pool = get_pool()?;
     
-    AIResponseCard::delete(&pool, &id)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::delete(&pool, &id).await
 }
 
 #[tauri::command]
@@ -64,8 +55,8 @@ pub async fn get_ai_cards_by_project(
     project_id: String,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> std::result::Result<Vec<AIResponseCard>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<Vec<AIResponseCard>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     let filter = AICardFilter {
         project_id: Some(project_id),
@@ -77,9 +68,7 @@ pub async fn get_ai_cards_by_project(
         offset,
     };
     
-    AIResponseCard::get_filtered(&pool, filter)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::get_filtered(&pool, filter).await
 }
 
 #[tauri::command]
@@ -87,8 +76,8 @@ pub async fn get_ai_cards_by_document(
     document_id: String,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> std::result::Result<Vec<AIResponseCard>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<Vec<AIResponseCard>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     let filter = AICardFilter {
         project_id: None,
@@ -100,9 +89,7 @@ pub async fn get_ai_cards_by_document(
         offset,
     };
     
-    AIResponseCard::get_filtered(&pool, filter)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::get_filtered(&pool, filter).await
 }
 
 #[tauri::command]
@@ -110,8 +97,8 @@ pub async fn get_stacked_ai_cards(
     project_id: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> std::result::Result<Vec<AIResponseCard>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<Vec<AIResponseCard>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     let filter = AICardFilter {
         project_id,
@@ -123,9 +110,7 @@ pub async fn get_stacked_ai_cards(
         offset,
     };
     
-    AIResponseCard::get_filtered(&pool, filter)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::get_filtered(&pool, filter).await
 }
 
 #[tauri::command]
@@ -133,8 +118,8 @@ pub async fn get_starred_ai_cards(
     project_id: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> std::result::Result<Vec<AIResponseCard>, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<Vec<AIResponseCard>, StoryWeaverError> {
+    let pool = get_pool()?;
     
     let filter = AICardFilter {
         project_id,
@@ -146,21 +131,17 @@ pub async fn get_starred_ai_cards(
         offset,
     };
     
-    AIResponseCard::get_filtered(&pool, filter)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::get_filtered(&pool, filter).await
 }
 
 #[tauri::command]
 pub async fn toggle_ai_card_stack(
     id: String,
-) -> std::result::Result<AIResponseCard, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<AIResponseCard, StoryWeaverError> {
+    let pool = get_pool()?;
     
     // Get current card to toggle its stacked state
-    let current_card = AIResponseCard::get_by_id(&pool, &id)
-        .await
-        .map_err(|e| e.to_string())?;
+    let current_card = AIResponseCard::get_by_id(&pool, &id).await?;
     
     let request = UpdateAICardRequest {
         is_stacked: Some(!current_card.is_stacked),
@@ -170,21 +151,17 @@ pub async fn toggle_ai_card_stack(
         tags: None,
     };
     
-    AIResponseCard::update(&pool, &id, request)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::update(&pool, &id, request).await
 }
 
 #[tauri::command]
 pub async fn toggle_ai_card_star(
     id: String,
-) -> std::result::Result<AIResponseCard, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<AIResponseCard, StoryWeaverError> {
+    let pool = get_pool()?;
     
     // Get current card to toggle its starred state
-    let current_card = AIResponseCard::get_by_id(&pool, &id)
-        .await
-        .map_err(|e| e.to_string())?;
+    let current_card = AIResponseCard::get_by_id(&pool, &id).await?;
     
     let request = UpdateAICardRequest {
         is_stacked: None,
@@ -194,21 +171,17 @@ pub async fn toggle_ai_card_star(
         tags: None,
     };
     
-    AIResponseCard::update(&pool, &id, request)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::update(&pool, &id, request).await
 }
 
 #[tauri::command]
 pub async fn toggle_ai_card_collapse(
     id: String,
-) -> std::result::Result<AIResponseCard, String> {
-    let pool = get_pool().map_err(|e| e.to_string())?;
+) -> Result<AIResponseCard, StoryWeaverError> {
+    let pool = get_pool()?;
     
     // Get current card to toggle its collapsed state
-    let current_card = AIResponseCard::get_by_id(&pool, &id)
-        .await
-        .map_err(|e| e.to_string())?;
+    let current_card = AIResponseCard::get_by_id(&pool, &id).await?;
     
     let request = UpdateAICardRequest {
         is_stacked: None,
@@ -218,7 +191,5 @@ pub async fn toggle_ai_card_collapse(
         tags: None,
     };
     
-    AIResponseCard::update(&pool, &id, request)
-        .await
-        .map_err(|e| e.to_string())
+    AIResponseCard::update(&pool, &id, request).await
 }

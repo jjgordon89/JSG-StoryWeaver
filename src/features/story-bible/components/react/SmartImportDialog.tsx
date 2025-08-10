@@ -121,7 +121,7 @@ const SmartImportDialog: React.FC<SmartImportDialogProps> = ({
             .map((_, index) => index)
             .filter(index => (result.extracted_elements.characters![index] as any).confidence > 0.7)
         );
-        setSelectedCharacters(highConfidenceChars);
+        setSelectedCharacters(new Set(Array.from(highConfidenceChars) as number[]));
       }
       
       if (result.extracted_elements.locations) {
@@ -130,7 +130,7 @@ const SmartImportDialog: React.FC<SmartImportDialogProps> = ({
             .map((_, index) => index)
             .filter(index => (result.extracted_elements.locations![index] as any).confidence > 0.7)
         );
-        setSelectedLocations(highConfidenceLocations);
+        setSelectedLocations(new Set(Array.from(highConfidenceLocations) as number[]));
       }
       
       setProgress({ stage: 'complete', progress: 100, message: 'Analysis complete!' });

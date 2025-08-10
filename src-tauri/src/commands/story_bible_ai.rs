@@ -54,6 +54,18 @@ pub struct GenerateStyleAnalysisRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateOutlineFromTextRequest {
+    pub project_id: String,
+    pub input_text: String,
+    pub outline_type: Option<String>, // "chapter", "scene", "full_story", etc.
+    pub target_length: Option<String>, // "short", "medium", "detailed"
+    pub include_character_arcs: Option<bool>,
+    pub include_subplots: Option<bool>,
+    pub custom_prompt: Option<String>,
+    pub creativity: Option<f32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StyleAnalysisResponse {
     pub analysis_result: String,
     pub generated_style_prompt: String,
@@ -540,4 +552,102 @@ STYLE_PROMPT:
     }
     
     analyze(request, ai_manager.inner().clone()).await
+}
+
+/// Generate outline from single sentence or paragraph
+#[tauri::command]
+pub async fn generate_outline_from_text(
+    request: GenerateOutlineFromTextRequest,
+    ai_manager: State<'_, Arc<AIProviderManager>>,
+) -> Result<AIGenerationResponse> {
+    async fn generate(request: GenerateOutlineFromTextRequest, ai_manager: Arc<AIProviderManager>) -> Result<AIGenerationResponse> {
+        let pool = get_pool()?;
+        
+        // Get story bible context for additional context
+        let story_bible = StoryBibleOps::get_by_project(&pool, &request.project_id).await.ok();
+        
+        // Build AI context
+        let context = AIContext {
+            project_id: Some(request.project_id.clone()),
+            story_context: Some(request.input_text.clone()),
+            creativity_level: request.creativity.map(|c| c as u8),
+            feature_type: Some(WritingFeature::Write),
+            ..Default::default()
+        };
+        
+        // Determine outline scope and detail level
+        let outline_scope = request.outline_type.as_deref().unwrap_or("full_story");
+        let detail_level = request.target_length.as_deref().unwrap_or("medium");
+        
+        let scope_instruction = match outline_scope {
+            "chapter" => "Create a detailed chapter outline with scenes and key plot points.",
+            "scene" => "Create a scene-by-scene breakdown with character actions and dialogue notes.",
+            "act" => "Create a three-act structure outline with major plot points and character arcs.",
+            _ => "Create a comprehensive story outline with chapters, character arcs, and plot progression.",
+        };
+        
+        let detail_instruction = match detail_level {
+            "short" => "Keep each section concise with 1-2 sentences per plot point.",
+            "detailed" => "Provide rich detail for each section including character motivations, conflicts, and scene descriptions.",
+            _ => "Provide moderate detail with clear plot progression and character development.", // medium
+        };
+        
+        // Build character arc instruction
+        let character_arc_instruction = if request.include_character_arcs.unwrap_or(true) {
+            " Include character development arcs and emotional journeys."
+        } else {
+            ""
+        };
+        
+        // Build subplot instruction
+        let subplot_instruction = if request.include_subplots.unwrap_or(false) {
+            " Include relevant subplots and secondary storylines."
+        } else {
+            ""
+        };
+        
+        // Add story bible context if available
+        let context_info = if let Some(bible) = &story_bible {
+            let genre_context = bible.genre.as_ref()
+                .map(|g| format!(" This is a {} story.", g))
+                .unwrap_or_default();
+            
+            let synopsis_context = bible.synopsis.as_ref()
+                .or_else(|| bible.braindump.as_ref())
+                .map(|s| format!(" Story context: {}", s))
+                .unwrap_or_default();
+            
+            format!("{}{}", genre_context, synopsis_context)
+        } else {
+            String::new()
+        };
+        
+        let base_prompt = format!(
+            "Based on the following text, generate a comprehensive story outline. {}{}{}{}{}\n\nInput text:\n{}\n\nGenerate a well-structured outline with:\n- Clear chapter/section divisions\n- Plot progression and pacing\n- Character development\n- Conflict escalation and resolution\n- Satisfying story arc\n\nOutline:",
+            scope_instruction,
+            detail_instruction,
+            character_arc_instruction,
+            subplot_instruction,
+            context_info,
+            request.input_text
+        );
+        
+        let prompt = request.custom_prompt.unwrap_or(base_prompt);
+        
+        // Generate outline
+        let provider = ai_manager.get_default_provider()
+            .ok_or_else(|| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: "No AI provider available".to_string() })?;
+        let generated_content = provider.generate_text(&prompt, &context).await
+            .map_err(|e| StoryWeaverError::AIProvider { provider: "AI".to_string(), message: e.to_string() })?;
+        
+        Ok(AIGenerationResponse {
+            generated_content,
+            tokens_used: 0, // Placeholder - actual token counting would need to be implemented
+            cost_estimate: 0.0, // Placeholder - actual cost calculation would need to be implemented
+            provider: "AI".to_string(), // Placeholder - would need to get actual provider name
+            model: "unknown".to_string(), // Placeholder - would need to get actual model name
+        })
+    }
+    
+    generate(request, ai_manager.inner().clone()).await
 }

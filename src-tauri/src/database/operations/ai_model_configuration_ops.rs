@@ -152,7 +152,7 @@ impl super::AIModelConfigurationOps {
             cost_per_input_token: r.cost_per_input_token,
             cost_per_output_token: r.cost_per_output_token,
             cost_per_image: r.cost_per_image,
-            quality_tier: r.quality_tier.unwrap_or("standard".to_string()),
+            quality_tier: r.quality_tier.unwrap_or_default(),
             specializations: r.specializations,
             is_active: r.is_active.unwrap_or(true),
             created_at: r.created_at.map(|dt| dt.to_string()),

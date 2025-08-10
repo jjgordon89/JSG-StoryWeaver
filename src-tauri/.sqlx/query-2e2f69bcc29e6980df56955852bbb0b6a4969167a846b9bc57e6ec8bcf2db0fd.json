@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE streaming_sessions \n            SET generated_content = ?, tokens_generated = ?, updated_at = CURRENT_TIMESTAMP\n            WHERE session_id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "2e2f69bcc29e6980df56955852bbb0b6a4969167a846b9bc57e6ec8bcf2db0fd"
+}

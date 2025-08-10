@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                v.id,\n                v.version_number as \"version_number: i32\",\n                v.word_count as \"word_count: i32\",\n                v.created_at as \"created_at: chrono::NaiveDateTime\",\n                v.created_by,\n                v.comment,\n                (v.word_count - COALESCE(prev.word_count, 0)) as \"word_count_change: i32\"\n            FROM \n                document_versions v\n            LEFT JOIN \n                document_versions prev ON v.document_id = prev.document_id \n                AND prev.version_number = v.version_number - 1\n            WHERE \n                v.document_id = ?\n            ORDER BY \n                v.version_number DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "version_number: i32",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "word_count: i32",
+        "ordinal": 2,
+        "type_info": "Int64"
+      },
+      {
+        "name": "created_at: chrono::NaiveDateTime",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "created_by",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "comment",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "word_count_change: i32",
+        "ordinal": 6,
+        "type_info": "Int"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "f5ea5320fabe018927caf2e919e99550908d5584929b7541aac1888c6e524497"
+}

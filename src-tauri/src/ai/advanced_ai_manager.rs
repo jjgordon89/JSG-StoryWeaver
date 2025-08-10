@@ -439,7 +439,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
                             if parts.len() >= 2 {
                                 let name = parts[0].trim().to_string();
                                 // Skip if character already exists
-                                if !characters.iter().any(|c| c.name.eq_ignore_ascii_case(&name)) {
+                                if !characters.iter().any(|c: &ExtractedCharacter| c.name.eq_ignore_ascii_case(&name)) {
                                     characters.push(ExtractedCharacter {
                                         name,
                                         description: parts.get(1).unwrap_or(&"").trim().to_string(),

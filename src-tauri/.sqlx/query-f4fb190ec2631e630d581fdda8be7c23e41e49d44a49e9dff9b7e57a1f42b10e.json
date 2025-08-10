@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO brainstorm_sessions (\n                project_id, session_name, session_type, initial_prompt, context_data,\n                generated_ideas, selected_ideas, session_notes, model_used, total_tokens,\n                cost_credits, status\n            )\n            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 12
+    },
+    "nullable": []
+  },
+  "hash": "f4fb190ec2631e630d581fdda8be7c23e41e49d44a49e9dff9b7e57a1f42b10e"
+}
