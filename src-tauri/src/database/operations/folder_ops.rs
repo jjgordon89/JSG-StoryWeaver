@@ -191,7 +191,6 @@ impl super::FolderOps {
         let folders = Self::get_all(pool).await?;
         
         // Build tree structure
-        let mut tree: Vec<FolderTreeNode> = Vec::new();
         let mut folder_map = std::collections::HashMap::new();
         
         // First pass: create map of all folders

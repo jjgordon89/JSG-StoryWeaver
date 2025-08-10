@@ -120,7 +120,7 @@ pub async fn set_preference(request: SetPreferenceRequest) -> CommandResponse<()
 pub async fn delete_preference(category: String, key: String) -> CommandResponse<()> {
     async fn delete(category: String, key: String) -> Result<()> {
         let pool = get_pool()?;
-        UserPreferenceOps::delete_preference(&pool, &category, &key).await
+        UserPreferenceOps::delete_preference(&*pool, &category, &key).await
     }
     
     delete(category, key).await.into()
@@ -131,7 +131,7 @@ pub async fn delete_preference(category: String, key: String) -> CommandResponse
 pub async fn delete_preference_category(category: String) -> CommandResponse<()> {
     async fn delete_category(category: String) -> Result<()> {
         let pool = get_pool()?;
-        UserPreferenceOps::delete_category(&pool, &category).await
+        UserPreferenceOps::delete_category(&*pool, &category).await
     }
     
     delete_category(category).await.into()
@@ -142,7 +142,7 @@ pub async fn delete_preference_category(category: String) -> CommandResponse<()>
 pub async fn get_preferences_as_object(category: String) -> CommandResponse<Value> {
     async fn get_as_object(category: String) -> Result<Value> {
         let pool = get_pool()?;
-        UserPreferenceOps::get_preferences_as_object(&pool, &category).await
+        UserPreferenceOps::get_preferences_as_object(&*pool, &category).await
     }
     
     get_as_object(category).await.into()
@@ -153,7 +153,7 @@ pub async fn get_preferences_as_object(category: String) -> CommandResponse<Valu
 pub async fn set_preferences_from_object(category: String, preferences: Value) -> CommandResponse<()> {
     async fn set_from_object(category: String, preferences: Value) -> Result<()> {
         let pool = get_pool()?;
-        UserPreferenceOps::set_preferences_from_object(&pool, &category, preferences).await
+        UserPreferenceOps::set_preferences_from_object(&*pool, &category, preferences).await
     }
     
     set_from_object(category, preferences).await.into()
@@ -171,10 +171,10 @@ pub async fn sync_settings(request: SyncSettingsRequest) -> CommandResponse<Valu
         let pool = get_pool()?;
         
         // Store settings in the database
-        UserPreferenceOps::set_preferences_from_object(&pool, "app", request.settings.clone()).await?;
+        UserPreferenceOps::set_preferences_from_object(&*pool, "app", request.settings.clone()).await?;
         
         // Return the current settings from the database
-        UserPreferenceOps::get_preferences_as_object(&pool, "app").await
+        UserPreferenceOps::get_preferences_as_object(&*pool, "app").await
     }
     
     sync(request).await.into()

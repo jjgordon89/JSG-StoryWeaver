@@ -3,12 +3,13 @@ import ProjectView from '../../features/projects/ProjectView';
 import DocumentEditor from '../editor/DocumentEditor';
 import AdvancedAI from '../AdvancedAI/AdvancedAI';
 import { useStore } from '../../stores/documentStore';
+import { useProjectStore } from '../../stores/projectStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { invoke } from '../../utils/tauriSafe';
 
 const MainLayout: React.FC = () => {
-  const [activeDocument, setActiveDocument] = useState<{id: number, content: string} | null>(null);
   const { currentDocument, loadDocument } = useStore();
+  const { currentProject } = useProjectStore();
   const { focusModeEnabled } = useSettingsStore();
   
   // Load a document when selected from the project view
@@ -55,9 +56,9 @@ const MainLayout: React.FC = () => {
           <div className="space-y-4">
             <div className="bg-white dark:bg-gray-700 p-3 rounded-md shadow">
               <h3 className="font-medium text-sm text-gray-500 dark:text-gray-400">Document Info</h3>
-              <p className="mt-1">Word count: {currentDocument.word_count}</p>
+              <p className="mt-1">Word count: {currentDocument.word_count || 0}</p>
               <p className="text-xs text-gray-500 mt-2">
-                Last updated: {new Date(currentDocument.updated_at).toLocaleString()}
+                Last updated: {currentDocument.updated_at ? new Date(currentDocument.updated_at).toLocaleString() : 'Unknown'}
               </p>
             </div>
             {/* Advanced AI Component */}

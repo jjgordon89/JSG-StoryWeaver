@@ -51,6 +51,9 @@ pub fn run() {
             commands::projects::update_project_word_count,
             commands::projects::get_project_summary,
             
+            // Project preview commands
+            commands::project_preview_commands::get_project_preview,
+            
             // Document commands
             commands::documents::create_document,
             commands::documents::get_documents,

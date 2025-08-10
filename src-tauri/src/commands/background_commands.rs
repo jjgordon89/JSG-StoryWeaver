@@ -19,7 +19,7 @@ pub async fn create_background_task(
     document_id: Option<String>,
     metadata: Option<serde_json::Value>,
     task_manager: State<'_, BackgroundTaskManager>,
-) -> Result<String> {
+) -> CommandResponse<String> {
     async fn create(
         task_type: String,
         description: String,
@@ -78,6 +78,7 @@ pub async fn create_background_task(
         &task_manager,
     )
     .await
+    .into()
 }
 
 /// Get a task by ID
@@ -85,7 +86,7 @@ pub async fn create_background_task(
 pub async fn get_background_task(task_id: String) -> CommandResponse<TaskResponse> {
     async fn get(task_id: String) -> Result<TaskResponse> {
         let pool = get_pool()?;
-        let task = BackgroundTaskOps::get_task(&pool, &task_id).await?;
+        let task = BackgroundTaskOps::get_task(&*pool, &task_id).await?;
         Ok(TaskResponse::from(task))
     }
     
@@ -97,7 +98,7 @@ pub async fn get_background_task(task_id: String) -> CommandResponse<TaskRespons
 pub async fn get_all_background_tasks() -> CommandResponse<Vec<TaskResponse>> {
     async fn get_all() -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
-        let tasks = BackgroundTaskOps::get_all_tasks(&pool).await?;
+        let tasks = BackgroundTaskOps::get_all_tasks(&*pool).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
@@ -112,15 +113,15 @@ pub async fn get_background_tasks_by_status(status: String) -> CommandResponse<V
         
         // Convert status string to enum
         let status_enum = match status.as_str() {
-            "queued" => TaskStatus::Queued,
+            "pending" => TaskStatus::Pending,
             "running" => TaskStatus::Running,
             "completed" => TaskStatus::Completed,
             "failed" => TaskStatus::Failed,
             "cancelled" => TaskStatus::Cancelled,
-            _ => return Err(StoryWeaverError::internal(format!("Invalid task status: {}", status))),
+            _ => return Err(StoryWeaverError::InvalidInput { message: format!("Invalid status: {}", status) }),
         };
         
-        let tasks = BackgroundTaskOps::get_tasks_by_status(&pool, status_enum).await?;
+        let tasks = BackgroundTaskOps::get_tasks_by_status(&*pool, status_enum).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
@@ -132,7 +133,7 @@ pub async fn get_background_tasks_by_status(status: String) -> CommandResponse<V
 pub async fn get_background_tasks_by_project(project_id: String) -> CommandResponse<Vec<TaskResponse>> {
     async fn get_by_project(project_id: String) -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
-        let tasks = BackgroundTaskOps::get_tasks_by_project(&pool, &project_id).await?;
+        let tasks = BackgroundTaskOps::get_tasks_by_project(&*pool, &project_id).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
@@ -144,7 +145,7 @@ pub async fn get_background_tasks_by_project(project_id: String) -> CommandRespo
 pub async fn get_background_tasks_by_document(document_id: String) -> CommandResponse<Vec<TaskResponse>> {
     async fn get_by_document(document_id: String) -> Result<Vec<TaskResponse>> {
         let pool = get_pool()?;
-        let tasks = BackgroundTaskOps::get_tasks_by_document(&pool, &document_id).await?;
+        let tasks = BackgroundTaskOps::get_tasks_by_document(&*pool, &document_id).await?;
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
@@ -156,13 +157,13 @@ pub async fn get_background_tasks_by_document(document_id: String) -> CommandRes
 pub async fn cancel_background_task(
     task_id: String,
     task_manager: State<'_, BackgroundTaskManager>,
-) -> Result<bool> {
+) -> CommandResponse<bool> {
     async fn cancel(task_id: String, task_manager: &BackgroundTaskManager) -> Result<bool> {
-        task_manager.cancel_task(&task_id).await?;
-        Ok(true)
+        let cancelled = task_manager.cancel_task(&task_id).await?;
+        Ok(cancelled)
     }
     
-    cancel(task_id, &task_manager).await
+    cancel(task_id, &task_manager).await.into()
 }
 
 /// Clean up old tasks
@@ -170,7 +171,7 @@ pub async fn cancel_background_task(
 pub async fn cleanup_old_background_tasks(days: i64) -> CommandResponse<usize> {
     async fn cleanup(days: i64) -> Result<usize> {
         let pool = get_pool()?;
-        let count = BackgroundTaskOps::cleanup_old_tasks(&pool, days).await?;
+        let count = BackgroundTaskOps::cleanup_old_tasks(&*pool, days).await?;
         Ok(count)
     }
     

@@ -42,6 +42,58 @@ pub struct CanvasElement {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Canvas type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "text")]
+pub enum CanvasType {
+    #[sqlx(rename = "story_outline")]
+    StoryOutline,
+    #[sqlx(rename = "character_map")]
+    CharacterMap,
+    #[sqlx(rename = "world_building")]
+    WorldBuilding,
+    #[sqlx(rename = "timeline")]
+    Timeline,
+    #[sqlx(rename = "plot_structure")]
+    PlotStructure,
+    #[sqlx(rename = "mind_map")]
+    MindMap,
+    #[sqlx(rename = "free_form")]
+    FreeForm,
+}
+
+impl std::fmt::Display for CanvasType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            CanvasType::StoryOutline => "story_outline",
+            CanvasType::CharacterMap => "character_map",
+            CanvasType::WorldBuilding => "world_building",
+            CanvasType::Timeline => "timeline",
+            CanvasType::PlotStructure => "plot_structure",
+            CanvasType::MindMap => "mind_map",
+            CanvasType::FreeForm => "free_form",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl std::str::FromStr for CanvasType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "story_outline" => Ok(CanvasType::StoryOutline),
+            "character_map" => Ok(CanvasType::CharacterMap),
+            "world_building" => Ok(CanvasType::WorldBuilding),
+            "timeline" => Ok(CanvasType::Timeline),
+            "plot_structure" => Ok(CanvasType::PlotStructure),
+            "mind_map" => Ok(CanvasType::MindMap),
+            "free_form" => Ok(CanvasType::FreeForm),
+            _ => Err(format!("Unknown canvas type: {}", s)),
+        }
+    }
+}
+
 /// Canvas element type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "text")]
@@ -66,6 +118,10 @@ pub enum CanvasElementType {
     Theme,
     #[sqlx(rename = "conflict")]
     Conflict,
+    #[sqlx(rename = "text_box")]
+    TextBox,
+    #[sqlx(rename = "sticky_note")]
+    StickyNote,
 }
 
 /// Outline template type enumeration

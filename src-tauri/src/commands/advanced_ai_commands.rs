@@ -114,26 +114,30 @@ pub struct SmartImportAnalysisResult {
 pub async fn generate_with_prose_mode(
     request: ProseGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<AdvancedGenerationResult, StoryWeaverError> {
-    let mut ai_manager = ai_state.lock().await;
+) -> CommandResponse<AdvancedGenerationResult> {
+    async fn generate(request: ProseGenerationRequest, ai_state: AdvancedAIState) -> Result<AdvancedGenerationResult> {
+        let mut ai_manager = ai_state.lock().await;
+        
+        let advanced_request = AdvancedGenerationRequest {
+            project_id: request.project_id,
+            document_id: request.document_id,
+            prose_mode: request.prose_mode,
+            text_context: request.text_context,
+            generation_type: request.generation_type,
+            max_words: request.max_words,
+            ultra_creative: request.ultra_creative,
+            use_saliency_engine: request.use_saliency_engine,
+            style_examples: request.style_examples,
+            special_instructions: request.special_instructions,
+        };
+        
+        ai_manager
+            .generate_with_advanced_features(advanced_request, request.story_bible)
+            .await
+            .map_err(StoryWeaverError::ai)
+    }
     
-    let advanced_request = AdvancedGenerationRequest {
-        project_id: request.project_id,
-        document_id: request.document_id,
-        prose_mode: request.prose_mode,
-        text_context: request.text_context,
-        generation_type: request.generation_type,
-        max_words: request.max_words,
-        ultra_creative: request.ultra_creative,
-        use_saliency_engine: request.use_saliency_engine,
-        style_examples: request.style_examples,
-        special_instructions: request.special_instructions,
-    };
-    
-    ai_manager
-        .generate_with_advanced_features(advanced_request, request.story_bible)
-        .await
-        .map_err(StoryWeaverError::ai)
+    generate(request, ai_state.into_inner()).await.into()
 }
 
 // Image Generation with Visualize Engine
@@ -141,26 +145,30 @@ pub async fn generate_with_prose_mode(
 pub async fn generate_image(
     request: ImageGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<GeneratedImage, StoryWeaverError> {
-    let mut ai_manager = ai_state.lock().await;
+) -> CommandResponse<GeneratedImage> {
+    async fn generate(request: ImageGenerationRequest, ai_state: AdvancedAIState) -> Result<GeneratedImage> {
+        let mut ai_manager = ai_state.lock().await;
+        
+        let visualize_request = VisualizeRequest {
+            project_id: request.project_id,
+            source_text: request.text_content,
+            style_preference: Some(request.style_preference),
+            resolution: match request.resolution.as_str() {
+                "1024x1024" => crate::ai::ImageResolution::Square1024,
+                "1792x1024" => crate::ai::ImageResolution::Landscape1792,
+                "1024x1792" => crate::ai::ImageResolution::Portrait1024,
+                _ => crate::ai::ImageResolution::Square1024,
+            },
+            enhance_prompt: request.enhance_prompt,
+        };
+        
+        ai_manager
+            .generate_image(visualize_request)
+            .await
+            .map_err(StoryWeaverError::ai)
+    }
     
-    let visualize_request = VisualizeRequest {
-        project_id: request.project_id,
-        source_text: request.text_content,
-        style_preference: Some(request.style_preference),
-        resolution: match request.resolution.as_str() {
-            "1024x1024" => crate::ai::ImageResolution::Square1024,
-            "1792x1024" => crate::ai::ImageResolution::Landscape1792,
-            "1024x1792" => crate::ai::ImageResolution::Portrait1024,
-            _ => crate::ai::ImageResolution::Square1024,
-        },
-        enhance_prompt: request.enhance_prompt,
-    };
-    
-    ai_manager
-        .generate_image(visualize_request)
-        .await
-        .map_err(StoryWeaverError::ai)
+    generate(request, ai_state.into_inner()).await.into()
 }
 
 // Advanced Brainstorming
@@ -168,33 +176,41 @@ pub async fn generate_image(
 pub async fn create_brainstorm_session(
     request: BrainstormSessionRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<String, StoryWeaverError> {
-    let mut ai_manager = ai_state.lock().await;
+) -> CommandResponse<String> {
+    async fn create(request: BrainstormSessionRequest, ai_state: AdvancedAIState) -> Result<String> {
+        let mut ai_manager = ai_state.lock().await;
+        
+        let brainstorm_request = BrainstormRequest {
+            project_id: request.project_id,
+            category: crate::ai::BrainstormCategory::Custom(request.category),
+            seed_prompt: Some(request.context),
+            context: None,
+            num_ideas: request.num_ideas as usize,
+            creativity_level: request.creativity_level as i32,
+            focus_areas: vec![request.focus_area],
+        };
+        
+        ai_manager
+            .create_brainstorm_session(brainstorm_request)
+            .await
+            .map_err(StoryWeaverError::ai)
+    }
     
-    let brainstorm_request = BrainstormRequest {
-        project_id: request.project_id,
-        category: crate::ai::BrainstormCategory::Custom(request.category),
-        seed_prompt: Some(request.context),
-        context: None,
-        num_ideas: request.num_ideas as usize,
-        creativity_level: request.creativity_level as i32,
-        focus_areas: vec![request.focus_area],
-    };
-    
-    ai_manager
-        .create_brainstorm_session(brainstorm_request)
-        .await
-        .map_err(StoryWeaverError::ai)
+    create(request, ai_state.into_inner()).await.into()
 }
 
 #[tauri::command]
 pub async fn get_brainstorm_session(
     session_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<Option<BrainstormSession>, StoryWeaverError> {
-    let ai_manager = ai_state.lock().await;
+) -> CommandResponse<Option<BrainstormSession>> {
+    async fn get(session_id: String, ai_state: AdvancedAIState) -> Result<Option<BrainstormSession>> {
+        let ai_manager = ai_state.lock().await;
+        
+        Ok(ai_manager.get_brainstorm_session(&session_id).cloned())
+    }
     
-    Ok(ai_manager.get_brainstorm_session(&session_id).cloned())
+    get(session_id, ai_state.into_inner()).await.into()
 }
 
 #[tauri::command]
@@ -203,12 +219,16 @@ pub async fn rate_brainstorm_idea(
     idea_id: String,
     rating: u32,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<(), StoryWeaverError> {
-    let mut ai_manager = ai_state.lock().await;
+) -> CommandResponse<()> {
+    async fn rate(session_id: String, idea_id: String, rating: u32, ai_state: AdvancedAIState) -> Result<()> {
+        let mut ai_manager = ai_state.lock().await;
+        
+        // This would need to be implemented in the brainstorm engine
+        // For now, return success
+        Ok(())
+    }
     
-    // This would need to be implemented in the brainstorm engine
-    // For now, return success
-    Ok(())
+    rate(session_id, idea_id, rating, ai_state.into_inner()).await.into()
 }
 
 #[tauri::command]
@@ -217,12 +237,16 @@ pub async fn mark_idea_as_keeper(
     idea_id: String,
     is_keeper: bool,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<(), StoryWeaverError> {
-    let mut ai_manager = ai_state.lock().await;
+) -> CommandResponse<()> {
+    async fn mark(session_id: String, idea_id: String, is_keeper: bool, ai_state: AdvancedAIState) -> Result<()> {
+        let mut ai_manager = ai_state.lock().await;
+        
+        // This would need to be implemented in the brainstorm engine
+        // For now, return success
+        Ok(())
+    }
     
-    // This would need to be implemented in the brainstorm engine
-    // For now, return success
-    Ok(())
+    mark(session_id, idea_id, is_keeper, ai_state.into_inner()).await.into()
 }
 
 // Style Examples Management
@@ -230,22 +254,26 @@ pub async fn mark_idea_as_keeper(
 pub async fn add_style_example(
     request: StyleExampleRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<StyleExample, StoryWeaverError> {
-    let mut ai_manager = ai_state.lock().await;
+) -> CommandResponse<StyleExample> {
+    async fn add(request: StyleExampleRequest, ai_state: AdvancedAIState) -> Result<StyleExample> {
+        let mut ai_manager = ai_state.lock().await;
+        
+        let style_example = StyleExample {
+            id: uuid::Uuid::new_v4().to_string(),
+            project_id: request.project_id,
+            name: request.name,
+            content: request.content.clone(),
+            word_count: request.content.split_whitespace().count() as i32,
+            analysis_result: Some(ai_manager.analyze_style(&request.content)),
+            is_active: request.is_active,
+        };
+        
+        ai_manager.add_style_example(style_example.clone());
+        
+        Ok(style_example)
+    }
     
-    let style_example = StyleExample {
-        id: uuid::Uuid::new_v4().to_string(),
-        project_id: request.project_id,
-        name: request.name,
-        content: request.content.clone(),
-        word_count: request.content.split_whitespace().count() as i32,
-        analysis_result: Some(ai_manager.analyze_style(&request.content)),
-        is_active: request.is_active,
-    };
-    
-    ai_manager.add_style_example(style_example.clone());
-    
-    Ok(style_example)
+    add(request, ai_state.into_inner()).await.into()
 }
 
 #[tauri::command]

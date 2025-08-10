@@ -13,7 +13,7 @@ pub async fn generate_series_consistency_report(
 ) -> Result<CommandResponse<SeriesConsistencyReport>, StoryWeaverError> {
     let pool = get_pool()?;
     
-    match SeriesConsistencyOps::generate_consistency_report(&pool, &series_id).await {
+    match SeriesConsistencyOps::generate_consistency_report(&*pool, &series_id).await {
         Ok(report) => Ok(CommandResponse::success(report)),
         Err(e) => Ok(CommandResponse::error(e.to_string())),
     }
@@ -26,7 +26,7 @@ pub async fn get_series_consistency_status(
 ) -> Result<CommandResponse<(f64, usize)>, StoryWeaverError> {
     let pool = get_pool()?;
     
-    match SeriesConsistencyOps::get_consistency_status(&pool, &series_id).await {
+    match SeriesConsistencyOps::get_consistency_status(&*pool, &series_id).await {
         Ok(status) => Ok(CommandResponse::success(status)),
         Err(e) => Ok(CommandResponse::error(e.to_string())),
     }
@@ -48,7 +48,7 @@ pub async fn get_series_conflicts_by_severity(
         _ => return Ok(CommandResponse::error("Invalid severity level".to_string())),
     };
     
-    match SeriesConsistencyOps::get_conflicts_by_severity(&pool, &series_id, severity_enum).await {
+    match SeriesConsistencyOps::get_conflicts_by_severity(&*pool, &series_id, severity_enum).await {
         Ok(conflicts) => Ok(CommandResponse::success(conflicts)),
         Err(e) => Ok(CommandResponse::error(e.to_string())),
     }
@@ -63,7 +63,7 @@ pub async fn batch_check_series_consistency(
     let mut results = Vec::new();
     
     for series_id in series_ids {
-        match SeriesConsistencyOps::get_consistency_status(&pool, &series_id).await {
+        match SeriesConsistencyOps::get_consistency_status(&*pool, &series_id).await {
             Ok((score, conflict_count)) => {
                 results.push((series_id, score, conflict_count));
             }

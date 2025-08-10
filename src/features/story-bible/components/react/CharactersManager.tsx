@@ -232,7 +232,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
         project_id: projectId,
         character_id: selectedCharacter,
         trait_type: createForm.traitType || 'personality'
-      };
+      });
       
       const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
       if (!selectedCharacterData) return;

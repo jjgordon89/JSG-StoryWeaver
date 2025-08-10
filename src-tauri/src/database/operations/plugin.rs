@@ -81,6 +81,67 @@ pub async fn create_plugin(
     })
 }
 
+/// Create a new plugin from Plugin struct
+pub async fn create_plugin_from_struct(
+    pool: &SqlitePool,
+    plugin: Plugin,
+) -> Result<Plugin, sqlx::Error> {
+    let now = Utc::now();
+
+    let result = sqlx::query!(
+        r#"
+        INSERT INTO plugins (
+            name, description, prompt_template, variables, ai_model, temperature,
+            max_tokens, stop_sequences, category, tags, is_multi_stage, stage_count,
+            creator_id, is_public, version, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#,
+        plugin.name,
+        plugin.description,
+        plugin.prompt_template,
+        plugin.variables,
+        plugin.ai_model,
+        plugin.temperature,
+        plugin.max_tokens,
+        plugin.stop_sequences,
+        plugin.category.to_string(),
+        plugin.tags,
+        plugin.is_multi_stage,
+        plugin.stage_count,
+        plugin.creator_id,
+        plugin.is_public,
+        plugin.version,
+        now,
+        now
+    )
+    .execute(pool)
+    .await?;
+
+    let id = result.last_insert_rowid() as i32;
+
+    Ok(Plugin {
+        id,
+        name: plugin.name,
+        description: plugin.description,
+        prompt_template: plugin.prompt_template,
+        variables: plugin.variables,
+        ai_model: plugin.ai_model,
+        temperature: plugin.temperature,
+        max_tokens: plugin.max_tokens,
+        stop_sequences: plugin.stop_sequences,
+        category: plugin.category,
+        tags: plugin.tags,
+        is_multi_stage: plugin.is_multi_stage,
+        stage_count: plugin.stage_count,
+        creator_id: plugin.creator_id,
+        is_public: plugin.is_public,
+        version: plugin.version,
+        created_at: now,
+        updated_at: now,
+    })
+}
+
 /// Get plugin by ID
 pub async fn get_plugin_by_id(
     pool: &SqlitePool,
@@ -363,7 +424,7 @@ pub async fn record_plugin_execution(
 }
 
 /// Update plugin usage statistics
-async fn update_plugin_usage_stats(
+pub async fn update_plugin_usage_stats(
     pool: &SqlitePool,
     plugin_id: &i32,
     success: bool,
@@ -474,6 +535,27 @@ pub async fn get_plugin_templates(
     };
 
     Ok(templates)
+}
+
+/// Get plugin template by ID
+pub async fn get_plugin_template_by_id(
+    pool: &SqlitePool,
+    template_id: i32,
+) -> Result<Option<PluginTemplate>, sqlx::Error> {
+    let template = sqlx::query_as!(
+        PluginTemplate,
+        r#"
+        SELECT id, name, description, category as "category: PluginCategory",
+               template_code, example_variables, created_at, updated_at
+        FROM plugin_templates
+        WHERE id = ?
+        "#,
+        template_id
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(template)
 }
 
 /// Create plugin template

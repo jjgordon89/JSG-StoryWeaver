@@ -63,7 +63,7 @@ pub async fn apply_character_template(
         let character_id = uuid::Uuid::new_v4().to_string();
         
         let _traits = CharacterTemplateOps::apply_template_to_character(
-            &pool,
+            &*pool,
             &template_id,
             &character_id,
             trait_overrides,

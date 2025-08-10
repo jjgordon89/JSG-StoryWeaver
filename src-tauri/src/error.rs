@@ -94,6 +94,20 @@ pub enum StoryWeaverError {
     #[error("Token limit exceeded: {used} / {limit} tokens")]
     TokenLimitExceeded { used: u32, limit: u32 },
     
+    // AI Generation Errors
+    #[error("AI generation failed: {message}")]
+    AIGenerationError { message: String },
+    
+    #[error("AI generation timeout: {message}")]
+    AIGenerationTimeout { message: String },
+    
+    #[error("AI content filtered: {reason}")]
+    AIContentFiltered { reason: String },
+    
+    // Not Found Errors
+    #[error("Resource not found: {resource_type} - {id}")]
+    NotFound { resource_type: String, id: String },
+    
     // Vector Database Errors
     #[error("Vector database error: {message}")]
     VectorDatabase { message: String },
@@ -337,6 +351,37 @@ impl From<reqwest::Error> for StoryWeaverError {
                 message: err.to_string(),
             }
         }
+    }
+}
+
+// Additional From implementations for common types
+impl From<String> for StoryWeaverError {
+    fn from(err: String) -> Self {
+        Self::Internal { message: err }
+    }
+}
+
+impl From<&str> for StoryWeaverError {
+    fn from(err: &str) -> Self {
+        Self::Internal { message: err.to_string() }
+    }
+}
+
+impl From<i64> for StoryWeaverError {
+    fn from(err: i64) -> Self {
+        Self::Internal { message: err.to_string() }
+    }
+}
+
+impl From<i32> for StoryWeaverError {
+    fn from(err: i32) -> Self {
+        Self::Internal { message: err.to_string() }
+    }
+}
+
+impl From<chrono::NaiveDateTime> for StoryWeaverError {
+    fn from(err: chrono::NaiveDateTime) -> Self {
+        Self::Internal { message: err.to_string() }
     }
 }
 

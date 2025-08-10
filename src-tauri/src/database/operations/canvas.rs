@@ -15,36 +15,40 @@ pub async fn create_canvas(
     canvas_type: CanvasType,
     settings: Option<Value>,
 ) -> Result<Canvas, sqlx::Error> {
-    let id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
-    sqlx::query!(
+    let result = sqlx::query!(
         r#"
         INSERT INTO canvas (
-            id, project_id, name, description, canvas_type, settings,
-            is_active, created_at, updated_at
+            project_id, name, description, canvas_data, template_type, width, height,
+            zoom_level, viewport_x, viewport_y, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
-        id,
         project_id,
         name,
         description,
-        canvas_type.to_string(),
-        settings.map(|s| s.to_string()),
-        true,
+        "[]", // Empty canvas data initially
+        None::<String>, // template_type
+        1920, // width
+        1080, // height
+        1.0, // zoom_level
+        0.0, // viewport_x
+        0.0, // viewport_y
         now,
         now
     )
     .execute(pool)
     .await?;
 
+    let id = result.last_insert_rowid() as i32;
+
     Ok(Canvas {
-        id: 0, // Will be set by database auto-increment
+        id,
         project_id: project_id.to_string(),
         name: name.to_string(),
         description: description.map(|s| s.to_string()),
-        canvas_data: String::new(), // Empty canvas data initially
+        canvas_data: "[]".to_string(), // Empty canvas data initially
         template_type: None,
         width: 1920,
         height: 1080,
@@ -204,10 +208,10 @@ pub async fn get_canvas_elements(
     let results = sqlx::query!(
         r#"
         SELECT id, canvas_id, element_type, position_x, position_y, width, height,
-               content, style, z_index, is_locked, is_visible, created_at, updated_at
+               content, created_at, updated_at
         FROM canvas_elements
-        WHERE canvas_id = ? AND is_visible = 1
-        ORDER BY z_index ASC, created_at ASC
+        WHERE canvas_id = ?
+        ORDER BY order_index ASC, created_at ASC
         "#,
         canvas_id
     )
@@ -220,15 +224,16 @@ pub async fn get_canvas_elements(
             id: row.id,
             canvas_id: row.canvas_id,
             element_type: row.element_type.parse().unwrap_or(CanvasElementType::TextBox),
-            position_x: row.position_x,
-            position_y: row.position_y,
-            width: row.width,
-            height: row.height,
-            content: serde_json::from_str(&row.content).unwrap_or(Value::Null),
-            style: row.style.and_then(|s| serde_json::from_str(&s).ok()),
-            z_index: row.z_index,
-            is_locked: row.is_locked,
-            is_visible: row.is_visible,
+            title: String::new(), // Default title
+            content: row.content.unwrap_or_default(),
+            position_x: row.position_x.unwrap_or(0.0) as f32,
+            position_y: row.position_y.unwrap_or(0.0) as f32,
+            width: row.width.unwrap_or(100.0) as f32,
+            height: row.height.unwrap_or(100.0) as f32,
+            color: "#000000".to_string(), // Default color
+            metadata: "{}".to_string(), // Default metadata
+            connections: "[]".to_string(), // Default connections
+            order_index: 0, // Default order
             created_at: row.created_at,
             updated_at: row.updated_at,
         });
@@ -288,27 +293,6 @@ pub async fn update_canvas_element(
             c.to_string(), now, element_id
         ).execute(pool).await?;
     }
-    
-    if let Some(s) = style {
-        sqlx::query!(
-            "UPDATE canvas_elements SET style = ?, updated_at = ? WHERE id = ?",
-            s.to_string(), now, element_id
-        ).execute(pool).await?;
-    }
-    
-    if let Some(z) = z_index {
-        sqlx::query!(
-            "UPDATE canvas_elements SET z_index = ?, updated_at = ? WHERE id = ?",
-            z, now, element_id
-        ).execute(pool).await?;
-    }
-    
-    if let Some(locked) = is_locked {
-        sqlx::query!(
-            "UPDATE canvas_elements SET is_locked = ?, updated_at = ? WHERE id = ?",
-            locked, now, element_id
-        ).execute(pool).await?;
-    }
 
     Ok(())
 }
@@ -319,8 +303,7 @@ pub async fn delete_canvas_element(
     element_id: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        "UPDATE canvas_elements SET is_visible = 0, updated_at = ? WHERE id = ?",
-        Utc::now(),
+        "DELETE FROM canvas_elements WHERE id = ?",
         element_id
     )
     .execute(pool)
@@ -506,6 +489,34 @@ pub async fn get_canvas_snapshots(
     }
 
     Ok(snapshots)
+}
+
+/// Restore canvas snapshot
+pub async fn restore_canvas_snapshot(
+    pool: &SqlitePool,
+    snapshot_id: i32,
+) -> Result<(), sqlx::Error> {
+    // Get the snapshot data
+    let snapshot = sqlx::query!(
+        "SELECT canvas_id, canvas_data FROM canvas_snapshots WHERE id = ?",
+        snapshot_id
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(snapshot) = snapshot {
+        // Update the canvas with the snapshot data
+        sqlx::query!(
+            "UPDATE canvas SET canvas_data = ?, updated_at = ? WHERE id = ?",
+            snapshot.canvas_data,
+            Utc::now(),
+            snapshot.canvas_id
+        )
+        .execute(pool)
+        .await?;
+    }
+
+    Ok(())
 }
 
 /// Create canvas collaboration session

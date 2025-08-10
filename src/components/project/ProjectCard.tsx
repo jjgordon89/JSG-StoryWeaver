@@ -3,7 +3,7 @@ import React from 'react';
 interface Project {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
 }
 
 interface ProjectCardProps {
@@ -28,7 +28,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project, isSelected = false, 
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-lg font-bold">{project.name}</h3>
-          <p className="text-gray-600 dark:text-gray-400">{project.description}</p>
+          <p className="text-gray-600 dark:text-gray-400">{project.description || 'No description'}</p>
           {isSelected && (
             <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
               Selected

@@ -169,10 +169,10 @@ impl super::SeriesOps {
 /// Series with project count
 #[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
 pub struct SeriesWithCount {
-    pub id: i64,
+    pub id: String,
     pub name: String,
     pub description: Option<String>,
-    pub folder_id: Option<i64>,
+    pub folder_id: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub project_count: i64,
 }

@@ -3,15 +3,16 @@ import ProjectCard from './ProjectCard';
 import ProjectPreview from './ProjectPreview';
 import { invoke } from '../../utils/tauriSafe';
 import { useProjectContext } from '../../contexts/ProjectContext';
+import { useProjectStore } from '../../stores/projectStore';
 
 interface Project {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
 }
 
 interface Document {
-  id: number;
+  id: string;
   title: string;
   document_type: string;
 }
@@ -22,29 +23,15 @@ interface ProjectListProps {
 
 const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const { projects, loadProjects, isLoading } = useProjectStore();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [previewProjectId, setPreviewProjectId] = useState<string | null>(null);
 
   // Fetch projects on component mount
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        // In a real implementation, this would call the Tauri API
-        // For now, using placeholder data
-        setProjects([
-          { id: '1', name: 'My First Novel', description: 'A story about a brave adventurer.' },
-          { id: '2', name: 'Sci-Fi Epic', description: 'A sprawling space opera.' },
-          { id: '3', name: 'Fantasy World', description: 'A world of magic and monsters.' },
-        ]);
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      }
-    };
-
-    fetchProjects();
-  }, []);
+    loadProjects();
+  }, [loadProjects]);
 
   // Fetch documents when a project is selected
   useEffect(() => {
@@ -53,13 +40,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
     const fetchDocuments = async () => {
       setLoading(true);
       try {
-        // In a real implementation, this would call the Tauri API
-        // For now, using placeholder data based on project ID
-        const projectDocs = [
-          { id: 101, title: 'Chapter 1', document_type: 'chapter' },
-          { id: 102, title: 'Chapter 2', document_type: 'chapter' },
-          { id: 103, title: 'Character Notes', document_type: 'notes' },
-        ];
+        const projectDocs = await invoke<Document[]>('get_documents', { projectId: selectedProjectId });
         setDocuments(projectDocs);
       } catch (error) {
         console.error('Error fetching documents:', error);
@@ -75,9 +56,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onDocumentSelect }) => {
     setSelectedProjectId(projectId === selectedProjectId ? null : projectId);
   };
 
-  const handleDocumentClick = (documentId: number) => {
+  const handleDocumentClick = (documentId: string) => {
     if (onDocumentSelect) {
-      onDocumentSelect(documentId);
+      onDocumentSelect(parseInt(documentId));
     }
   };
 

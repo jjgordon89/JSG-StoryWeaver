@@ -42,9 +42,9 @@ pub async fn emit_sync_event(
         // Get the app handle to emit events to all windows
         let app_handle = window.app_handle();
         
-        // Emit the event to all windows
-        app_handle
-            .emit_to(window.label(), &request.event_type, request.payload)
+        // Emit the event to the specific window
+        window
+            .emit(&request.event_type, request.payload)
             .map_err(|e| crate::error::StoryWeaverError::EventEmitError(e.to_string()))?;
         
         Ok(())

@@ -73,6 +73,20 @@ pub enum PluginCategory {
     Research,
     #[sqlx(rename = "formatting")]
     Formatting,
+    #[sqlx(rename = "text_processing")]
+    TextProcessing,
+    #[sqlx(rename = "ai_integration")]
+    AIIntegration,
+    #[sqlx(rename = "export")]
+    Export,
+    #[sqlx(rename = "import")]
+    Import,
+    #[sqlx(rename = "theme")]
+    Theme,
+    #[sqlx(rename = "workflow")]
+    Workflow,
+    #[sqlx(rename = "collaboration")]
+    Collaboration,
     #[sqlx(rename = "other")]
     Other,
 }
@@ -88,6 +102,13 @@ impl std::str::FromStr for PluginCategory {
             "brainstorming" => Ok(PluginCategory::Brainstorming),
             "research" => Ok(PluginCategory::Research),
             "formatting" => Ok(PluginCategory::Formatting),
+            "text_processing" => Ok(PluginCategory::TextProcessing),
+            "ai_integration" => Ok(PluginCategory::AIIntegration),
+            "export" => Ok(PluginCategory::Export),
+            "import" => Ok(PluginCategory::Import),
+            "theme" => Ok(PluginCategory::Theme),
+            "workflow" => Ok(PluginCategory::Workflow),
+            "collaboration" => Ok(PluginCategory::Collaboration),
             "other" => Ok(PluginCategory::Other),
             _ => Err(format!("Invalid plugin category: {}", s)),
         }
@@ -136,6 +157,8 @@ pub struct PluginMarketplaceEntry {
 pub enum PluginVisibility {
     #[sqlx(rename = "published")]
     Published,
+    #[sqlx(rename = "public")]
+    Public,
     #[sqlx(rename = "unlisted")]
     Unlisted,
     #[sqlx(rename = "private")]
@@ -148,6 +171,7 @@ impl std::str::FromStr for PluginVisibility {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "published" => Ok(PluginVisibility::Published),
+            "public" => Ok(PluginVisibility::Public),
             "unlisted" => Ok(PluginVisibility::Unlisted),
             "private" => Ok(PluginVisibility::Private),
             _ => Err(format!("Invalid plugin visibility: {}", s)),

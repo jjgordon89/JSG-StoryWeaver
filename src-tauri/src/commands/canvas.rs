@@ -1,6 +1,7 @@
 //! Tauri commands for canvas and visual story planning features
 
 use crate::database::{get_pool, models::canvas::*, operations::canvas::*};
+use crate::database::models::canvas::{Canvas, CanvasElement, OutlineTemplate, CanvasCollaborationSession, CanvasSnapshot, CanvasExportResult, CanvasOperation, OutlineTemplateType, ExportFormat};
 use crate::error::{Result, StoryWeaverError};
 use serde_json::Value;
 
@@ -11,7 +12,8 @@ pub async fn create_canvas(
     name: String,
     description: Option<String>,
     canvas_type: String,
-    settings: Option<Value>,
+    width: i32,
+    height: i32,
 ) -> Result<Canvas> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
@@ -23,21 +25,10 @@ pub async fn create_canvas(
         "plot_structure" => CanvasType::PlotStructure,
         "mind_map" => CanvasType::MindMap,
         "free_form" => CanvasType::FreeForm,
-        _ => return Err(StoryWeaverError::InvalidInput("Invalid canvas type".to_string())),
+        _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid canvas type".to_string() }),
     };
     
-    let canvas = Canvas {
-        id: String::new(), // Will be set by database
-        project_id,
-        name,
-        description,
-        canvas_type: canvas_type_enum,
-        settings: settings.unwrap_or(Value::Object(serde_json::Map::new())),
-        created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
-    };
-    
-    crate::database::operations::canvas::create_canvas(&pool, canvas)
+    crate::database::operations::canvas::create_canvas(&pool, &project_id, &name, description.as_deref(), canvas_type_enum, None)
         .await
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
@@ -76,7 +67,7 @@ pub async fn update_canvas(
 ) -> Result<()> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    crate::database::operations::canvas::update_canvas(&pool, &canvas_id, name.as_deref(), description, settings.as_ref())
+    crate::database::operations::canvas::update_canvas(&pool, &canvas_id, name.as_deref(), description.as_deref(), settings)
         .await
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
@@ -225,7 +216,7 @@ pub async fn create_outline_template(
         "freytag_pyramid" => OutlineTemplateType::FreytagPyramid,
         "seven_point" => OutlineTemplateType::SevenPoint,
         "custom" => OutlineTemplateType::Custom,
-        _ => return Err(StoryWeaverError::InvalidInput("Invalid outline template type".to_string())),
+        _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid outline template type".to_string() }),
     };
     
     let template_data = serde_json::to_string(&structure).unwrap_or_default();
@@ -240,7 +231,7 @@ pub async fn create_outline_template(
         created_at: chrono::Utc::now(),
     };
     
-    crate::database::operations::canvas::create_outline_template(&pool, template)
+    crate::database::operations::canvas::create_outline_template(&pool, &name, &description, template_type_enum, structure, false, None)
         .await
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
@@ -297,7 +288,7 @@ pub async fn export_canvas(
         "svg" => ExportFormat::SVG,
         "pdf" => ExportFormat::PDF,
         "json" => ExportFormat::JSON,
-        _ => return Err(StoryWeaverError::InvalidInput("Invalid export format".to_string())),
+        _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid export format".to_string() }),
     };
     
     let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
@@ -308,7 +299,7 @@ pub async fn export_canvas(
         include_metadata: true,
     };
 
-    crate::database::operations::canvas::export_canvas_data(&pool, &canvas_id, export_format)
+    crate::database::operations::canvas::export_canvas(&pool, &canvas_id, export_format)
         .await
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
@@ -322,7 +313,7 @@ pub async fn create_canvas_collaboration_session(
 ) -> Result<CanvasCollaborationSession> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    crate::database::operations::canvas::create_canvas_collaboration_session(&pool, canvas_id, max_participants, expires_in_hours)
+    crate::database::operations::canvas::create_canvas_collaboration_session(&pool, &canvas_id, max_participants, expires_in_hours)
         .await
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }

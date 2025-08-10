@@ -259,7 +259,7 @@ pub async fn execute_plugin(
         .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))?;
     
     // Update usage statistics
-    update_plugin_usage_stats(&pool, plugin_id)
+          update_plugin_usage_stats(&*pool, &plugin_id)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update usage stats: {}", e)))?;
     
@@ -457,25 +457,25 @@ pub async fn apply_plugin_template(
     let plugin = Plugin {
         id: 0,
         name,
-        description: template.description.unwrap_or_default(),
-        prompt_template: template.template_code,
+        description: template.description,
+        prompt_template: template.template_data,
         variables: variables.map(|v| v.to_string()),
         ai_model: "gpt-3.5-turbo".to_string(),
-        temperature: Some(0.7),
+        temperature: 0.7,
         max_tokens: Some(1000),
         stop_sequences: None,
         category: template.category,
-        tags: None,
+        tags: "[]".to_string(),
         is_multi_stage: false,
-        stage_count: Some(1),
-        creator_id: "system".to_string(),
+        stage_count: 1,
+        creator_id: Some("system".to_string()),
         is_public: false,
         version: "1.0.0".to_string(),
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };
     
-    create_plugin(&pool, plugin)
+    crate::database::operations::plugin::create_plugin_from_struct(&pool, plugin)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin from template: {}", e)))
 }
@@ -515,7 +515,7 @@ pub async fn create_plugin_template(
         updated_at: chrono::Utc::now(),
     };
     
-    create_plugin_template(&pool, template)
+    create_plugin_template(&pool, &template.name, &template.description, template.category, &template.template_code, template.variables_schema)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin template: {}", e)))
 }
