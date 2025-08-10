@@ -71,7 +71,7 @@ impl super::StreamingSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming session: {}", e)))?;
 
         Ok(row.map(|r| StreamingSession {
-            id: Some(r.id as i32),
+            id: r.id.map(|id| id as i32),
             session_id: r.session_id,
             project_id: r.project_id as i32,
             model_used: r.model_used,
@@ -105,7 +105,7 @@ impl super::StreamingSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming session by session ID: {}", e)))?;
 
         Ok(row.map(|r| StreamingSession {
-            id: Some(r.id as i32),
+            id: r.id.map(|id| id as i32),
             session_id: r.session_id,
             project_id: r.project_id as i32,
             model_used: r.model_used,
@@ -141,7 +141,7 @@ impl super::StreamingSessionOps {
         Ok(rows.into_iter().map(|r| StreamingSession {
             id: r.id.map(|id| id as i32),
             session_id: r.session_id,
-            project_id: r.project_id.parse().unwrap_or(0),
+            project_id: r.project_id as i32,
             model_used: r.model_used,
             prompt: r.prompt,
             status: r.status,
@@ -173,7 +173,7 @@ impl super::StreamingSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming sessions by status: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| StreamingSession {
-             id: Some(r.id as i32),
+             id: r.id.map(|id| id as i32),
             session_id: r.session_id,
             project_id: r.project_id as i32,
             model_used: r.model_used,
@@ -208,7 +208,7 @@ impl super::StreamingSessionOps {
         Ok(rows.into_iter().map(|r| StreamingSession {
             id: r.id.map(|id| id as i32),
             session_id: r.session_id,
-            project_id: r.project_id.parse().unwrap_or(0),
+            project_id: r.project_id as i32,
             model_used: r.model_used,
             prompt: r.prompt,
             status: r.status,
@@ -407,7 +407,7 @@ impl super::StreamingSessionOps {
         Ok(rows.into_iter().map(|r| StreamingSession {
              id: r.id.map(|id| id as i32),
             session_id: r.session_id,
-            project_id: r.project_id.parse().unwrap_or(0),
+            project_id: r.project_id as i32,
             model_used: r.model_used,
             prompt: r.prompt,
             status: r.status,

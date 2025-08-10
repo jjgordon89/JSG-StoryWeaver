@@ -48,6 +48,26 @@
         "--profile",
         "pregnant-reindeer-aYSgUy"
       ]
+    },
+    "github": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "-e",
+        "GITHUB_TOOLSETS",
+        "-e",
+        "GITHUB_READ_ONLY",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "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",
+        "GITHUB_TOOLSETS": "",
+        "GITHUB_READ_ONLY": ""
+      }
     }
   }
 }
