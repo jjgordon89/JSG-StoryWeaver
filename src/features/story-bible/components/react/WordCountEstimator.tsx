@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Input } from '../../../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Button } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
 import { Badge } from '../../../../components/ui/badge';
 import { Progress } from '../../../../components/ui/progress';
 import { Calculator, Target, TrendingUp, Clock, BookOpen, FileText, BarChart3 } from 'lucide-react';

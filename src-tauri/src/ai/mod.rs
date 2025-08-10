@@ -11,6 +11,7 @@ pub mod saliency_engine;
 pub mod visualize;
 pub mod brainstorm;
 pub mod advanced_ai_manager;
+pub mod token_counter;
 
 // Re-export commonly used types
 pub use ai_history::{AIInteraction, AIHistoryManager, AIInteractionBuilder};
@@ -184,6 +185,7 @@ pub use saliency_engine::{SaliencyEngine, SaliencyContext, SelectedElements};
 pub use visualize::{VisualizeEngine, VisualizeRequest, GeneratedImage, ImageResolution};
 pub use brainstorm::{BrainstormEngine, BrainstormSession, BrainstormRequest, BrainstormIdea, BrainstormCategory};
 pub use advanced_ai_manager::{AdvancedAIManager, AdvancedGenerationRequest, AdvancedGenerationResult, StyleExample, CreditUsage};
+pub use token_counter::{TokenCounter, TokenUsage, CostEstimate, TokenCountResult};
 
 pub struct AIProviderManager {
     providers: HashMap<String, Arc<dyn AIProvider>>,

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Input } from '../../../../components/ui/input';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Button } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
 import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../../../components/ui/dialog';
 import { Tree, TreeNode } from '../../../../components/ui/tree';

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Button } from '../../../../components/ui/Button';
+import { Card, CardContent } from '../../../../ui/components/common';
+import { Button } from '../../../../ui/components/common';
 import BraindumpEditor from './BraindumpEditor';
-import StyleExamplesManager from './StyleExamplesManager';
+import StyleExamplesManager from '../StyleExamplesManager';
 import CharactersManager from './CharactersManager';
-import WorldbuildingManager from './WorldbuildingManager';
+import HierarchicalWorldbuilding from './HierarchicalWorldbuilding';
 import OutlineManager from './OutlineManager';
 import ScenesManager from './ScenesManager';
 import { useStoryBible } from '../../hooks/useStoryBible';
@@ -13,7 +13,7 @@ import type { StoryBibleProps } from '../../../../types/storyBible';
 
 export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) => {
   const [activeTab, setActiveTab] = useState<'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes'>('braindump');
-  const { storyBible, isLoading, error, loadStoryBible, clearError } = useStoryBible();
+  const { isLoading, error, loadStoryBible, clearError } = useStoryBible();
 
   useEffect(() => {
     if (projectId) {
@@ -116,7 +116,19 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
           </TabsContent>
           
           <TabsContent value="worldbuilding" className="h-full m-0">
-            <WorldbuildingManager projectId={projectId} seriesId={seriesId} />
+            <HierarchicalWorldbuilding 
+              projectId={projectId}
+              categories={[]}
+              elements={[]}
+              onCreateCategory={async () => {}}
+              onUpdateCategory={async () => {}}
+              onDeleteCategory={async () => {}}
+              onCreateElement={async () => {}}
+              onUpdateElement={async () => {}}
+              onDeleteElement={async () => {}}
+              onMoveElement={async () => {}}
+              onReorderElements={async () => {}}
+            />
           </TabsContent>
           
           <TabsContent value="outline" className="h-full m-0">
@@ -124,7 +136,7 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
           </TabsContent>
           
           <TabsContent value="scenes" className="h-full m-0">
-            <ScenesManager outlineId="" />
+            <ScenesManager projectId={projectId} seriesId={seriesId} />
           </TabsContent>
         </div>
       </Tabs>

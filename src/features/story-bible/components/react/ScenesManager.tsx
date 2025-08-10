@@ -2,16 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { Scene, CreateSceneRequest, UpdateSceneRequest } from '../../../../types/storyBible';
 
-import { Button } from '../../../../components/ui/button';
-import { Input } from '../../../../components/ui/input';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
+import { Button } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../../../components/ui/dialog';
-import { Checkbox } from '../../../../components/ui/checkbox';
+
 import { Label } from '../../../../components/ui/label';
 import { Badge } from '../../../../components/ui/badge';
-import { Loader2, Plus, Search, Eye, Edit, Trash2, Check, Sparkles, Download } from 'lucide-react';
+import { Loader2, Plus, Search, Eye, Edit, Trash2, Check, Download } from 'lucide-react';
 
 interface ScenesManagerProps {
   projectId: string;
@@ -20,44 +20,29 @@ interface ScenesManagerProps {
 
 interface SceneFormData {
   title: string;
-  content: string;
-  scene_type: string;
-  chapter_number: number | null;
+  summary: string;
   scene_number: number | null;
-  character_pov: string;
-  location: string;
-  time_of_day: string;
+  characters: string[];
+  setting: string;
   mood: string;
-  purpose: string;
-  conflict: string;
-  outcome: string;
-  notes: string;
-  word_count_target: number | null;
-  status: 'planned' | 'drafted' | 'revised' | 'final';
-  visibility: 'always' | 'chapter' | 'never';
-  series_shared: boolean;
+  extra_instructions: string;
+  word_count_estimate: number | null;
 }
 
 const initialFormData: SceneFormData = {
   title: '',
-  content: '',
-  scene_type: '',
-  chapter_number: null,
+  summary: '',
   scene_number: null,
-  character_pov: '',
-  location: '',
-  time_of_day: '',
+  characters: [],
+  setting: '',
   mood: '',
-  purpose: '',
-  conflict: '',
-  outcome: '',
-  notes: '',
-  word_count_target: null,
-  status: 'planned',
-  visibility: 'always',
-  series_shared: false
+  extra_instructions: '',
+  word_count_estimate: null
 };
 
+
+
+// Scene type options
 const sceneTypeOptions = [
   { value: '', label: 'Select scene type' },
   { value: 'action', label: 'Action Scene' },
@@ -66,7 +51,6 @@ const sceneTypeOptions = [
   { value: 'flashback', label: 'Flashback' },
   { value: 'transition', label: 'Transition' },
   { value: 'climax', label: 'Climax' },
-  { value: 'resolution', label: 'Resolution' },
   { value: 'character_development', label: 'Character Development' },
   { value: 'world_building', label: 'World Building' },
   { value: 'romance', label: 'Romance' },
@@ -75,29 +59,12 @@ const sceneTypeOptions = [
   { value: 'other', label: 'Other' }
 ];
 
+// Status options
 const statusOptions = [
   { value: 'planned', label: 'Planned' },
   { value: 'drafted', label: 'Drafted' },
   { value: 'revised', label: 'Revised' },
   { value: 'final', label: 'Final' }
-];
-
-const visibilityOptions = [
-  { value: 'always', label: 'Always Visible' },
-  { value: 'chapter', label: 'Chapter Context' },
-  { value: 'never', label: 'Hidden' }
-];
-
-const timeOfDayOptions = [
-  { value: '', label: 'Select time' },
-  { value: 'dawn', label: 'Dawn' },
-  { value: 'morning', label: 'Morning' },
-  { value: 'midday', label: 'Midday' },
-  { value: 'afternoon', label: 'Afternoon' },
-  { value: 'evening', label: 'Evening' },
-  { value: 'night', label: 'Night' },
-  { value: 'midnight', label: 'Midnight' },
-  { value: 'unspecified', label: 'Unspecified' }
 ];
 
 const moodOptions = [
@@ -123,21 +90,7 @@ const availableCharacters = [
   { id: '3', name: 'Supporting Character' }
 ];
 
-const getSceneTypeLabel = (sceneType: string): string => {
-  return sceneTypeOptions.find(opt => opt.value === sceneType)?.label || sceneType;
-};
 
-const getStatusLabel = (status: string): string => {
-  return statusOptions.find(opt => opt.value === status)?.label || status;
-};
-
-const getVisibilityLabel = (visibility: string): string => {
-  return visibilityOptions.find(opt => opt.value === visibility)?.label || visibility;
-};
-
-const getTimeOfDayLabel = (timeOfDay: string): string => {
-  return timeOfDayOptions.find(opt => opt.value === timeOfDay)?.label || timeOfDay;
-};
 
 const getMoodLabel = (mood: string): string => {
   return moodOptions.find(opt => opt.value === mood)?.label || mood;
@@ -147,41 +100,13 @@ const getCharacterName = (characterId: string): string => {
   return availableCharacters.find(char => char.id === characterId)?.name || characterId;
 };
 
-const getSceneIcon = (sceneType: string): string => {
-  const icons: Record<string, string> = {
-    action: '⚔️',
-    dialogue: '💬',
-    exposition: '📖',
-    flashback: '⏪',
-    transition: '🔄',
-    climax: '🎯',
-    resolution: '✅',
-    character_development: '👤',
-    world_building: '🌍',
-    romance: '💕',
-    mystery: '🔍',
-    comedy: '😄',
-    other: '🎬'
-  };
-  return icons[sceneType] || '🎬';
-};
 
-const getStatusColor = (status: string): string => {
-  const colors: Record<string, string> = {
-    planned: '#6c757d',
-    drafted: '#ffc107',
-    revised: '#17a2b8',
-    final: '#28a745'
-  };
-  return colors[status] || '#6c757d';
-};
 
 const formatSceneReference = (scene: Scene): string => {
   const parts = [];
-  if (scene.chapter_number) parts.push(`Ch. ${scene.chapter_number}`);
   if (scene.scene_number) parts.push(`Scene ${scene.scene_number}`);
-  if (scene.character_pov) parts.push(`POV: ${getCharacterName(scene.character_pov)}`);
-  if (scene.location) parts.push(`@ ${scene.location}`);
+  if (scene.characters && Array.isArray(scene.characters) && scene.characters.length > 0) parts.push(`Characters: ${scene.characters.map((id: string) => getCharacterName(id)).join(', ')}`);
+  if (scene.setting) parts.push(`@ ${scene.setting}`);
   return parts.join(' • ');
 };
 
@@ -190,26 +115,24 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
     scenes,
     isLoadingScenes,
     scenesError,
-    sceneFilter,
     createScene,
     updateScene,
     deleteScene,
     validateScene,
     loadScenes,
     searchScenes,
-    setSceneFilter,
     clearError,
     generateScenes
   } = useStoryBible();
 
   // AI generation state
-  const [isGeneratingScenes, setIsGeneratingScenes] = useState(false);
+  const [, setIsGeneratingScenes] = useState(false);
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [editingScene, setEditingScene] = useState<Scene | null>(null);
+  const [, setEditingScene] = useState<Scene | null>(null);
   const [viewingScene, setViewingScene] = useState<Scene | null>(null);
 
   // Form state
@@ -219,11 +142,14 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
     id: ''
   });
 
+  // Filter state
+  const [localSceneFilter, setLocalSceneFilter] = useState<any>({});
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadScenes(projectId, seriesId);
+    loadScenes(projectId);
   }, [projectId, seriesId, loadScenes]);
 
   const openCreateModal = useCallback(() => {
@@ -235,23 +161,14 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
     setEditingScene(scene);
     setEditForm({
       id: scene.id,
-      title: scene.title,
-      content: scene.content,
-      scene_type: scene.scene_type,
-      chapter_number: scene.chapter_number,
+      title: scene.title || '',
+      summary: scene.summary || '',
       scene_number: scene.scene_number,
-      character_pov: scene.character_pov || '',
-      location: scene.location || '',
-      time_of_day: scene.time_of_day || '',
+      characters: typeof scene.characters === 'string' ? scene.characters.split(',').filter(Boolean) : [],
+      setting: scene.setting || '',
       mood: scene.mood || '',
-      purpose: scene.purpose || '',
-      conflict: scene.conflict || '',
-      outcome: scene.outcome || '',
-      notes: scene.notes || '',
-      word_count_target: scene.word_count_target,
-      status: scene.status,
-      visibility: scene.visibility,
-      series_shared: scene.series_shared
+      extra_instructions: scene.extra_instructions || '',
+      word_count_estimate: scene.word_count_estimate || null
     });
     setShowEditModal(true);
   }, []);
@@ -270,30 +187,20 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
   }, []);
 
   const handleCreateScene = useCallback(async () => {
-    if (!createForm.title || !createForm.content || !createForm.scene_type) {
+    if (!createForm.title || !createForm.summary) {
       return;
     }
 
     const request: CreateSceneRequest = {
-      project_id: projectId,
-      series_id: seriesId,
+        outline_id: projectId,
       title: createForm.title,
-      content: createForm.content,
-      scene_type: createForm.scene_type,
-      chapter_number: createForm.chapter_number,
-      scene_number: createForm.scene_number,
-      character_pov: createForm.character_pov || undefined,
-      location: createForm.location || undefined,
-      time_of_day: createForm.time_of_day || undefined,
+      summary: createForm.summary,
+      scene_number: createForm.scene_number ?? 0,
+      characters: createForm.characters.length > 0 ? createForm.characters.join(',') : undefined,
+      setting: createForm.setting || undefined,
       mood: createForm.mood || undefined,
-      purpose: createForm.purpose || undefined,
-      conflict: createForm.conflict || undefined,
-      outcome: createForm.outcome || undefined,
-      notes: createForm.notes || undefined,
-      word_count_target: createForm.word_count_target,
-      status: createForm.status,
-      visibility: createForm.visibility,
-      series_shared: createForm.series_shared
+      extra_instructions: createForm.extra_instructions || undefined,
+      word_count_estimate: createForm.word_count_estimate || undefined
     };
 
     await createScene(request);
@@ -301,29 +208,20 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
   }, [createForm, projectId, seriesId, createScene, closeModals]);
 
   const handleUpdateScene = useCallback(async () => {
-    if (!editForm.id || !editForm.title || !editForm.content || !editForm.scene_type) {
+    if (!editForm.id || !editForm.title || !editForm.summary) {
       return;
     }
 
     const request: UpdateSceneRequest = {
       id: editForm.id,
       title: editForm.title,
-      content: editForm.content,
-      scene_type: editForm.scene_type,
-      chapter_number: editForm.chapter_number,
-      scene_number: editForm.scene_number,
-      character_pov: editForm.character_pov || undefined,
-      location: editForm.location || undefined,
-      time_of_day: editForm.time_of_day || undefined,
+      summary: editForm.summary,
+      scene_number: editForm.scene_number || undefined,
+      characters: editForm.characters.length > 0 ? editForm.characters.join(',') : undefined,
+      setting: editForm.setting || undefined,
       mood: editForm.mood || undefined,
-      purpose: editForm.purpose || undefined,
-      conflict: editForm.conflict || undefined,
-      outcome: editForm.outcome || undefined,
-      notes: editForm.notes || undefined,
-      word_count_target: editForm.word_count_target,
-      status: editForm.status,
-      visibility: editForm.visibility,
-      series_shared: editForm.series_shared
+      extra_instructions: editForm.extra_instructions || undefined,
+      word_count_estimate: editForm.word_count_estimate || undefined
     };
 
     await updateScene(request);
@@ -337,7 +235,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
   }, [deleteScene]);
 
   const handleGenerateScenes = useCallback(async () => {
-    if (!createForm.scene_type || !createForm.title) {
+    if (!createForm.title) {
       return;
     }
 
@@ -345,31 +243,30 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
     try {
       // Build story context from available information
       const storyContext = [
-        createForm.purpose && `Purpose: ${createForm.purpose}`,
-        createForm.location && `Location: ${createForm.location}`,
+        createForm.summary && `Summary: ${createForm.summary}`,
+        createForm.setting && `Setting: ${createForm.setting}`,
         createForm.mood && `Mood: ${createForm.mood}`,
-        createForm.conflict && `Conflict: ${createForm.conflict}`,
-        createForm.outcome && `Outcome: ${createForm.outcome}`
+        createForm.extra_instructions && `Instructions: ${createForm.extra_instructions}`
       ].filter(Boolean).join('. ');
 
       const response = await generateScenes({
         project_id: projectId,
-        scene_type: createForm.scene_type,
+        scene_type: 'scene',
         title: createForm.title,
-        chapter_number: createForm.chapter_number,
-        scene_number: createForm.scene_number,
-        character_pov: createForm.character_pov,
-        location: createForm.location,
+        scene_number: createForm.scene_number ?? undefined,
+        character_pov: createForm.characters.length > 0 ? createForm.characters[0] : undefined,
         mood: createForm.mood,
-        purpose: createForm.purpose,
-        story_context: storyContext || `A ${createForm.scene_type} scene titled "${createForm.title}"`,
-        existing_scenes: scenes.map(scene => scene.title)
+        // summary property not available in GenerateScenesRequest
+        location: createForm.setting,
+        custom_prompt: createForm.extra_instructions,
+        story_context: storyContext || `A scene titled "${createForm.title}"`,
+        existing_scenes: scenes.map(scene => scene.title).filter((title): title is string => title !== undefined)
       });
       
       if (response?.generated_content) {
         setCreateForm(prev => ({
           ...prev,
-          content: response.generated_content
+          extra_instructions: prev.extra_instructions + '\n\nGenerated content: ' + response.generated_content
         }));
       }
     } catch (error) {
@@ -379,45 +276,39 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
     }
   }, [createForm, projectId, generateScenes, scenes]);
 
+  // Suppress unused variable warning
+  void handleGenerateScenes;
+
   const handleValidateScene = useCallback(async (sceneId: string) => {
     await validateScene(sceneId);
   }, [validateScene]);
 
   const handleSearch = useCallback(async () => {
     if (searchQuery.trim()) {
-      await searchScenes(projectId, searchQuery, seriesId);
+      await searchScenes({ outline_id: projectId, query: searchQuery });
     } else {
-      await loadScenes(projectId, seriesId);
+      await loadScenes(projectId);
     }
-  }, [searchQuery, projectId, seriesId, searchScenes, loadScenes]);
+  }, [searchQuery, projectId, searchScenes, loadScenes]);
 
   const handleExportCSV = useCallback(() => {
     if (scenes.length === 0) return;
     
     // Create CSV content
     const headers = [
-      'Title', 'Type', 'Chapter', 'Scene Number', 'Character POV', 
-      'Location', 'Time of Day', 'Mood', 'Status', 'Word Count Target',
-      'Purpose', 'Conflict', 'Outcome', 'Visibility', 'Series Shared', 'Content'
+      'Title', 'Summary', 'Setting', 'Scene Number', 'Character POV', 
+      'Mood', 'Word Count Target', 'Extra Instructions'
     ];
     
     const rows = scenes.map(scene => [
       scene.title,
-      getSceneTypeLabel(scene.scene_type),
-      scene.chapter_number || '',
+      scene.summary || '',
+      scene.setting || '',
       scene.scene_number || '',
-      scene.character_pov ? getCharacterName(scene.character_pov) : '',
-      scene.location || '',
-      getTimeOfDayLabel(scene.time_of_day || ''),
+      scene.characters && Array.isArray(scene.characters) && scene.characters.length > 0 ? scene.characters.map((id: string) => getCharacterName(id)).join(', ') : '',
       getMoodLabel(scene.mood || ''),
-      getStatusLabel(scene.status),
-      scene.word_count_target || '',
-      scene.purpose || '',
-      scene.conflict || '',
-      scene.outcome || '',
-      getVisibilityLabel(scene.visibility),
-      scene.series_shared ? 'Yes' : 'No',
-      scene.content.replace(/"/g, '""') // Escape quotes
+      scene.word_count_estimate || '',
+      scene.extra_instructions ? scene.extra_instructions.replace(/"/g, '""') : '' // Escape quotes
     ]);
     
     const csvContent = [
@@ -438,11 +329,11 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
   }, [scenes]);
 
   const handleFilterChange = useCallback((filterType: string, value: any) => {
-    setSceneFilter({
-      ...sceneFilter,
+    setLocalSceneFilter({
+      ...localSceneFilter,
       [filterType]: value || undefined
     });
-  }, [sceneFilter, setSceneFilter]);
+  }, [localSceneFilter]);
 
   const updateCreateForm = useCallback((field: keyof SceneFormData, value: any) => {
     setCreateForm(prev => ({ ...prev, [field]: value }));
@@ -502,7 +393,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             <div className="space-y-2">
               <Label>Filter by Type:</Label>
               <Select
-                value={sceneFilter.sceneType || ''}
+                value={localSceneFilter.sceneType || ''}
                 onValueChange={(value) => handleFilterChange('sceneType', value)}
               >
                 <SelectTrigger>
@@ -522,7 +413,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             <div className="space-y-2">
               <Label>Filter by Status:</Label>
               <Select
-                value={sceneFilter.status || ''}
+                value={localSceneFilter.status || ''}
                 onValueChange={(value) => handleFilterChange('status', value)}
               >
                 <SelectTrigger>
@@ -542,7 +433,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             <div className="space-y-2">
               <Label>Filter by Character POV:</Label>
               <Select
-                value={sceneFilter.characterPov || ''}
+                value={localSceneFilter.characterPov || ''}
                 onValueChange={(value) => handleFilterChange('characterPov', value)}
               >
                 <SelectTrigger>
@@ -564,7 +455,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
               <Input
                 type="number"
                 placeholder="Chapter #"
-                value={sceneFilter.chapterNumber || ''}
+                value={localSceneFilter.chapterNumber || ''}
                 onChange={(e) => handleFilterChange('chapterNumber', e.target.value ? parseInt(e.target.value) : undefined)}
               />
             </div>
@@ -608,7 +499,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <div className="flex items-start gap-3 mb-3">
-                          <span className="text-2xl">{getSceneIcon(scene.scene_type)}</span>
+                          <span className="text-2xl">🎬</span>
                           <div className="flex-1">
                             <h4 className="text-lg font-semibold mb-1">{scene.title}</h4>
                             {formatSceneReference(scene) && (
@@ -619,24 +510,11 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge variant="secondary">{getSceneTypeLabel(scene.scene_type)}</Badge>
-                          <Badge 
-                            style={{ 
-                              backgroundColor: `${getStatusColor(scene.status)}20`, 
-                              color: getStatusColor(scene.status),
-                              border: `1px solid ${getStatusColor(scene.status)}40`
-                            }}
-                          >
-                            {getStatusLabel(scene.status)}
-                          </Badge>
                           {scene.mood && (
                             <Badge variant="outline">{getMoodLabel(scene.mood)}</Badge>
                           )}
-                          {scene.time_of_day && (
-                            <Badge variant="outline">{getTimeOfDayLabel(scene.time_of_day)}</Badge>
-                          )}
-                          {scene.series_shared && (
-                            <Badge>Series Shared</Badge>
+                          {scene.word_count_estimate && (
+                            <Badge variant="secondary">{scene.word_count_estimate} words</Badge>
                           )}
                         </div>
                       </div>
@@ -646,7 +524,6 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleValidateScene(scene.id)}
-                          title="Validate Scene"
                         >
                           <Check className="w-4 h-4" />
                         </Button>
@@ -654,7 +531,6 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                           variant="ghost" 
                           size="sm"
                           onClick={() => openDetailModal(scene)}
-                          title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -662,7 +538,6 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                           variant="ghost" 
                           size="sm"
                           onClick={() => openEditModal(scene)}
-                          title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -670,7 +545,6 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleDeleteScene(scene.id)}
-                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -679,27 +553,21 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                     
                     <div className="space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        {scene.content.substring(0, 200)}{scene.content.length > 200 ? '...' : ''}
+                        {scene.summary ? scene.summary.substring(0, 200) + (scene.summary.length > 200 ? '...' : '') : 'No summary available'}
                       </p>
                       
-                      {(scene.purpose || scene.conflict || scene.outcome) && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          {scene.purpose && (
+                      {(scene.summary || scene.setting) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          {scene.summary && (
                             <div>
-                              <strong className="text-foreground">Purpose:</strong>
-                              <p className="text-muted-foreground">{scene.purpose}</p>
+                              <strong className="text-foreground">Summary:</strong>
+                              <p className="text-muted-foreground">{scene.summary}</p>
                             </div>
                           )}
-                          {scene.conflict && (
+                          {scene.setting && (
                             <div>
-                              <strong className="text-foreground">Conflict:</strong>
-                              <p className="text-muted-foreground">{scene.conflict}</p>
-                            </div>
-                          )}
-                          {scene.outcome && (
-                            <div>
-                              <strong className="text-foreground">Outcome:</strong>
-                              <p className="text-muted-foreground">{scene.outcome}</p>
+                              <strong className="text-foreground">Setting:</strong>
+                              <p className="text-muted-foreground">{scene.setting}</p>
                             </div>
                           )}
                         </div>
@@ -708,8 +576,8 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                     
                     <div className="flex justify-between items-center mt-4 pt-4 border-t text-sm text-muted-foreground">
                       <div className="flex gap-4">
-                        {scene.word_count_target && (
-                          <span>Target: {scene.word_count_target} words</span>
+                        {scene.word_count_estimate && (
+          <span>Target: {scene.word_count_estimate} words</span>
                         )}
                       </div>
                       <span>Updated {new Date(scene.updated_at).toLocaleDateString()}</span>
@@ -740,55 +608,25 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="create-scene-type">Scene Type:</Label>
-                <Select
-                  value={createForm.scene_type}
-                  onValueChange={(value) => updateCreateForm('scene_type', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select scene type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sceneTypeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value} disabled={!option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="create-status">Status:</Label>
-                <Select
-                  value={createForm.status}
-                  onValueChange={(value) => updateCreateForm('status', value as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-summary">Summary:</Label>
+              <Textarea
+                id="create-summary"
+                value={createForm.summary}
+                onChange={(e) => updateCreateForm('summary', e.target.value)}
+                placeholder="Brief summary of what happens in this scene..."
+                rows={3}
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="create-chapter">Chapter Number:</Label>
+                <Label htmlFor="create-setting">Setting:</Label>
                 <Input
-                  id="create-chapter"
-                  type="number"
-                  value={createForm.chapter_number || ''}
-                  onChange={(e) => updateCreateForm('chapter_number', e.target.value ? parseInt(e.target.value) : null)}
-                  placeholder="Chapter #"
+                  id="create-setting"
+                  value={createForm.setting}
+                  onChange={(e) => updateCreateForm('setting', e.target.value)}
+                  placeholder="Where does this scene take place?"
                 />
               </div>
               
@@ -808,8 +646,8 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                 <Input
                   id="create-word-target"
                   type="number"
-                  value={createForm.word_count_target || ''}
-                  onChange={(e) => updateCreateForm('word_count_target', e.target.value ? parseInt(e.target.value) : null)}
+                  value={createForm.word_count_estimate || ''}
+          onChange={(e) => updateCreateForm('word_count_estimate', e.target.value ? parseInt(e.target.value) : null)}
                   placeholder="Target words"
                 />
               </div>
@@ -817,50 +655,19 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="create-character-pov">Character POV:</Label>
+                <Label htmlFor="create-characters">Characters:</Label>
                 <Select
-                  value={createForm.character_pov}
-                  onValueChange={(value) => updateCreateForm('character_pov', value)}
+                  value={createForm.characters.length > 0 ? createForm.characters[0] : ""}
+                  onValueChange={(value) => updateCreateForm('characters', value ? [value] : [])}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="No specific POV" />
+                    <SelectValue placeholder="No characters selected" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No specific POV</SelectItem>
+                    <SelectItem value="">No characters selected</SelectItem>
                     {availableCharacters.map(char => (
                       <SelectItem key={char.id} value={char.id}>
                         {char.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="create-location">Location:</Label>
-                <Input
-                  id="create-location"
-                  value={createForm.location}
-                  onChange={(e) => updateCreateForm('location', e.target.value)}
-                  placeholder="Scene location..."
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="create-time">Time of Day:</Label>
-                <Select
-                  value={createForm.time_of_day}
-                  onValueChange={(value) => updateCreateForm('time_of_day', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeOfDayOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -888,110 +695,14 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="create-purpose">Scene Purpose:</Label>
-              <Input
-                id="create-purpose"
-                value={createForm.purpose}
-                onChange={(e) => updateCreateForm('purpose', e.target.value)}
-                placeholder="What does this scene accomplish?"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-conflict">Conflict:</Label>
-              <Input
-                id="create-conflict"
-                value={createForm.conflict}
-                onChange={(e) => updateCreateForm('conflict', e.target.value)}
-                placeholder="What conflict drives this scene?"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-outcome">Outcome:</Label>
-              <Input
-                id="create-outcome"
-                value={createForm.outcome}
-                onChange={(e) => updateCreateForm('outcome', e.target.value)}
-                placeholder="How does the scene end?"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-content">Scene Content:</Label>
+              <Label htmlFor="create-extra-instructions">Extra Instructions:</Label>
               <Textarea
-                id="create-content"
-                value={createForm.content}
-                onChange={(e) => updateCreateForm('content', e.target.value)}
-                placeholder="Write your scene content or detailed breakdown..."
+                id="create-extra-instructions"
+                value={createForm.extra_instructions}
+                onChange={(e) => updateCreateForm('extra_instructions', e.target.value)}
+                placeholder="Additional notes, instructions, or details for this scene..."
                 rows={6}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateScenes}
-                disabled={!createForm.scene_type || !createForm.title || isGeneratingScenes}
-                className="w-full"
-              >
-                {isGeneratingScenes ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Scene Content...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Scene Content with AI
-                  </>
-                )}
-              </Button>
-              {(!createForm.scene_type || !createForm.title) && (
-                <p className="text-sm text-muted-foreground">
-                  Enter a title and select a scene type to enable AI generation
-                </p>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="create-notes">Notes:</Label>
-              <Textarea
-                id="create-notes"
-                value={createForm.notes}
-                onChange={(e) => updateCreateForm('notes', e.target.value)}
-                placeholder="Additional notes or reminders..."
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="create-visibility">Visibility:</Label>
-                <Select
-                  value={createForm.visibility}
-                  onValueChange={(value) => updateCreateForm('visibility', value as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {visibilityOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center space-x-2 pt-6">
-                <Checkbox
-                  id="create-series-shared"
-                  checked={createForm.series_shared}
-                  onCheckedChange={(checked) => updateCreateForm('series_shared', checked)}
-                />
-                <Label htmlFor="create-series-shared">Share across series</Label>
-              </div>
             </div>
           </div>
           
@@ -1001,7 +712,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             </Button>
             <Button 
               onClick={handleCreateScene}
-              disabled={!createForm.title || !createForm.scene_type || !createForm.content}
+              disabled={!createForm.title}
             >
               Add Scene
             </Button>
@@ -1027,55 +738,25 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-scene-type">Scene Type:</Label>
-                <Select
-                  value={editForm.scene_type}
-                  onValueChange={(value) => updateEditForm('scene_type', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select scene type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sceneTypeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value} disabled={!option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status:</Label>
-                <Select
-                  value={editForm.status}
-                  onValueChange={(value) => updateEditForm('status', value as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-summary">Summary:</Label>
+              <Textarea
+                id="edit-summary"
+                value={editForm.summary}
+                onChange={(e) => updateEditForm('summary', e.target.value)}
+                placeholder="Brief summary of the scene..."
+                rows={3}
+              />
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-chapter">Chapter Number:</Label>
+                <Label htmlFor="edit-setting">Setting:</Label>
                 <Input
-                  id="edit-chapter"
-                  type="number"
-                  value={editForm.chapter_number || ''}
-                  onChange={(e) => updateEditForm('chapter_number', e.target.value ? parseInt(e.target.value) : null)}
-                  placeholder="Chapter #"
+                  id="edit-setting"
+                  value={editForm.setting}
+                  onChange={(e) => updateEditForm('setting', e.target.value)}
+                  placeholder="Scene setting/location"
                 />
               </div>
               
@@ -1095,166 +776,64 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                 <Input
                   id="edit-word-target"
                   type="number"
-                  value={editForm.word_count_target || ''}
-                  onChange={(e) => updateEditForm('word_count_target', e.target.value ? parseInt(e.target.value) : null)}
+                  value={editForm.word_count_estimate || ''}
+                  onChange={(e) => updateEditForm('word_count_estimate', e.target.value ? parseInt(e.target.value) : null)}
                   placeholder="Target words"
                 />
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-character-pov">Character POV:</Label>
-                <Select
-                  value={editForm.character_pov}
-                  onValueChange={(value) => updateEditForm('character_pov', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="No specific POV" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No specific POV</SelectItem>
-                    {availableCharacters.map(char => (
-                      <SelectItem key={char.id} value={char.id}>
-                        {char.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-location">Location:</Label>
-                <Input
-                  id="edit-location"
-                  value={editForm.location}
-                  onChange={(e) => updateEditForm('location', e.target.value)}
-                  placeholder="Scene location..."
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-time">Time of Day:</Label>
-                <Select
-                  value={editForm.time_of_day}
-                  onValueChange={(value) => updateEditForm('time_of_day', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeOfDayOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-mood">Mood:</Label>
-                <Select
-                  value={editForm.mood}
-                  onValueChange={(value) => updateEditForm('mood', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select mood" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {moodOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-characters">Characters:</Label>
+              <Select
+                value={editForm.characters.length > 0 ? editForm.characters[0] : ""}
+                onValueChange={(value) => updateEditForm('characters', value ? [value] : [])}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No characters selected" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No characters selected</SelectItem>
+                  {availableCharacters.map(char => (
+                    <SelectItem key={char.id} value={char.id}>
+                      {char.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="edit-purpose">Scene Purpose:</Label>
-              <Input
-                id="edit-purpose"
-                value={editForm.purpose}
-                onChange={(e) => updateEditForm('purpose', e.target.value)}
-                placeholder="What does this scene accomplish?"
-              />
+              <Label htmlFor="edit-mood">Mood:</Label>
+              <Select
+                value={editForm.mood}
+                onValueChange={(value) => updateEditForm('mood', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select mood" />
+                </SelectTrigger>
+                <SelectContent>
+                  {moodOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="edit-conflict">Conflict:</Label>
-              <Input
-                id="edit-conflict"
-                value={editForm.conflict}
-                onChange={(e) => updateEditForm('conflict', e.target.value)}
-                placeholder="What conflict drives this scene?"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit-outcome">Outcome:</Label>
-              <Input
-                id="edit-outcome"
-                value={editForm.outcome}
-                onChange={(e) => updateEditForm('outcome', e.target.value)}
-                placeholder="How does the scene end?"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="edit-content">Scene Content:</Label>
+              <Label htmlFor="edit-extra-instructions">Extra Instructions:</Label>
               <Textarea
-                id="edit-content"
-                value={editForm.content}
-                onChange={(e) => updateEditForm('content', e.target.value)}
-                placeholder="Write your scene content or detailed breakdown..."
+                id="edit-extra-instructions"
+                value={editForm.extra_instructions}
+                onChange={(e) => updateEditForm('extra_instructions', e.target.value)}
+                placeholder="Additional notes, instructions, or details for this scene..."
                 rows={6}
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes:</Label>
-              <Textarea
-                id="edit-notes"
-                value={editForm.notes}
-                onChange={(e) => updateEditForm('notes', e.target.value)}
-                placeholder="Additional notes or reminders..."
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-visibility">Visibility:</Label>
-                <Select
-                  value={editForm.visibility}
-                  onValueChange={(value) => updateEditForm('visibility', value as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {visibilityOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center space-x-2 pt-6">
-                <Checkbox
-                  id="edit-series-shared"
-                  checked={editForm.series_shared}
-                  onCheckedChange={(checked) => updateEditForm('series_shared', checked)}
-                />
-                <Label htmlFor="edit-series-shared">Share across series</Label>
-              </div>
-            </div>
+
           </div>
           
           <DialogFooter>
@@ -1263,7 +842,7 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             </Button>
             <Button 
               onClick={handleUpdateScene}
-              disabled={!editForm.title || !editForm.scene_type || !editForm.content}
+              disabled={!editForm.title}
             >
               Save Changes
             </Button>
@@ -1282,11 +861,10 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
             <div className="space-y-6">
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-3">
-                  <span className="text-3xl">{getSceneIcon(viewingScene.scene_type)}</span>
+                  <span className="text-3xl">🎬</span>
                   <div>
                     <h3 className="text-xl font-semibold">{viewingScene.title}</h3>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      <Badge variant="secondary">{getSceneTypeLabel(viewingScene.scene_type)}</Badge>
                       {formatSceneReference(viewingScene) && (
                         <Badge variant="outline">{formatSceneReference(viewingScene)}</Badge>
                       )}
@@ -1295,91 +873,44 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  <Badge 
-                    style={{ 
-                      backgroundColor: `${getStatusColor(viewingScene.status)}20`, 
-                      color: getStatusColor(viewingScene.status),
-                      border: `1px solid ${getStatusColor(viewingScene.status)}40`
-                    }}
-                  >
-                    {getStatusLabel(viewingScene.status)}
-                  </Badge>
                   {viewingScene.mood && (
                     <Badge variant="outline">{getMoodLabel(viewingScene.mood)}</Badge>
                   )}
-                  {viewingScene.series_shared && (
-                    <Badge>Series Shared</Badge>
-                  )}
                 </div>
               </div>
               
-              {(viewingScene.purpose || viewingScene.conflict || viewingScene.outcome) && (
+              {viewingScene.extra_instructions && (
                 <div>
-                  <h4 className="text-lg font-semibold mb-3">Scene Structure</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {viewingScene.purpose && (
-                      <div>
-                        <strong className="text-foreground">Purpose:</strong>
-                        <p className="text-muted-foreground mt-1">{viewingScene.purpose}</p>
-                      </div>
-                    )}
-                    {viewingScene.conflict && (
-                      <div>
-                        <strong className="text-foreground">Conflict:</strong>
-                        <p className="text-muted-foreground mt-1">{viewingScene.conflict}</p>
-                      </div>
-                    )}
-                    {viewingScene.outcome && (
-                      <div>
-                        <strong className="text-foreground">Outcome:</strong>
-                        <p className="text-muted-foreground mt-1">{viewingScene.outcome}</p>
-                      </div>
-                    )}
+                  <h4 className="text-lg font-semibold mb-3">Extra Instructions</h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <p className="text-muted-foreground">{viewingScene.extra_instructions}</p>
+                    </div>
                   </div>
                 </div>
               )}
               
-              <div>
-                <h4 className="text-lg font-semibold mb-3">Scene Content</h4>
-                <div className="p-4 bg-muted rounded-lg">
-                  <p className="whitespace-pre-wrap">{viewingScene.content}</p>
-                </div>
-              </div>
-              
-              {viewingScene.notes && (
-                <div>
-                  <h4 className="text-lg font-semibold mb-3">Notes</h4>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="whitespace-pre-wrap">{viewingScene.notes}</p>
-                  </div>
-                </div>
-              )}
+
               
               <div>
                 <h4 className="text-lg font-semibold mb-3">Scene Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  {viewingScene.location && (
+                  {viewingScene.setting && (
                     <div>
-                      <strong className="text-foreground">Location:</strong>
-                      <span className="ml-2 text-muted-foreground">{viewingScene.location}</span>
+                      <strong className="text-foreground">Setting:</strong>
+                      <span className="ml-2 text-muted-foreground">{viewingScene.setting}</span>
                     </div>
                   )}
-                  {viewingScene.time_of_day && (
+                  {viewingScene.characters && (
                     <div>
-                      <strong className="text-foreground">Time:</strong>
-                      <span className="ml-2 text-muted-foreground">{getTimeOfDayLabel(viewingScene.time_of_day)}</span>
+                      <strong className="text-foreground">Characters:</strong>
+                      <span className="ml-2 text-muted-foreground">{viewingScene.characters}</span>
                     </div>
                   )}
-                  {viewingScene.character_pov && (
-                    <div>
-                      <strong className="text-foreground">POV Character:</strong>
-                      <span className="ml-2 text-muted-foreground">{getCharacterName(viewingScene.character_pov)}</span>
-                    </div>
-                  )}
-                  {viewingScene.word_count_target && (
+                  {viewingScene.word_count_estimate && (
                     <div>
                       <strong className="text-foreground">Target Word Count:</strong>
-                      <span className="ml-2 text-muted-foreground">{viewingScene.word_count_target}</span>
+                      <span className="ml-2 text-muted-foreground">{viewingScene.word_count_estimate}</span>
                     </div>
                   )}
                   <div>

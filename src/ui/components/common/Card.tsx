@@ -51,6 +51,14 @@ export const CardTitle: React.FC<CardProps> = ({ className = '', children }) => 
   );
 };
 
+export const CardDescription: React.FC<CardProps> = ({ className = '', children }) => {
+  return (
+    <p className={`text-sm text-muted-foreground ${className}`}>
+      {children}
+    </p>
+  );
+};
+
 export const CardFooter: React.FC<CardProps> = ({ className = '', children }) => {
   return (
     <div className={`px-4 py-3 border-t border-slate-200 dark:border-slate-700 ${className}`}>
@@ -58,3 +66,5 @@ export const CardFooter: React.FC<CardProps> = ({ className = '', children }) =>
     </div>
   );
 };
+
+export default Card;

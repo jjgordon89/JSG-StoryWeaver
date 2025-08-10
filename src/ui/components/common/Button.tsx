@@ -6,7 +6,7 @@ interface ButtonProps {
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
   disabled?: boolean;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent<HTMLButtonElement>) => void;
   type?: 'button' | 'submit' | 'reset';
   'aria-label'?: string;
 }
@@ -51,3 +51,5 @@ export const Button: React.FC<ButtonProps> = ({
     </button>
   );
 };
+
+export default Button;

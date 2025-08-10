@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Input } from '../../../../components/ui/input';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import React, { useState } from 'react';
+import { Button } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
 import { Badge } from '../../../../components/ui/badge';
 import { Checkbox } from '../../../../components/ui/checkbox';
 import { Share2, Users, Globe, Link, Unlink, Eye, EyeOff, Copy, Check, AlertCircle } from 'lucide-react';
@@ -309,7 +309,7 @@ const SeriesSharing: React.FC<SeriesSharingProps> = ({
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
-                          variant={character.series_shared ? 'destructive' : 'default'}
+                          variant={character.series_shared ? 'secondary' : 'default'}
                           size="sm"
                           onClick={() => handleShareToggle(character.id, 'character', character.series_shared)}
                           disabled={!currentProject.series_id}
@@ -365,7 +365,7 @@ const SeriesSharing: React.FC<SeriesSharingProps> = ({
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
-                          variant={element.series_shared ? 'destructive' : 'default'}
+                          variant={element.series_shared ? 'secondary' : 'default'}
                           size="sm"
                           onClick={() => handleShareToggle(element.id, 'worldbuilding', element.series_shared)}
                           disabled={!currentProject.series_id}

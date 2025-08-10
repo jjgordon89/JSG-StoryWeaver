@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { TextArea } from '../ui/TextArea';
+import { Textarea } from '../ui/textarea';
 import { Input } from '../ui/input';
 
 interface Template {
@@ -79,7 +79,7 @@ const TemplateApplicationDialog: React.FC<TemplateApplicationDialogProps> = ({
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Customize Content
           </h4>
-          <TextArea
+          <Textarea
             value={customizedContent}
             onChange={setCustomizedContent}
             placeholder="Customize the template content..."

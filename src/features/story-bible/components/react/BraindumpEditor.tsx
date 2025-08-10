@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { TextArea } from '../../../../components/ui/TextArea';
-import { Input } from '../../../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
+import { Button } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { CreateStoryBibleRequest, GenerateSynopsisRequest } from '../../../../types/storyBible';
 import './BraindumpEditor.css';
@@ -424,7 +424,7 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
               <div className="field-group">
                 <label htmlFor="style">Style Description</label>
                 {isEditing ? (
-                  <TextArea
+                  <Textarea
                     id="style"
                     value={formData.style}
                     onChange={(value) => updateFormData('style', value)}
@@ -446,7 +446,7 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
               <div className="field-group">
                 <label htmlFor="style-examples">Style Examples</label>
                 {isEditing ? (
-                  <TextArea
+                  <Textarea
                     id="style-examples"
                     value={formData.style_examples}
                     onChange={(value) => updateFormData('style_examples', value)}
@@ -603,7 +603,7 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
           </CardHeader>
           <CardContent>
             {isEditing ? (
-              <TextArea
+              <Textarea
                 value={formData.braindump}
                 onChange={(value) => updateFormData('braindump', value)}
                 placeholder="Let your creativity flow! Jot down ideas, plot points, character thoughts, world-building details, or anything else related to your story..."

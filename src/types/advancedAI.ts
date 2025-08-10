@@ -306,6 +306,44 @@ export interface VisualMoment {
 }
 
 // Advanced AI Store State
+export interface AdvancedAISettings {
+  general: {
+    ultraCreativeMode: boolean;
+    autoEnhancePrompts: boolean;
+    clicheDetectionEnabled: boolean;
+    saliencyEnabled: boolean;
+    defaultProseMode: string;
+    autoSave: boolean;
+    showAdvancedOptions: boolean;
+    enableStreaming: boolean;
+  };
+  generation: {
+    defaultContextLength: number;
+    defaultOutputLength: number;
+    creativityLevel: number;
+    maxWords: number;
+    creativityBoost: number;
+    styleConsistency: number;
+    clicheAvoidance: number;
+  };
+  saliencyEngine: {
+    enabled: boolean;
+    autoBuild: boolean;
+    refreshInterval: number;
+    includedElements: string[];
+  };
+  imageGeneration: {
+    qualityLevel: string;
+    enablePromptEnhancement: boolean;
+    useStoryContext: boolean;
+    autoSaveImages: boolean;
+  };
+  brainstorming: {
+    defaultSessionDuration: number;
+    ideasPerGeneration: number;
+  };
+}
+
 export interface AdvancedAIState {
   // Prose Modes
   availableProseModes: ProseMode[];
@@ -336,6 +374,7 @@ export interface AdvancedAIState {
   lastSaliencyContext?: SaliencyContext;
   
   // Settings
+  settings: AdvancedAISettings;
   ultraCreativeMode: boolean;
   autoEnhancePrompts: boolean;
   clicheDetectionEnabled: boolean;

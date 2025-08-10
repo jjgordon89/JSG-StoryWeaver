@@ -132,6 +132,9 @@ pub enum StoryWeaverError {
     WasmRuntime { message: String },
     
     // Security Errors
+    #[error("Authentication failed: {message}")]
+    Authentication { message: String },
+    
     #[error("Keychain access failed: {message}")]
     KeychainAccess { message: String },
     
@@ -270,6 +273,13 @@ impl StoryWeaverError {
     /// Create a parse error
     pub fn parse_error<S: Into<String>>(message: S) -> Self {
         Self::ParseError {
+            message: message.into(),
+        }
+    }
+    
+    /// Create an authentication error
+    pub fn authentication<S: Into<String>>(message: S) -> Self {
+        Self::Authentication {
             message: message.into(),
         }
     }

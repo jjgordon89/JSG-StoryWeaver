@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Input } from '../../../../components/ui/input';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Button } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
 import { Upload, Download, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 interface CSVImportDialogProps {

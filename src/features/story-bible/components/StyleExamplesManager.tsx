@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
-import Button from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/input';
-import { Card } from '../../../components/ui/Card';
-import Modal from '../../../components/ui/Modal';
+import { Button } from '../../../ui/components/common';
+import { Input } from '../../../ui/components/common';
+import { Card } from '../../../ui/components/common';
+import { Modal } from '../../../ui/components/common';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { showToast } from '../../../utils/toast';
 

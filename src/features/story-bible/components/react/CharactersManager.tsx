@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../components/ui/select';
+import { Button } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
 import { Sparkles, Loader2, Download, Users, Plus, Trash2, Network, Upload } from 'lucide-react';
 import type { CharacterTrait, CharactersManagerProps } from '../../../../types/storyBible';
 import useStoryBible from '../../hooks/useStoryBible';

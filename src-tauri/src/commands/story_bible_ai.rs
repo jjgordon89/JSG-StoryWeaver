@@ -2,13 +2,17 @@
 
 use crate::commands::CommandResponse;
 use crate::error::{Result};
-use crate::ai::{AIProviderManager, AIContext, WritingFeature, AIProvider};
+use crate::ai::{AIProviderManager, AIContext, WritingFeature, AIProvider, TokenCounter};
 use crate::database::{get_pool};
 use crate::database::operations::{StoryBibleOps, CharacterTraitOps, StyleExampleOps, OutlineOps};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::collections::HashMap;
 use std::sync::Arc;
+use once_cell::sync::Lazy;
+
+// Global token counter instance
+static TOKEN_COUNTER: Lazy<TokenCounter> = Lazy::new(|| TokenCounter::new());
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateSynopsisRequest {
@@ -120,10 +124,22 @@ pub async fn generate_synopsis(
         // Generate synopsis
         let result = ai_manager.generate_text(&request.braindump, &context).await?;
         
+        // Count tokens and estimate cost
+        let input_tokens = TOKEN_COUNTER.count_tokens(&request.braindump);
+        let output_tokens = TOKEN_COUNTER.count_tokens(&result);
+        let total_tokens = input_tokens + output_tokens;
+        
+        let cost_estimate = TOKEN_COUNTER.estimate_cost(
+            &ai_manager.get_provider_name(),
+            &ai_manager.get_model_name(),
+            input_tokens,
+            output_tokens,
+        );
+        
         Ok(AIGenerationResponse {
             generated_content: result,
-            tokens_used: 0, // TODO: Implement token counting
-            cost_estimate: 0.0, // TODO: Implement cost estimation
+            tokens_used: total_tokens,
+            cost_estimate,
             provider: ai_manager.get_provider_name().to_string(),
             model: ai_manager.get_model_name().to_string(),
         })
@@ -232,10 +248,22 @@ pub async fn generate_world_element(
         let prompt = format!("Generate {}: {}", request.element_type, request.name);
         let result = ai_manager.generate_text(&prompt, &context).await?;
         
+        // Count tokens and estimate cost
+        let input_tokens = TOKEN_COUNTER.count_tokens(&prompt);
+        let output_tokens = TOKEN_COUNTER.count_tokens(&result);
+        let total_tokens = input_tokens + output_tokens;
+        
+        let cost_estimate = TOKEN_COUNTER.estimate_cost(
+            &ai_manager.get_provider_name(),
+            &ai_manager.get_model_name(),
+            input_tokens,
+            output_tokens,
+        );
+        
         Ok(AIGenerationResponse {
             generated_content: result,
-            tokens_used: 0, // TODO: Implement token counting
-            cost_estimate: 0.0, // TODO: Implement cost estimation
+            tokens_used: total_tokens,
+            cost_estimate,
             provider: ai_manager.get_provider_name().to_string(),
             model: ai_manager.get_model_name().to_string(),
         })
@@ -284,10 +312,22 @@ pub async fn generate_outline_from_story_bible(
         let prompt = custom_prompt.unwrap_or_else(|| "Generate a detailed story outline".to_string());
         let result = ai_manager.generate_text(&prompt, &context).await?;
         
+        // Count tokens and estimate cost
+        let input_tokens = TOKEN_COUNTER.count_tokens(&prompt);
+        let output_tokens = TOKEN_COUNTER.count_tokens(&result);
+        let total_tokens = input_tokens + output_tokens;
+        
+        let cost_estimate = TOKEN_COUNTER.estimate_cost(
+            &ai_manager.get_provider_name(),
+            &ai_manager.get_model_name(),
+            input_tokens,
+            output_tokens,
+        );
+        
         Ok(AIGenerationResponse {
             generated_content: result,
-            tokens_used: 0, // TODO: Implement token counting
-            cost_estimate: 0.0, // TODO: Implement cost estimation
+            tokens_used: total_tokens,
+            cost_estimate,
             provider: ai_manager.get_provider_name().to_string(),
             model: ai_manager.get_model_name().to_string(),
         })
@@ -346,10 +386,22 @@ pub async fn generate_scene_content(
         let prompt = custom_prompt.unwrap_or_else(|| format!("Generate scene content for: {}", scene_title));
         let result = ai_manager.generate_text(&prompt, &context).await?;
         
+        // Count tokens and estimate cost
+        let input_tokens = TOKEN_COUNTER.count_tokens(&prompt);
+        let output_tokens = TOKEN_COUNTER.count_tokens(&result);
+        let total_tokens = input_tokens + output_tokens;
+        
+        let cost_estimate = TOKEN_COUNTER.estimate_cost(
+            &ai_manager.get_provider_name(),
+            &ai_manager.get_model_name(),
+            input_tokens,
+            output_tokens,
+        );
+        
         Ok(AIGenerationResponse {
             generated_content: result,
-            tokens_used: 0, // TODO: Implement token counting
-            cost_estimate: 0.0, // TODO: Implement cost estimation
+            tokens_used: total_tokens,
+            cost_estimate,
             provider: ai_manager.get_provider_name().to_string(),
             model: ai_manager.get_model_name().to_string(),
         })
@@ -396,11 +448,23 @@ pub async fn analyze_style_example(
         let prompt = request.custom_prompt.unwrap_or_else(|| "Analyze the writing style and generate a style prompt".to_string());
         let result = ai_manager.generate_text(&prompt, &context).await?;
         
+        // Count tokens and estimate cost
+        let input_tokens = TOKEN_COUNTER.count_tokens(&prompt);
+        let output_tokens = TOKEN_COUNTER.count_tokens(&result);
+        let total_tokens = input_tokens + output_tokens;
+        
+        let cost_estimate = TOKEN_COUNTER.estimate_cost(
+            &ai_manager.get_provider_name(),
+            &ai_manager.get_model_name(),
+            input_tokens,
+            output_tokens,
+        );
+        
         Ok(StyleAnalysisResponse {
             analysis_result: result.clone(),
             generated_style_prompt: result,
-            tokens_used: 0, // TODO: Implement token counting
-            cost_estimate: 0.0, // TODO: Implement cost estimation
+            tokens_used: total_tokens,
+            cost_estimate,
             provider: ai_manager.get_provider_name().to_string(),
             model: ai_manager.get_model_name().to_string(),
         })
@@ -447,10 +511,22 @@ pub async fn generate_outline_from_text(
         let prompt = request.custom_prompt.unwrap_or_else(|| "Generate an outline from the provided text".to_string());
         let result = ai_manager.generate_text(&prompt, &context).await?;
         
+        // Count tokens and estimate cost
+        let input_tokens = TOKEN_COUNTER.count_tokens(&prompt);
+        let output_tokens = TOKEN_COUNTER.count_tokens(&result);
+        let total_tokens = input_tokens + output_tokens;
+        
+        let cost_estimate = TOKEN_COUNTER.estimate_cost(
+            &ai_manager.get_provider_name(),
+            &ai_manager.get_model_name(),
+            input_tokens,
+            output_tokens,
+        );
+        
         Ok(AIGenerationResponse {
             generated_content: result,
-            tokens_used: 0, // TODO: Implement token counting
-            cost_estimate: 0.0, // TODO: Implement cost estimation
+            tokens_used: total_tokens,
+            cost_estimate,
             provider: ai_manager.get_provider_name().to_string(),
             model: ai_manager.get_model_name().to_string(),
         })

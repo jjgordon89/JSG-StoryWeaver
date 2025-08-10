@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/Card';
+import { Button } from '../../../../ui/components/common';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { Badge } from '../../../../components/ui/badge';
 import { Progress } from '../../../../components/ui/progress';
 import { AlertTriangle, CheckCircle, Clock, Target, Users, MapPin, Eye, RefreshCw } from 'lucide-react';

@@ -348,7 +348,7 @@ pub async fn rewrite_text(
                 _ => crate::ai::RewriteStyle::Rephrase,
             };
             
-            provider.rewrite_text(&text, &rewrite_style).await.map_err(StoryWeaverError::ai)
+            provider.rewrite_text(&text, &rewrite_style).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -372,7 +372,7 @@ pub async fn expand_text(
                 options
             });
             
-            provider.expand_text(&text, &context).await.map_err(StoryWeaverError::ai)
+            provider.expand_text(&text, &context).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -396,7 +396,7 @@ pub async fn describe_scene(
                 });
             }
             
-            provider.describe_scene(&text, &context).await.map_err(StoryWeaverError::ai)
+            provider.describe_scene(&text, &context).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -419,7 +419,7 @@ pub async fn brainstorm(
                 options
             });
             
-            provider.brainstorm(&prompt, &context).await.map_err(StoryWeaverError::ai)
+            provider.brainstorm(&prompt, &context).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -432,7 +432,7 @@ pub async fn visualize_scene(
 ) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
-            provider.generate_image(&description).await.map_err(StoryWeaverError::ai)
+            provider.generate_image(&description).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -446,7 +446,7 @@ pub async fn quick_edit(
 ) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
-            provider.quick_edit(&text, &instruction).await.map_err(StoryWeaverError::ai)
+            provider.quick_edit(&text, &instruction).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -465,7 +465,7 @@ pub async fn quick_chat(
                 ai_context.story_context = Some(ctx);
             }
             
-            provider.quick_chat(&message, &ai_context).await.map_err(StoryWeaverError::ai)
+            provider.quick_chat(&message, &ai_context).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }
@@ -501,7 +501,7 @@ pub async fn get_related_words(
                 ai_context.preceding_text = Some(ctx);
             }
             
-            provider.related_words(&word, &ai_context).await.map_err(StoryWeaverError::ai)
+            provider.related_words(&word, &ai_context).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
         }
         None => Err(StoryWeaverError::ai("No AI provider available")),
     }

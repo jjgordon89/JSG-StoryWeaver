@@ -63,6 +63,11 @@ interface AdvancedAIActions {
   smartImportContent: (request: SmartImportRequest) => Promise<SmartImportResult>;
   
   // Settings
+  loadSettings: () => Promise<void>;
+  updateSettings: (settings: Partial<any>) => Promise<void>;
+  resetSettings: () => Promise<void>;
+  exportSettings: () => string;
+  importSettings: (settingsJson: string) => Promise<void>;
   toggleUltraCreativeMode: (enabled: boolean) => void;
   toggleAutoEnhancePrompts: (enabled: boolean) => void;
   toggleClicheDetection: (enabled: boolean) => void;
@@ -109,9 +114,46 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
     lastSaliencyContext: undefined,
     
     // Settings
-    ultraCreativeMode: false,
-    autoEnhancePrompts: true,
-    clicheDetectionEnabled: true,
+  settings: {
+      general: {
+        ultraCreativeMode: false,
+        autoEnhancePrompts: true,
+        clicheDetectionEnabled: true,
+        saliencyEnabled: false,
+        defaultProseMode: 'balanced',
+        autoSave: true,
+        showAdvancedOptions: false,
+        enableStreaming: true,
+      },
+      generation: {
+        defaultContextLength: 4000,
+        defaultOutputLength: 500,
+        creativityLevel: 0.7,
+        maxWords: 1000,
+        creativityBoost: 50,
+        styleConsistency: 70,
+        clicheAvoidance: 80,
+      },
+      saliencyEngine: {
+        enabled: false,
+        autoBuild: true,
+        refreshInterval: 60,
+        includedElements: ['characters', 'plot', 'themes'],
+      },
+      imageGeneration: {
+        qualityLevel: 'standard',
+        enablePromptEnhancement: true,
+        useStoryContext: true,
+        autoSaveImages: false,
+      },
+      brainstorming: {
+        defaultSessionDuration: 15,
+        ideasPerGeneration: 5,
+      },
+    },
+  ultraCreativeMode: false,
+  autoEnhancePrompts: true,
+  clicheDetectionEnabled: true,
 
     // Computed getters as properties
     get currentProseModeDetails() {
@@ -476,7 +518,15 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
     },
 
     toggleSaliencyEngine(enabled: boolean) {
-      set({ saliencyEnabled: enabled });
+      const currentSettings = get().settings;
+      const updatedSettings = { 
+        ...currentSettings, 
+        general: { ...currentSettings.general, saliencyEnabled: enabled }
+      };
+      set({ 
+        saliencyEnabled: enabled,
+        settings: updatedSettings
+      });
     },
 
     // Smart Import
@@ -500,16 +550,165 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
     },
 
     // Settings
+    async loadSettings() {
+      try {
+        const settings = await invoke('load_advanced_ai_settings');
+        set({ 
+          settings: {
+            general: { ...settings.general },
+            generation: { ...settings.generation },
+            saliencyEngine: { ...settings.saliencyEngine },
+            imageGeneration: { ...settings.imageGeneration },
+            brainstorming: { ...settings.brainstorming }
+          },
+          ultraCreativeMode: settings.general?.ultraCreativeMode ?? false,
+          autoEnhancePrompts: settings.general?.autoEnhancePrompts ?? true,
+          clicheDetectionEnabled: settings.general?.clicheDetectionEnabled ?? true,
+          saliencyEnabled: settings.general?.saliencyEnabled ?? false
+        });
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    },
+
+    async updateSettings(newSettings: Partial<any>) {
+      try {
+        const currentSettings = get().settings;
+        const updatedSettings = {
+          general: { ...currentSettings.general, ...newSettings.general },
+          generation: { ...currentSettings.generation, ...newSettings.generation },
+          saliencyEngine: { ...currentSettings.saliencyEngine, ...newSettings.saliencyEngine },
+          imageGeneration: { ...currentSettings.imageGeneration, ...newSettings.imageGeneration },
+          brainstorming: { ...currentSettings.brainstorming, ...newSettings.brainstorming }
+        };
+        await invoke('update_advanced_ai_settings', { settings: updatedSettings });
+        set({ 
+          settings: updatedSettings,
+          ultraCreativeMode: updatedSettings.general?.ultraCreativeMode ?? get().ultraCreativeMode,
+          autoEnhancePrompts: updatedSettings.general?.autoEnhancePrompts ?? get().autoEnhancePrompts,
+          clicheDetectionEnabled: updatedSettings.general?.clicheDetectionEnabled ?? get().clicheDetectionEnabled,
+          saliencyEnabled: updatedSettings.general?.saliencyEnabled ?? get().saliencyEnabled
+        });
+      } catch (error) {
+        console.error('Failed to update settings:', error);
+      }
+    },
+
+    async resetSettings() {
+      try {
+        await invoke('reset_advanced_ai_settings');
+        const defaultSettings = {
+           general: {
+             ultraCreativeMode: false,
+             autoEnhancePrompts: true,
+             clicheDetectionEnabled: true,
+             saliencyEnabled: false,
+             defaultProseMode: 'balanced',
+             autoSave: true,
+             showAdvancedOptions: false,
+             enableStreaming: true,
+           },
+           generation: {
+             defaultContextLength: 4000,
+             defaultOutputLength: 500,
+             creativityLevel: 0.7,
+             maxWords: 1000,
+             creativityBoost: 50,
+             styleConsistency: 70,
+             clicheAvoidance: 80,
+           },
+           saliencyEngine: {
+              enabled: false,
+              autoBuild: true,
+              refreshInterval: 60,
+              includedElements: ['characters', 'plot', 'themes'],
+            },
+            imageGeneration: {
+              qualityLevel: 'standard',
+              enablePromptEnhancement: true,
+              useStoryContext: true,
+              autoSaveImages: false,
+            },
+            brainstorming: {
+              defaultSessionDuration: 15,
+              ideasPerGeneration: 5,
+            },
+          };
+        set({ 
+          settings: defaultSettings,
+          ultraCreativeMode: defaultSettings.general.ultraCreativeMode,
+          autoEnhancePrompts: defaultSettings.general.autoEnhancePrompts,
+          clicheDetectionEnabled: defaultSettings.general.clicheDetectionEnabled,
+          saliencyEnabled: defaultSettings.general.saliencyEnabled
+        });
+      } catch (error) {
+        console.error('Failed to reset settings:', error);
+      }
+    },
+
+    exportSettings() {
+      const settings = get().settings;
+      return JSON.stringify(settings, null, 2);
+    },
+
+    async importSettings(settingsJson: string) {
+      try {
+        const settings = JSON.parse(settingsJson);
+        await invoke('update_advanced_ai_settings', { settings });
+        const currentSettings = get().settings;
+        set({ 
+          settings: {
+            general: { ...currentSettings.general, ...settings.general },
+            generation: { ...currentSettings.generation, ...settings.generation },
+            saliencyEngine: { ...currentSettings.saliencyEngine, ...settings.saliencyEngine },
+            imageGeneration: { ...currentSettings.imageGeneration, ...settings.imageGeneration },
+            brainstorming: { ...currentSettings.brainstorming, ...settings.brainstorming }
+          },
+          ultraCreativeMode: settings.general?.ultraCreativeMode ?? get().ultraCreativeMode,
+          autoEnhancePrompts: settings.general?.autoEnhancePrompts ?? get().autoEnhancePrompts,
+          clicheDetectionEnabled: settings.general?.clicheDetectionEnabled ?? get().clicheDetectionEnabled,
+          saliencyEnabled: settings.general?.saliencyEnabled ?? get().saliencyEnabled
+        });
+      } catch (error) {
+        console.error('Failed to import settings:', error);
+        throw error;
+      }
+    },
+
     toggleUltraCreativeMode(enabled: boolean) {
-      set({ ultraCreativeMode: enabled });
+      const currentSettings = get().settings;
+      const updatedSettings = { 
+        ...currentSettings, 
+        general: { ...currentSettings.general, ultraCreativeMode: enabled }
+      };
+      set({ 
+        ultraCreativeMode: enabled,
+        settings: updatedSettings
+      });
     },
 
     toggleAutoEnhancePrompts(enabled: boolean) {
-      set({ autoEnhancePrompts: enabled });
+      const currentSettings = get().settings;
+      const updatedSettings = { 
+        ...currentSettings, 
+        general: { ...currentSettings.general, autoEnhancePrompts: enabled }
+      };
+      set({ 
+        autoEnhancePrompts: enabled,
+        settings: updatedSettings
+      });
     },
 
     toggleClicheDetection(enabled: boolean) {
-      set({ clicheDetectionEnabled: enabled });
+      const currentSettings = get().settings;
+      const updatedSettings = { 
+        ...currentSettings, 
+        general: { ...currentSettings.general, clicheDetectionEnabled: enabled }
+      };
+      set({ 
+        clicheDetectionEnabled: enabled,
+        settings: updatedSettings
+      });
     },
 
     // Utility Methods

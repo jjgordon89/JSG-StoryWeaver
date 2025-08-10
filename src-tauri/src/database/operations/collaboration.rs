@@ -553,7 +553,7 @@ pub async fn get_project_shared_documents(
         expires_at: row.expires_at,
         max_uses: row.max_uses.map(|v| v as i32),
         current_uses: row.current_uses.unwrap_or(0) as i32,
-        is_active: row.is_active.map(|v| v != 0),
+        is_active: row.is_active.map(|v| v != 0).unwrap_or(false),
         created_by: row.created_by,
         created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
         updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),

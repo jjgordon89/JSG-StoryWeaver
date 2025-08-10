@@ -668,10 +668,13 @@ mod tests {
         };
         
         // Cache the response
-        cache.cache_response(&request, &response).await.unwrap();
+        cache.cache_response(&request, &response).await
+            .expect("Failed to cache response in test");
         
         // Retrieve the response
-        let cached = cache.get_response(&request).await.unwrap().unwrap();
+        let cached = cache.get_response(&request).await
+            .expect("Failed to get response from cache")
+            .expect("Expected cached response to exist");
         assert_eq!(cached.response_text, response.text);
         assert_eq!(cached.access_count, 2); // 1 for caching, 1 for retrieval
     }
@@ -699,7 +702,8 @@ mod tests {
         };
         
         // Cache the original response
-        cache.cache_response(&original_request, &response).await.unwrap();
+        cache.cache_response(&original_request, &response).await
+            .expect("Failed to cache original response in similarity test");
         
         // Try a similar request
         let similar_request = AIRequest {
@@ -711,10 +715,11 @@ mod tests {
         };
         
         // Should find the similar cached response
-        let cached = cache.get_response(&similar_request).await.unwrap();
+        let cached = cache.get_response(&similar_request).await
+            .expect("Failed to get similar response from cache");
         assert!(cached.is_some());
         
-        let cached_response = cached.unwrap();
+        let cached_response = cached.expect("Expected similar cached response to exist");
         assert_eq!(cached_response.response_text, response.text);
         assert!(cached_response.similarity_score < 1.0); // Not an exact match
     }
@@ -732,7 +737,8 @@ mod tests {
         };
         
         // Miss
-        let _ = cache.get_response(&request).await.unwrap();
+        let _ = cache.get_response(&request).await
+            .expect("Failed to get response for cache miss test");
         
         // Cache and hit
         let response = AIResponse {
@@ -742,8 +748,10 @@ mod tests {
             metadata: HashMap::new(),
         };
         
-        cache.cache_response(&request, &response).await.unwrap();
-        let _ = cache.get_response(&request).await.unwrap();
+        cache.cache_response(&request, &response).await
+            .expect("Failed to cache response in statistics test");
+        let _ = cache.get_response(&request).await
+            .expect("Failed to get cached response for hit test");
         
         let stats = cache.get_statistics().await;
         assert_eq!(stats.total_requests, 2);

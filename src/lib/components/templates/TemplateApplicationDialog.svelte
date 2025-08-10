@@ -1,13 +1,13 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Textarea } from '$lib/components/ui/textarea';
-  import { Checkbox } from '$lib/components/ui/checkbox';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+  import { Button } from '../../../ui/components/common';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '$lib/components/ui/dialog';
+import { Input } from '../../../ui/components/common';
+import { Label } from '$lib/components/ui/label';
+import { Textarea } from '../../../ui/components/common';
+import { Switch } from '$lib/components/ui/switch';
+import { Separator } from '$lib/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/components/common';
   import { Separator } from '$lib/components/ui/separator';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
   import { Sparkles, User, Globe } from 'lucide-svelte';

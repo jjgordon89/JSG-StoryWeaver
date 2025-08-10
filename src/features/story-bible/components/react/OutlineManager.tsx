@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button } from '../../../../components/ui/Button';
-import { Card } from '../../../../components/ui/Card';
-import { Input } from '../../../../components/ui/input';
-import { Textarea } from '../../../../components/ui/textarea';
-import { Select } from '../../../../components/ui/select';
+import { Button } from '../../../../ui/components/common';
+import { Card } from '../../../../ui/components/common';
+import { Input } from '../../../../ui/components/common';
+import { Textarea } from '../../../../ui/components/common';
+import { Select } from '../../../../ui/components/common';
 import { Sparkles, Loader2, Download } from 'lucide-react';
 import { useStoryBible } from '../../hooks/useStoryBible';
 import type { Outline, CreateOutlineRequest, UpdateOutlineRequest } from '../../../../types/storyBible';
@@ -15,15 +15,11 @@ interface OutlineManagerProps {
 
 interface OutlineFormData {
   id?: string;
-  title: string;
-  content: string;
-  outline_type: string;
+  chapter_title: string;
+  summary: string;
   chapter_number: number | null;
   character_pov: string;
-  act_number: number | null;
-  scene_number: number | null;
-  visibility: string;
-  series_shared: boolean;
+  linked_document_id?: string;
 }
 
 const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) => {
@@ -31,15 +27,12 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
     outlines,
     isLoadingOutlines,
     outlinesError,
-    outlineFilter,
     createOutline,
     updateOutline,
     deleteOutline,
     loadOutlines,
-    searchOutlines,
-    setOutlineFilter,
-    clearError,
-    generateOutline
+    generateOutline,
+    clearError
   } = useStoryBible();
 
   // AI generation state
@@ -49,58 +42,38 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [editingOutline, setEditingOutline] = useState<Outline | null>(null);
+  // Removed unused editingOutline state
   const [viewingOutline, setViewingOutline] = useState<Outline | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filter state
+  const [localFilter, setLocalFilter] = useState({
+    outlineType: '',
+    characterPov: '',
+    chapterNumber: '',
+    visibility: ''
+  });
 
   // Form states
   const [createForm, setCreateForm] = useState<OutlineFormData>({
-    title: '',
-    content: '',
-    outline_type: '',
+    chapter_title: '',
+    summary: '',
     chapter_number: null,
     character_pov: '',
-    act_number: null,
-    scene_number: null,
-    visibility: 'always',
-    series_shared: false
+    linked_document_id: undefined
   });
 
   const [editForm, setEditForm] = useState<OutlineFormData>({
-    title: '',
-    content: '',
-    outline_type: '',
+    chapter_title: '',
+    summary: '',
     chapter_number: null,
     character_pov: '',
-    act_number: null,
-    scene_number: null,
-    visibility: 'always',
-    series_shared: false
+    linked_document_id: undefined
   });
 
-  // Options
-  const outlineTypeOptions = [
-    { value: '', label: 'Select type...' },
-    { value: 'chapter', label: 'Chapter' },
-    { value: 'scene', label: 'Scene' },
-    { value: 'act', label: 'Act' },
-    { value: 'character_arc', label: 'Character Arc' },
-    { value: 'plot_thread', label: 'Plot Thread' },
-    { value: 'subplot', label: 'Subplot' },
-    { value: 'theme', label: 'Theme' },
-    { value: 'conflict', label: 'Conflict' },
-    { value: 'pacing', label: 'Pacing' },
-    { value: 'structure', label: 'Structure' },
-    { value: 'other', label: 'Other' }
-  ];
-
-  const visibilityOptions = [
-    { value: 'always', label: 'Always Visible' },
-    { value: 'chapter', label: 'Chapter Context' },
-    { value: 'never', label: 'Hidden' }
-  ];
+  // Options (removed unused options arrays)
 
   // Mock available characters - in real app, this would come from the store
   const availableCharacters = useMemo(() => [
@@ -110,38 +83,29 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
 
   // Load outlines on mount
   useEffect(() => {
-    loadOutlines(projectId, seriesId);
+    loadOutlines(projectId);
   }, [projectId, seriesId, loadOutlines]);
 
   // Modal handlers
   const openCreateModal = () => {
     setCreateForm({
-      title: '',
-      content: '',
-      outline_type: '',
+      chapter_title: '',
+      summary: '',
       chapter_number: null,
       character_pov: '',
-      act_number: null,
-      scene_number: null,
-      visibility: 'always',
-      series_shared: false
+      linked_document_id: undefined
     });
     setShowCreateModal(true);
   };
 
   const openEditModal = (outline: Outline) => {
-    setEditingOutline(outline);
     setEditForm({
       id: outline.id,
-      title: outline.title,
-      content: outline.content,
-      outline_type: outline.outline_type,
-      chapter_number: outline.chapter_number,
+      chapter_title: outline.chapter_title || '',
+      summary: outline.summary,
+      chapter_number: outline.chapter_number || null,
       character_pov: outline.character_pov || '',
-      act_number: outline.act_number,
-      scene_number: outline.scene_number,
-      visibility: outline.visibility,
-      series_shared: outline.series_shared
+      linked_document_id: outline.linked_document_id
     });
     setShowEditModal(true);
   };
@@ -155,28 +119,22 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
     setShowCreateModal(false);
     setShowEditModal(false);
     setShowDetailModal(false);
-    setEditingOutline(null);
     setViewingOutline(null);
   };
 
   // CRUD handlers
   const handleCreateOutline = async () => {
-    if (!createForm.title || !createForm.content || !createForm.outline_type) {
+    if (!createForm.summary) {
       return;
     }
 
     const request: CreateOutlineRequest = {
       project_id: projectId,
-      series_id: seriesId,
-      title: createForm.title,
-      content: createForm.content,
-      outline_type: createForm.outline_type,
-      chapter_number: createForm.chapter_number,
+      chapter_title: createForm.chapter_title || undefined,
+      summary: createForm.summary,
+      chapter_number: createForm.chapter_number || undefined,
       character_pov: createForm.character_pov || undefined,
-      act_number: createForm.act_number,
-      scene_number: createForm.scene_number,
-      visibility: createForm.visibility,
-      series_shared: createForm.series_shared
+      linked_document_id: createForm.linked_document_id
     };
 
     await createOutline(request);
@@ -184,21 +142,17 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
   };
 
   const handleUpdateOutline = async () => {
-    if (!editForm.id || !editForm.title || !editForm.content || !editForm.outline_type) {
+    if (!editForm.id || !editForm.summary) {
       return;
     }
 
     const request: UpdateOutlineRequest = {
       id: editForm.id,
-      title: editForm.title,
-      content: editForm.content,
-      outline_type: editForm.outline_type,
-      chapter_number: editForm.chapter_number,
+      chapter_title: editForm.chapter_title || undefined,
+      summary: editForm.summary,
+      chapter_number: editForm.chapter_number || undefined,
       character_pov: editForm.character_pov || undefined,
-      act_number: editForm.act_number,
-      scene_number: editForm.scene_number,
-      visibility: editForm.visibility,
-      series_shared: editForm.series_shared
+      linked_document_id: editForm.linked_document_id
     };
 
     await updateOutline(request);
@@ -212,23 +166,24 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
   };
 
   const handleGenerateOutline = async () => {
-    if (!createForm.outline_type || !createForm.title) return;
+    if (!createForm.chapter_title) return;
     
     setIsGeneratingOutline(true);
     
     try {
       const request = {
         project_id: projectId,
-        outline_type: createForm.outline_type,
-        title: createForm.title,
-        chapter_number: createForm.chapter_number,
-        scene_number: createForm.scene_number
+        outline_type: 'chapter', // Default to chapter type
+        title: createForm.chapter_title,
+        chapter_number: createForm.chapter_number || undefined,
+        story_context: '', // Add required field
+        existing_outlines: [] // Add required field
       };
       
-      const generatedContent = await generateOutline(request);
+      const generatedResponse = await generateOutline(request);
       
-      if (generatedContent) {
-        setCreateForm(prev => ({ ...prev, content: generatedContent }));
+      if (generatedResponse && generatedResponse.generated_content) {
+        setCreateForm(prev => ({ ...prev, summary: generatedResponse.generated_content }));
       }
     } catch (err) {
       console.error('Failed to generate outline content:', err);
@@ -239,19 +194,15 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
 
   // Search and filter handlers
   const handleSearch = async () => {
-    if (searchQuery.trim()) {
-      await searchOutlines(projectId, searchQuery, seriesId);
-    } else {
-      await loadOutlines(projectId, seriesId);
-    }
+    // Simple reload for now - search functionality to be implemented
+    await loadOutlines(projectId);
   };
 
   const handleFilterChange = (filterType: string, value: any) => {
-    const currentFilter = outlineFilter;
-    setOutlineFilter({
-      ...currentFilter,
-      [filterType]: value || undefined
-    });
+    setLocalFilter(prev => ({
+      ...prev,
+      [filterType]: value || ''
+    }));
   };
 
   // CSV Export function
@@ -262,29 +213,21 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
     }
 
     const headers = [
-      'Title',
-      'Type',
-      'Act Number',
-      'Chapter Number', 
-      'Scene Number',
+      'Chapter Title',
+      'Chapter Number',
       'Character POV',
-      'Visibility',
-      'Series Shared',
-      'Content',
+      'Summary',
+      'Linked Document ID',
       'Created Date',
       'Updated Date'
     ];
 
     const csvData = outlines.map(outline => [
-      outline.title,
-      getOutlineTypeLabel(outline.outline_type),
-      outline.act_number || '',
+      outline.chapter_title || '',
       outline.chapter_number || '',
-      outline.scene_number || '',
       outline.character_pov ? getCharacterName(outline.character_pov) : '',
-      getVisibilityLabel(outline.visibility),
-      outline.series_shared ? 'Yes' : 'No',
-      outline.content.replace(/"/g, '""'), // Escape quotes
+      outline.summary.replace(/"/g, '""'), // Escape quotes
+      outline.linked_document_id || '',
       new Date(outline.created_at).toLocaleDateString(),
       new Date(outline.updated_at).toLocaleDateString()
     ]);
@@ -305,42 +248,15 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
   };
 
   // Helper functions
-  const getOutlineTypeLabel = (outlineType: string): string => {
-    return outlineTypeOptions.find(opt => opt.value === outlineType)?.label || outlineType;
-  };
-
-  const getVisibilityLabel = (visibility: string): string => {
-    return visibilityOptions.find(opt => opt.value === visibility)?.label || visibility;
-  };
-
   const getCharacterName = (characterId: string): string => {
     return availableCharacters.find(char => char.id === characterId)?.name || characterId;
   };
 
-  const getOutlineIcon = (outlineType: string): string => {
-    const icons: Record<string, string> = {
-      chapter: '📖',
-      scene: '🎬',
-      act: '🎭',
-      character_arc: '👤',
-      plot_thread: '🧵',
-      subplot: '📝',
-      theme: '💭',
-      conflict: '⚔️',
-      pacing: '⏱️',
-      structure: '🏗️',
-      other: '📋'
-    };
-    return icons[outlineType] || '📋';
-  };
-
   const formatOutlineReference = (outline: Outline): string => {
     const parts = [];
-    if (outline.act_number) parts.push(`Act ${outline.act_number}`);
     if (outline.chapter_number) parts.push(`Ch. ${outline.chapter_number}`);
-    if (outline.scene_number) parts.push(`Scene ${outline.scene_number}`);
-    if (outline.character_pov) parts.push(`POV: ${getCharacterName(outline.character_pov)}`);
-    return parts.join(' • ');
+    if (outline.chapter_title) parts.push(outline.chapter_title);
+    return parts.length > 0 ? parts.join(' - ') : 'No reference';
   };
 
   return (
@@ -388,29 +304,12 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
             
             <div className="filters flex gap-4 flex-wrap">
               <div className="filter-group flex flex-col gap-2 min-w-[150px]">
-                <label className="text-sm font-medium">Filter by Type:</label>
-                <Select
-                  value={outlineFilter.outlineType || ''}
-                  onValueChange={(value) => handleFilterChange('outlineType', value)}
-                >
-                  <option value="">All types</option>
-                  {outlineTypeOptions.slice(1).map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </Select>
-              </div>
-              
-              <div className="filter-group flex flex-col gap-2 min-w-[150px]">
                 <label className="text-sm font-medium">Filter by Character POV:</label>
-                <Select
-                  value={outlineFilter.characterPov || ''}
-                  onValueChange={(value) => handleFilterChange('characterPov', value)}
-                >
-                  <option value="">All characters</option>
-                  {availableCharacters.map(char => (
-                    <option key={char.id} value={char.id}>{char.name}</option>
-                  ))}
-                </Select>
+                <Input
+                  placeholder="Character POV"
+                  value={localFilter.characterPov}
+                  onChange={(e) => handleFilterChange('characterPov', e.target.value)}
+                />
               </div>
               
               <div className="filter-group flex flex-col gap-2 min-w-[150px]">
@@ -418,22 +317,9 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                 <Input
                   type="number"
                   placeholder="Chapter #"
-                  value={outlineFilter.chapterNumber || ''}
-                  onChange={(e) => handleFilterChange('chapterNumber', e.target.value ? parseInt(e.target.value) : undefined)}
+                  value={localFilter.chapterNumber}
+                  onChange={(e) => handleFilterChange('chapterNumber', e.target.value)}
                 />
-              </div>
-              
-              <div className="filter-group flex flex-col gap-2 min-w-[150px]">
-                <label className="text-sm font-medium">Filter by Visibility:</label>
-                <Select
-                  value={outlineFilter.visibility || ''}
-                  onValueChange={(value) => handleFilterChange('visibility', value)}
-                >
-                  <option value="">All visibility</option>
-                  {visibilityOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </Select>
               </div>
             </div>
           </div>
@@ -476,9 +362,9 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                 <div className="outline-header flex justify-between items-start p-4 pb-2">
                   <div className="outline-meta flex-1">
                     <div className="outline-title flex items-start gap-3 mb-3">
-                      <span className="outline-icon text-2xl">{getOutlineIcon(outline.outline_type)}</span>
+                      <span className="outline-icon text-2xl">📖</span>
                       <div className="title-content flex-1">
-                        <h4 className="outline-name text-lg font-semibold text-foreground mb-1">{outline.title}</h4>
+                        <h4 className="outline-name text-lg font-semibold text-foreground mb-1">{outline.chapter_title || `Chapter ${outline.chapter_number || 'Untitled'}`}</h4>
                         {formatOutlineReference(outline) && (
                           <div className="outline-reference text-sm text-muted-foreground">
                             {formatOutlineReference(outline)}
@@ -488,18 +374,11 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                     </div>
                     <div className="outline-badges flex gap-2 flex-wrap">
                       <span className="type-badge px-2 py-1 bg-primary/10 text-primary text-xs rounded-md font-medium">
-                        {getOutlineTypeLabel(outline.outline_type)}
+                        Chapter Outline
                       </span>
-                      <span className={`visibility-badge px-2 py-1 text-xs rounded-md font-medium ${
-                        outline.visibility === 'always' ? 'bg-green-100 text-green-800' :
-                        outline.visibility === 'chapter' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {getVisibilityLabel(outline.visibility)}
-                      </span>
-                      {outline.series_shared && (
-                        <span className="series-badge px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md font-medium">
-                          Series Shared
+                      {outline.character_pov && (
+                        <span className="pov-badge px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md font-medium">
+                          POV: {outline.character_pov}
                         </span>
                       )}
                     </div>
@@ -510,7 +389,6 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                       variant="ghost" 
                       size="sm"
                       onClick={() => openDetailModal(outline)}
-                      title="View Details"
                     >
                       👁️
                     </Button>
@@ -518,7 +396,6 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                       variant="ghost" 
                       size="sm"
                       onClick={() => openEditModal(outline)}
-                      title="Edit"
                     >
                       ✏️
                     </Button>
@@ -526,7 +403,6 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleDeleteOutline(outline.id)}
-                      title="Delete"
                     >
                       🗑️
                     </Button>
@@ -535,7 +411,7 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                 
                 <div className="outline-content px-4 pb-2">
                   <p className="outline-preview text-sm text-muted-foreground">
-                    {outline.content.substring(0, 200)}{outline.content.length > 200 ? '...' : ''}
+                    {outline.summary.substring(0, 200)}{outline.summary.length > 200 ? '...' : ''}
                   </p>
                 </div>
                 
@@ -560,56 +436,22 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
             
             <div className="p-6 space-y-4">
               <div className="form-group">
-                <label className="block text-sm font-medium mb-2">Title:</label>
+                <label className="block text-sm font-medium mb-2">Chapter Title:</label>
                 <Input
-                  value={createForm.title}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter outline title..."
+                  value={createForm.chapter_title}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, chapter_title: e.target.value }))}
+                  placeholder="Enter chapter title..."
                 />
               </div>
               
               <div className="form-group">
-                <label className="block text-sm font-medium mb-2">Outline Type:</label>
-                <Select
-                  value={createForm.outline_type}
-                  onValueChange={(value) => setCreateForm(prev => ({ ...prev, outline_type: value }))}
-                >
-                  {outlineTypeOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </Select>
-              </div>
-              
-              <div className="form-row grid grid-cols-3 gap-4">
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Act Number:</label>
-                  <Input
-                    type="number"
-                    value={createForm.act_number || ''}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, act_number: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Act #"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Chapter Number:</label>
-                  <Input
-                    type="number"
-                    value={createForm.chapter_number || ''}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, chapter_number: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Chapter #"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Scene Number:</label>
-                  <Input
-                    type="number"
-                    value={createForm.scene_number || ''}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, scene_number: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Scene #"
-                  />
-                </div>
+                <label className="block text-sm font-medium mb-2">Chapter Number:</label>
+                <Input
+                  type="number"
+                  value={createForm.chapter_number || ''}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, chapter_number: e.target.value ? parseInt(e.target.value) : null }))}
+                  placeholder="Chapter #"
+                />
               </div>
               
               <div className="form-group">
@@ -630,7 +472,7 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                   <label className="block text-sm font-medium">Content:</label>
                   <Button
                     onClick={handleGenerateOutline}
-                    disabled={isGeneratingOutline || !createForm.outline_type || !createForm.title}
+                    disabled={isGeneratingOutline || !createForm.chapter_title}
                     variant="outline"
                     size="sm"
                     className="flex items-center gap-2"
@@ -644,42 +486,25 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                   </Button>
                 </div>
                 <Textarea
-                  value={createForm.content}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Write your outline content..."
+                  value={createForm.summary}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, summary: e.target.value }))}
+                  placeholder="Write your outline summary..."
                   rows={6}
                 />
-                {(!createForm.outline_type || !createForm.title) && (
+                {!createForm.chapter_title && (
                   <p className="text-sm text-gray-500 mt-1">
-                    💡 Enter a title and select an outline type to enable AI generation
+                    💡 Enter a chapter title to enable AI generation
                   </p>
                 )}
               </div>
               
-              <div className="form-row grid grid-cols-2 gap-4">
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Visibility:</label>
-                  <Select
-                    value={createForm.visibility}
-                    onValueChange={(value) => setCreateForm(prev => ({ ...prev, visibility: value }))}
-                  >
-                    {visibilityOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </Select>
-                </div>
-                
-                <div className="form-group">
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input 
-                      type="checkbox" 
-                      checked={createForm.series_shared}
-                      onChange={(e) => setCreateForm(prev => ({ ...prev, series_shared: e.target.checked }))}
-                      className="rounded"
-                    />
-                    Share across series
-                  </label>
-                </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium mb-2">Linked Document ID (Optional):</label>
+                <Input
+                  value={createForm.linked_document_id || ''}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, linked_document_id: e.target.value || undefined }))}
+                  placeholder="Enter linked document ID..."
+                />
               </div>
             </div>
             
@@ -689,7 +514,7 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
               </Button>
               <Button 
                 onClick={handleCreateOutline}
-                disabled={!createForm.title || !createForm.outline_type || !createForm.content}
+                disabled={!createForm.summary}
               >
                 Add Outline
               </Button>
@@ -708,56 +533,22 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
             
             <div className="p-6 space-y-4">
               <div className="form-group">
-                <label className="block text-sm font-medium mb-2">Title:</label>
+                <label className="block text-sm font-medium mb-2">Chapter Title:</label>
                 <Input
-                  value={editForm.title}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter outline title..."
+                  value={editForm.chapter_title}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, chapter_title: e.target.value }))}
+                  placeholder="Enter chapter title..."
                 />
               </div>
               
               <div className="form-group">
-                <label className="block text-sm font-medium mb-2">Outline Type:</label>
-                <Select
-                  value={editForm.outline_type}
-                  onValueChange={(value) => setEditForm(prev => ({ ...prev, outline_type: value }))}
-                >
-                  {outlineTypeOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </Select>
-              </div>
-              
-              <div className="form-row grid grid-cols-3 gap-4">
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Act Number:</label>
-                  <Input
-                    type="number"
-                    value={editForm.act_number || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, act_number: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Act #"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Chapter Number:</label>
-                  <Input
-                    type="number"
-                    value={editForm.chapter_number || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, chapter_number: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Chapter #"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Scene Number:</label>
-                  <Input
-                    type="number"
-                    value={editForm.scene_number || ''}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, scene_number: e.target.value ? parseInt(e.target.value) : null }))}
-                    placeholder="Scene #"
-                  />
-                </div>
+                <label className="block text-sm font-medium mb-2">Chapter Number:</label>
+                <Input
+                  type="number"
+                  value={editForm.chapter_number || ''}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, chapter_number: e.target.value ? parseInt(e.target.value) : null }))}
+                  placeholder="Chapter #"
+                />
               </div>
               
               <div className="form-group">
@@ -774,39 +565,22 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
               </div>
               
               <div className="form-group">
-                <label className="block text-sm font-medium mb-2">Content:</label>
+                <label className="block text-sm font-medium mb-2">Summary:</label>
                 <Textarea
-                  value={editForm.content}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Write your outline content..."
+                  value={editForm.summary}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, summary: e.target.value }))}
+                  placeholder="Write your outline summary..."
                   rows={6}
                 />
               </div>
               
-              <div className="form-row grid grid-cols-2 gap-4">
-                <div className="form-group">
-                  <label className="block text-sm font-medium mb-2">Visibility:</label>
-                  <Select
-                    value={editForm.visibility}
-                    onValueChange={(value) => setEditForm(prev => ({ ...prev, visibility: value }))}
-                  >
-                    {visibilityOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </Select>
-                </div>
-                
-                <div className="form-group">
-                  <label className="flex items-center gap-2 text-sm font-medium">
-                    <input 
-                      type="checkbox" 
-                      checked={editForm.series_shared}
-                      onChange={(e) => setEditForm(prev => ({ ...prev, series_shared: e.target.checked }))}
-                      className="rounded"
-                    />
-                    Share across series
-                  </label>
-                </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium mb-2">Linked Document ID (Optional):</label>
+                <Input
+                  value={editForm.linked_document_id || ''}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, linked_document_id: e.target.value || undefined }))}
+                  placeholder="Enter linked document ID..."
+                />
               </div>
             </div>
             
@@ -816,7 +590,7 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
               </Button>
               <Button 
                 onClick={handleUpdateOutline}
-                disabled={!editForm.title || !editForm.outline_type || !editForm.content}
+                disabled={!editForm.summary}
               >
                 Save Changes
               </Button>
@@ -830,18 +604,18 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-border">
-              <h3 className="text-lg font-semibold">{viewingOutline.title}</h3>
+              <h3 className="text-lg font-semibold">{viewingOutline.chapter_title || `Chapter ${viewingOutline.chapter_number || 'Untitled'}`}</h3>
             </div>
             
             <div className="p-6">
               <div className="detail-view">
                 <div className="detail-header mb-6">
                   <div className="detail-title flex items-start gap-3 mb-4">
-                    <span className="detail-icon text-3xl">{getOutlineIcon(viewingOutline.outline_type)}</span>
+                    <span className="detail-icon text-3xl">📖</span>
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold mb-2">{viewingOutline.title}</h3>
+                      <h3 className="text-xl font-semibold mb-2">{viewingOutline.chapter_title || `Chapter ${viewingOutline.chapter_number || 'Untitled'}`}</h3>
                       <div className="detail-meta flex gap-4 text-sm text-muted-foreground">
-                        <span className="detail-type">{getOutlineTypeLabel(viewingOutline.outline_type)}</span>
+                        <span className="detail-type">Chapter Outline</span>
                         {formatOutlineReference(viewingOutline) && (
                           <span className="detail-reference">{formatOutlineReference(viewingOutline)}</span>
                         )}
@@ -850,16 +624,12 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                   </div>
                   
                   <div className="detail-badges flex gap-2 flex-wrap">
-                    <span className={`visibility-badge px-2 py-1 text-xs rounded-md font-medium ${
-                      viewingOutline.visibility === 'always' ? 'bg-green-100 text-green-800' :
-                      viewingOutline.visibility === 'chapter' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {getVisibilityLabel(viewingOutline.visibility)}
+                    <span className="chapter-badge px-2 py-1 text-xs rounded-md font-medium bg-blue-100 text-blue-800">
+                      Chapter {viewingOutline.chapter_number || 'Untitled'}
                     </span>
-                    {viewingOutline.series_shared && (
-                      <span className="series-badge px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-md font-medium">
-                        Series Shared
+                    {viewingOutline.character_pov && (
+                      <span className="pov-badge px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-md font-medium">
+                        POV: {viewingOutline.character_pov}
                       </span>
                     )}
                   </div>
@@ -867,9 +637,9 @@ const OutlineManager: React.FC<OutlineManagerProps> = ({ projectId, seriesId }) 
                 
                 <div className="detail-content">
                   <div className="detail-section mb-6">
-                    <h4 className="text-lg font-medium mb-3">Content</h4>
+                    <h4 className="text-lg font-medium mb-3">Summary</h4>
                     <div className="content-text p-4 bg-muted/50 rounded-lg whitespace-pre-wrap">
-                      {viewingOutline.content}
+                      {viewingOutline.summary}
                     </div>
                   </div>
                   

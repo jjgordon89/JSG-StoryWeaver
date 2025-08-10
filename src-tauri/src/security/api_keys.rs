@@ -7,7 +7,8 @@ use crate::error::StoryWeaverError;
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use tauri::{AppHandle, Manager};
-use log;
+use keyring::{Entry, Error as KeyringError};
+use tracing::{info, warn, error, debug};
 
 const SERVICE: &str = "storyweaver";
 const OPENAI_KEY: &str = "openai";
@@ -34,53 +35,86 @@ impl ApiKeyManager {
 
     /// Save an API key to secure storage
     pub async fn save_api_key(&self, provider: ApiProvider, api_key: &str) -> Result<(), StoryWeaverError> {
-        let key = match provider {
-            ApiProvider::OpenAI => format!("{}-{}", SERVICE, OPENAI_KEY),
-            ApiProvider::Claude => format!("{}-{}", SERVICE, CLAUDE_KEY),
+        let key_name = match provider {
+            ApiProvider::OpenAI => OPENAI_KEY,
+            ApiProvider::Claude => CLAUDE_KEY,
         };
         
-        // Note: Keychain functionality needs to be implemented with proper Tauri plugin
-        // For now, we'll store in a secure location or use alternative storage
-        // TODO: Implement proper keychain storage
+        let entry = Entry::new(SERVICE, key_name)
+            .map_err(|e| StoryWeaverError::SecurityError {
+                message: format!("Failed to create keyring entry: {}", e),
+            })?;
         
-        // Placeholder implementation - in production, use proper secure storage
-        log::warn!("API key storage not yet implemented - using placeholder");
+        entry.set_password(api_key)
+            .map_err(|e| {
+                error!("Failed to save API key for {}: {}", key_name, e);
+                StoryWeaverError::SecurityError {
+                    message: format!("Failed to save API key: {}", e),
+                }
+            })?;
         
-        // Store in app data directory with encryption (placeholder)
-        // This should be replaced with proper keychain integration
-            
+        info!("Successfully saved API key for provider: {:?}", provider);
         Ok(())
     }
 
     /// Get an API key from secure storage
     pub async fn get_api_key(&self, provider: ApiProvider) -> Result<Option<String>, StoryWeaverError> {
-        let key = match provider {
-            ApiProvider::OpenAI => format!("{}-{}", SERVICE, OPENAI_KEY),
-            ApiProvider::Claude => format!("{}-{}", SERVICE, CLAUDE_KEY),
+        let key_name = match provider {
+            ApiProvider::OpenAI => OPENAI_KEY,
+            ApiProvider::Claude => CLAUDE_KEY,
         };
 
-        // TODO: Implement proper keychain retrieval
-        log::warn!("API key retrieval not yet implemented - using placeholder");
+        let entry = Entry::new(SERVICE, key_name)
+            .map_err(|e| StoryWeaverError::SecurityError {
+                message: format!("Failed to create keyring entry: {}", e),
+            })?;
         
-        // Placeholder implementation - return None for now
-        // In production, retrieve from secure storage
-        Ok(None)
+        match entry.get_password() {
+            Ok(password) => {
+                debug!("Successfully retrieved API key for provider: {:?}", provider);
+                Ok(Some(password))
+            },
+            Err(KeyringError::NoEntry) => {
+                debug!("No API key found for provider: {:?}", provider);
+                Ok(None)
+            },
+            Err(e) => {
+                error!("Failed to retrieve API key for {}: {}", key_name, e);
+                Err(StoryWeaverError::SecurityError {
+                    message: format!("Failed to retrieve API key: {}", e),
+                })
+            }
+        }
     }
 
     /// Delete an API key from secure storage
     pub async fn delete_api_key(&self, provider: ApiProvider) -> Result<(), StoryWeaverError> {
-        let key = match provider {
-            ApiProvider::OpenAI => format!("{}-{}", SERVICE, OPENAI_KEY),
-            ApiProvider::Claude => format!("{}-{}", SERVICE, CLAUDE_KEY),
+        let key_name = match provider {
+            ApiProvider::OpenAI => OPENAI_KEY,
+            ApiProvider::Claude => CLAUDE_KEY,
         };
 
-        // TODO: Implement proper keychain deletion
-        log::warn!("API key deletion not yet implemented - using placeholder");
+        let entry = Entry::new(SERVICE, key_name)
+            .map_err(|e| StoryWeaverError::SecurityError {
+                message: format!("Failed to create keyring entry: {}", e),
+            })?;
         
-        // Placeholder implementation - in production, delete from secure storage
-        // This should be replaced with proper keychain integration
-            
-        Ok(())
+        match entry.delete_password() {
+            Ok(()) => {
+                info!("Successfully deleted API key for provider: {:?}", provider);
+                Ok(())
+            },
+            Err(KeyringError::NoEntry) => {
+                debug!("No API key to delete for provider: {:?}", provider);
+                Ok(()) // Not an error if key doesn't exist
+            },
+            Err(e) => {
+                error!("Failed to delete API key for {}: {}", key_name, e);
+                Err(StoryWeaverError::SecurityError {
+                    message: format!("Failed to delete API key: {}", e),
+                })
+            }
+        }
     }
 
     /// Check if an API key exists
