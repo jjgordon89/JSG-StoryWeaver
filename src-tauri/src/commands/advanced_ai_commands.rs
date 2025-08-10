@@ -9,6 +9,7 @@ use crate::ai::{
     StyleExample, ProseMode, SaliencyContext, BrainstormIdea,
     saliency_engine::StoryBibleElements,
 };
+use crate::error::StoryWeaverError;
 
 // State wrapper for the Advanced AI Manager
 pub type AdvancedAIState = Mutex<AdvancedAIManager>;
@@ -113,7 +114,7 @@ pub struct SmartImportAnalysisResult {
 pub async fn generate_with_prose_mode(
     request: ProseGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<AdvancedGenerationResult, String> {
+) -> Result<AdvancedGenerationResult, StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     let advanced_request = AdvancedGenerationRequest {
@@ -132,7 +133,7 @@ pub async fn generate_with_prose_mode(
     ai_manager
         .generate_with_advanced_features(advanced_request, request.story_bible)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(StoryWeaverError::ai)
 }
 
 // Image Generation with Visualize Engine
@@ -140,7 +141,7 @@ pub async fn generate_with_prose_mode(
 pub async fn generate_image(
     request: ImageGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<GeneratedImage, String> {
+) -> Result<GeneratedImage, StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     let visualize_request = VisualizeRequest {
@@ -159,7 +160,7 @@ pub async fn generate_image(
     ai_manager
         .generate_image(visualize_request)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(StoryWeaverError::ai)
 }
 
 // Advanced Brainstorming
@@ -167,7 +168,7 @@ pub async fn generate_image(
 pub async fn create_brainstorm_session(
     request: BrainstormSessionRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<String, String> {
+) -> Result<String, StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     let brainstorm_request = BrainstormRequest {
@@ -183,14 +184,14 @@ pub async fn create_brainstorm_session(
     ai_manager
         .create_brainstorm_session(brainstorm_request)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(StoryWeaverError::ai)
 }
 
 #[tauri::command]
 pub async fn get_brainstorm_session(
     session_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<Option<BrainstormSession>, String> {
+) -> Result<Option<BrainstormSession>, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     Ok(ai_manager.get_brainstorm_session(&session_id).cloned())
@@ -202,7 +203,7 @@ pub async fn rate_brainstorm_idea(
     idea_id: String,
     rating: u32,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<(), String> {
+) -> Result<(), StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     // This would need to be implemented in the brainstorm engine
@@ -216,7 +217,7 @@ pub async fn mark_idea_as_keeper(
     idea_id: String,
     is_keeper: bool,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<(), String> {
+) -> Result<(), StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     // This would need to be implemented in the brainstorm engine
@@ -229,7 +230,7 @@ pub async fn mark_idea_as_keeper(
 pub async fn add_style_example(
     request: StyleExampleRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<StyleExample, String> {
+) -> Result<StyleExample, StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     let style_example = StyleExample {
@@ -251,7 +252,7 @@ pub async fn add_style_example(
 pub async fn analyze_text_style(
     content: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<crate::ai::advanced_ai_manager::StyleAnalysis, String> {
+) -> Result<crate::ai::advanced_ai_manager::StyleAnalysis, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     Ok(ai_manager.analyze_style(&content))
@@ -261,7 +262,7 @@ pub async fn analyze_text_style(
 #[tauri::command]
 pub async fn get_available_prose_modes(
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<Vec<ProseMode>, String> {
+) -> Result<Vec<ProseMode>, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     Ok(ai_manager.get_prose_modes().into_iter().cloned().collect())
@@ -271,7 +272,7 @@ pub async fn get_available_prose_modes(
 pub async fn get_prose_mode_details(
     mode_name: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<Option<ProseMode>, String> {
+) -> Result<Option<ProseMode>, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     Ok(ai_manager.get_prose_modes()
@@ -285,7 +286,7 @@ pub async fn get_prose_mode_details(
 pub async fn get_credit_usage(
     project_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<CreditUsageResponse, String> {
+) -> Result<CreditUsageResponse, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     let project_usage = ai_manager.get_credit_usage(&project_id);
@@ -304,7 +305,7 @@ pub async fn get_credit_usage(
 pub async fn get_project_images(
     project_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<Vec<GeneratedImage>, String> {
+) -> Result<Vec<GeneratedImage>, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     Ok(ai_manager.get_generated_images(&project_id)
@@ -317,7 +318,7 @@ pub async fn get_project_images(
 pub async fn delete_generated_image(
     image_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<(), String> {
+) -> Result<(), StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     // This would need to be implemented in the visualize engine
@@ -332,7 +333,7 @@ pub async fn build_saliency_context(
     text_context: String,
     story_bible: StoryBibleElements,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<SaliencyContext, String> {
+) -> Result<SaliencyContext, StoryWeaverError> {
     let mut ai_manager = ai_state.lock().await;
     
     // This would access the saliency engine directly
@@ -360,19 +361,19 @@ pub async fn smart_import_content(
     content: String,
     content_type: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<HashMap<String, serde_json::Value>, String> {
+) -> Result<HashMap<String, serde_json::Value>, StoryWeaverError> {
     let ai_manager = ai_state.lock().await;
     
     // Analyze the content using AI to extract story elements
     let analysis_result = ai_manager.analyze_content_for_import(&project_id, &content, &content_type).await
-        .map_err(|e| format!("Failed to analyze content: {}", e))?;
+        .map_err(StoryWeaverError::ai)?;
     
     let mut result = HashMap::new();
     result.insert("status".to_string(), serde_json::Value::String("analyzed".to_string()));
     result.insert("suggestions".to_string(), serde_json::to_value(&analysis_result.suggestions)
-        .map_err(|e| format!("Failed to serialize suggestions: {}", e))?);
+        .map_err(StoryWeaverError::serialization)?);
     result.insert("extracted_elements".to_string(), serde_json::to_value(&analysis_result.extracted_elements)
-        .map_err(|e| format!("Failed to serialize extracted elements: {}", e))?);
+        .map_err(StoryWeaverError::serialization)?);
     
     Ok(result)
 }
@@ -382,7 +383,7 @@ pub async fn smart_import_content(
 pub async fn start_streaming_generation(
     request: ProseGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<String, String> {
+) -> Result<String, StoryWeaverError> {
     // This would start a streaming generation and return a stream ID
     Ok(uuid::Uuid::new_v4().to_string())
 }
@@ -391,7 +392,7 @@ pub async fn start_streaming_generation(
 pub async fn get_stream_status(
     stream_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> Result<HashMap<String, serde_json::Value>, String> {
+) -> Result<HashMap<String, serde_json::Value>, StoryWeaverError> {
     // This would return the current status of a streaming generation
     let mut result = HashMap::new();
     result.insert("status".to_string(), serde_json::Value::String("completed".to_string()));

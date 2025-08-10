@@ -325,7 +325,6 @@ pub fn run() {
             commands::canvas::delete_canvas_element,
             commands::canvas::get_outline_templates,
             commands::canvas::create_outline_template,
-            commands::canvas::apply_outline_template,
             commands::canvas::create_canvas_snapshot,
             commands::canvas::get_canvas_snapshots,
             commands::canvas::restore_canvas_snapshot,

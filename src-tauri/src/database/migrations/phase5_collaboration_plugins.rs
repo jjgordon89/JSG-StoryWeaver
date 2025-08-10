@@ -235,13 +235,15 @@ pub async fn up(pool: &Pool<Sqlite>) -> Result<()> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             canvas_id INTEGER NOT NULL,
             element_type TEXT NOT NULL,
-            element_data TEXT NOT NULL,
             position_x REAL NOT NULL DEFAULT 0,
             position_y REAL NOT NULL DEFAULT 0,
             width REAL DEFAULT 100,
             height REAL DEFAULT 100,
+            content TEXT NOT NULL DEFAULT '{}',
+            style TEXT,
             z_index INTEGER DEFAULT 0,
             is_locked BOOLEAN DEFAULT 0,
+            is_visible BOOLEAN DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (canvas_id) REFERENCES canvas(id) ON DELETE CASCADE
@@ -256,13 +258,13 @@ pub async fn up(pool: &Pool<Sqlite>) -> Result<()> {
     sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS outline_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id TEXT PRIMARY KEY,
             name TEXT UNIQUE NOT NULL,
             description TEXT,
-            template_data TEXT NOT NULL,
-            category TEXT,
-            tags TEXT DEFAULT '[]',
-            is_system BOOLEAN DEFAULT 0,
+            template_type TEXT NOT NULL,
+            structure TEXT NOT NULL,
+            is_public BOOLEAN DEFAULT 0,
+            usage_count INTEGER DEFAULT 0,
             created_by TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

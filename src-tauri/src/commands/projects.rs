@@ -28,7 +28,7 @@ pub struct UpdateProjectRequest {
 
 /// Create a new project
 #[tauri::command]
-pub async fn create_project(request: CreateProjectRequest) -> Result<Project> {
+pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Project> {
     async fn create(request: CreateProjectRequest) -> Result<Project> {
         let pool = get_pool()?;
         
@@ -44,34 +44,34 @@ pub async fn create_project(request: CreateProjectRequest) -> Result<Project> {
         ProjectOps::create(&pool, project).await
     }
     
-    create(request).await
+    create(request).await.into()
 }
 
 /// Get all projects
 #[tauri::command]
-pub async fn get_projects() -> Result<Vec<Project>> {
-    async fn get_all() -> Result<Vec<Project>> {
+pub async fn get_projects() -> CommandResponse<Vec<Project>> {
+    async fn get(()) -> Result<Vec<Project>> {
         let pool = get_pool()?;
         ProjectOps::get_all(&pool).await
     }
     
-    get_all().await
+    get(()).await.into()
 }
 
 /// Get a project by ID
 #[tauri::command]
-pub async fn get_project(id: String) -> Result<Option<Project>> {
+pub async fn get_project(id: String) -> CommandResponse<Option<Project>> {
     async fn get(id: String) -> Result<Option<Project>> {
         let pool = get_pool()?;
         ProjectOps::get_by_id(&pool, &id).await
     }
     
-    get(id).await
+    get(id).await.into()
 }
 
 /// Update a project
 #[tauri::command]
-pub async fn update_project(request: UpdateProjectRequest) -> Result<()> {
+pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()> {
     async fn update(request: UpdateProjectRequest) -> Result<()> {
         let pool = get_pool()?;
         
@@ -103,29 +103,29 @@ pub async fn update_project(request: UpdateProjectRequest) -> Result<()> {
         ProjectOps::update(&pool, &project).await
     }
     
-    update(request).await
+    update(request).await.into()
 }
 
 /// Delete a project
 #[tauri::command]
-pub async fn delete_project(id: String) -> Result<()> {
+pub async fn delete_project(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
         let pool = get_pool()?;
         ProjectOps::delete(&pool, &id).await
     }
     
-    delete(id).await
+    delete(id).await.into()
 }
 
 /// Update project word count
 #[tauri::command]
-pub async fn update_project_word_count(project_id: String) -> Result<()> {
+pub async fn update_project_word_count(project_id: String) -> CommandResponse<()> {
     async fn update_count(project_id: String) -> Result<()> {
         let pool = get_pool()?;
         ProjectOps::update_word_count(&pool, &project_id).await
     }
     
-    update_count(project_id).await
+    update_count(project_id).await.into()
 }
 
 /// Project summary for dashboard
@@ -148,7 +148,7 @@ pub struct RecentActivity {
 
 /// Get project summary with statistics
 #[tauri::command]
-pub async fn get_project_summary(project_id: String) -> Result<ProjectSummary> {
+pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectSummary> {
     async fn get_summary(project_id: String) -> Result<ProjectSummary> {
         let pool = get_pool()?;
         
@@ -200,5 +200,5 @@ pub async fn get_project_summary(project_id: String) -> Result<ProjectSummary> {
         })
     }
     
-    get_summary(project_id).await
+    get_summary(project_id).await.into()
 }

@@ -12,8 +12,8 @@ pub async fn create_canvas(
     description: Option<String>,
     canvas_type: String,
     settings: Option<Value>,
-) -> Result<Canvas, String> {
-    let pool = get_pool()?;
+) -> Result<Canvas> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let canvas_type_enum = match canvas_type.as_str() {
         "story_outline" => CanvasType::StoryOutline,
@@ -23,7 +23,7 @@ pub async fn create_canvas(
         "plot_structure" => CanvasType::PlotStructure,
         "mind_map" => CanvasType::MindMap,
         "free_form" => CanvasType::FreeForm,
-        _ => return Err("Invalid canvas type".to_string()),
+        _ => return Err(StoryWeaverError::InvalidInput("Invalid canvas type".to_string())),
     };
     
     let canvas = Canvas {
@@ -37,60 +37,60 @@ pub async fn create_canvas(
         updated_at: chrono::Utc::now(),
     };
     
-    create_canvas(&pool, canvas)
+    crate::database::operations::canvas::create_canvas(&pool, canvas)
         .await
-        .map_err(|e| format!("Failed to create canvas: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
-/// Get canvas by ID
+/// Get a canvas by ID
 #[tauri::command]
 pub async fn get_canvas(
     canvas_id: String,
-) -> Result<Option<Canvas>, String> {
-    let pool = get_pool()?;
+) -> Result<Option<Canvas>> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_canvas_by_id(&pool, &canvas_id)
+    crate::database::operations::canvas::get_canvas_by_id(&pool, &canvas_id)
         .await
-        .map_err(|e| format!("Failed to get canvas: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
-/// Get canvases for a project
+/// Get all canvases for a project
 #[tauri::command]
 pub async fn get_project_canvases(
     project_id: String,
-) -> Result<Vec<Canvas>, String> {
-    let pool = get_pool()?;
+) -> Result<Vec<Canvas>> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_canvases_by_project(&pool, &project_id)
+    crate::database::operations::canvas::get_canvases_by_project(&pool, &project_id)
         .await
-        .map_err(|e| format!("Failed to get project canvases: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
-/// Update canvas
+/// Update a canvas
 #[tauri::command]
 pub async fn update_canvas(
     canvas_id: String,
     name: Option<String>,
     description: Option<String>,
     settings: Option<Value>,
-) -> Result<(), String> {
-    let pool = get_pool()?;
+) -> Result<()> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    update_canvas(&pool, &canvas_id, name.as_deref(), description, settings.as_ref())
+    crate::database::operations::canvas::update_canvas(&pool, &canvas_id, name.as_deref(), description, settings.as_ref())
         .await
-        .map_err(|e| format!("Failed to update canvas: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Delete canvas
 #[tauri::command]
 pub async fn delete_canvas(
     canvas_id: String,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<()> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    delete_canvas(&pool, &canvas_id)
+    crate::database::operations::canvas::delete_canvas(&pool, &canvas_id)
         .await
-        .map_err(|e| format!("Failed to delete canvas: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Create canvas element
@@ -105,8 +105,8 @@ pub async fn create_canvas_element(
     content: Value,
     style: Option<Value>,
     z_index: Option<i32>,
-) -> Result<CanvasElement, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<CanvasElement> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let element_type_enum = match element_type.as_str() {
         "text_box" => CanvasElementType::TextBox,
@@ -119,39 +119,34 @@ pub async fn create_canvas_element(
         "image" => CanvasElementType::Image,
         "shape" => CanvasElementType::Shape,
         "group" => CanvasElementType::Group,
-        _ => return Err("Invalid canvas element type".to_string()),
+        _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid canvas element type".to_string() }),
     };
     
-    let element = CanvasElement {
-        id: String::new(), // Will be set by database
-        canvas_id,
-        element_type: element_type_enum,
+    crate::database::operations::canvas::create_canvas_element(
+        &pool,
+        &canvas_id,
+        element_type_enum,
         x,
         y,
         width,
         height,
         content,
-        style: style.unwrap_or(Value::Object(serde_json::Map::new())),
-        z_index: z_index.unwrap_or(0),
-        created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
-    };
-    
-    create_canvas_element(&pool, element)
-        .await
-        .map_err(|e| format!("Failed to create canvas element: {}", e))
+        style,
+    )
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create canvas element: {}", e)))
 }
 
 /// Get canvas elements
 #[tauri::command]
 pub async fn get_canvas_elements(
     canvas_id: String,
-) -> Result<Vec<CanvasElement>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<CanvasElement>> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_canvas_elements(&pool, &canvas_id)
+    crate::database::operations::canvas::get_canvas_elements(&pool, &canvas_id)
         .await
-        .map_err(|e| format!("Failed to get canvas elements: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get canvas elements: {}", e)))
 }
 
 /// Update canvas element
@@ -165,32 +160,32 @@ pub async fn update_canvas_element(
     content: Option<Value>,
     style: Option<Value>,
     z_index: Option<i32>,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<()> {
+    let pool = get_pool()?;
     
-    update_canvas_element(&pool, &element_id, x, y, width, height, content.as_ref(), style.as_ref(), z_index)
+    crate::database::operations::canvas::update_canvas_element(&pool, &element_id, x, y, width, height, content, style, z_index, None)
         .await
-        .map_err(|e| format!("Failed to update canvas element: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to update canvas element: {}", e)))
 }
 
 /// Delete canvas element
 #[tauri::command]
 pub async fn delete_canvas_element(
     element_id: String,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<()> {
+    let pool = get_pool()?;
     
-    delete_canvas_element(&pool, &element_id)
+    crate::database::operations::canvas::delete_canvas_element(&pool, &element_id)
         .await
-        .map_err(|e| format!("Failed to delete canvas element: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to delete canvas element: {}", e)))
 }
 
 /// Get outline templates
 #[tauri::command]
 pub async fn get_outline_templates(
     template_type: Option<String>,
-) -> Result<Vec<OutlineTemplate>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<OutlineTemplate>> {
+    let pool = get_pool()?;
     
     let template_type_enum = if let Some(t_type) = template_type {
         Some(match t_type.as_str() {
@@ -201,15 +196,15 @@ pub async fn get_outline_templates(
             "freytag_pyramid" => OutlineTemplateType::FreytagPyramid,
             "seven_point" => OutlineTemplateType::SevenPoint,
             "custom" => OutlineTemplateType::Custom,
-            _ => return Err("Invalid outline template type".to_string()),
+            _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid outline template type".to_string() }),
         })
     } else {
         None
     };
     
-    get_outline_templates(&pool, template_type_enum, false)
+    crate::database::operations::canvas::get_outline_templates(&pool, template_type_enum, false)
         .await
-        .map_err(|e| format!("Failed to get outline templates: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get outline templates: {}", e)))
 }
 
 /// Create outline template
@@ -219,8 +214,8 @@ pub async fn create_outline_template(
     description: String,
     template_type: String,
     structure: Value,
-) -> Result<OutlineTemplate, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<OutlineTemplate> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let template_type_enum = match template_type.as_str() {
         "three_act" => OutlineTemplateType::ThreeAct,
@@ -230,7 +225,7 @@ pub async fn create_outline_template(
         "freytag_pyramid" => OutlineTemplateType::FreytagPyramid,
         "seven_point" => OutlineTemplateType::SevenPoint,
         "custom" => OutlineTemplateType::Custom,
-        _ => return Err("Invalid outline template type".to_string()),
+        _ => return Err(StoryWeaverError::InvalidInput("Invalid outline template type".to_string())),
     };
     
     let template_data = serde_json::to_string(&structure).unwrap_or_default();
@@ -245,9 +240,9 @@ pub async fn create_outline_template(
         created_at: chrono::Utc::now(),
     };
     
-    create_outline_template(&pool, template)
+    crate::database::operations::canvas::create_outline_template(&pool, template)
         .await
-        .map_err(|e| format!("Failed to create outline template: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Create canvas snapshot
@@ -256,36 +251,36 @@ pub async fn create_canvas_snapshot(
     canvas_id: String,
     name: String,
     snapshot_data: serde_json::Value,
-) -> Result<CanvasSnapshot, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<CanvasSnapshot> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    create_canvas_snapshot(&pool, &canvas_id, &name, snapshot_data)
+    crate::database::operations::canvas::create_canvas_snapshot(&pool, &canvas_id, &name, snapshot_data)
         .await
-        .map_err(|e| format!("Failed to create canvas snapshot: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Get canvas snapshots
 #[tauri::command]
 pub async fn get_canvas_snapshots(
     canvas_id: String,
-) -> Result<Vec<CanvasSnapshot>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<CanvasSnapshot>> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_canvas_snapshots(&pool, &canvas_id)
+    crate::database::operations::canvas::get_canvas_snapshots(&pool, &canvas_id)
         .await
-        .map_err(|e| format!("Failed to get canvas snapshots: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Restore canvas snapshot
 #[tauri::command]
 pub async fn restore_canvas_snapshot(
     snapshot_id: i32,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<()> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    restore_canvas_snapshot(&pool, snapshot_id)
+    crate::database::operations::canvas::restore_canvas_snapshot(&pool, snapshot_id)
         .await
-        .map_err(|e| format!("Failed to restore canvas snapshot: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Export canvas
@@ -294,15 +289,15 @@ pub async fn export_canvas(
     canvas_id: String,
     format: String,
     options: Option<Value>,
-) -> Result<CanvasExportResult, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<CanvasExportResult> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let export_format = match format.as_str() {
         "png" => ExportFormat::PNG,
         "svg" => ExportFormat::SVG,
         "pdf" => ExportFormat::PDF,
         "json" => ExportFormat::JSON,
-        _ => return Err("Invalid export format".to_string()),
+        _ => return Err(StoryWeaverError::InvalidInput("Invalid export format".to_string())),
     };
     
     let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
@@ -315,7 +310,7 @@ pub async fn export_canvas(
 
     crate::database::operations::canvas::export_canvas_data(&pool, &canvas_id, export_format)
         .await
-        .map_err(|e| format!("Failed to export canvas: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Create canvas collaboration session
@@ -324,24 +319,24 @@ pub async fn create_canvas_collaboration_session(
     canvas_id: String,
     max_participants: i32,
     expires_in_hours: Option<i32>,
-) -> Result<CanvasCollaborationSession, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<CanvasCollaborationSession> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    create_canvas_collaboration_session(&pool, canvas_id, max_participants, expires_in_hours)
+    crate::database::operations::canvas::create_canvas_collaboration_session(&pool, canvas_id, max_participants, expires_in_hours)
         .await
-        .map_err(|e| format!("Failed to create canvas collaboration session: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Get canvas collaboration session
 #[tauri::command]
 pub async fn get_canvas_collaboration_session(
     session_token: String,
-) -> Result<Option<CanvasCollaborationSession>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Option<CanvasCollaborationSession>> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     crate::database::operations::canvas::get_canvas_collaboration_session(&pool, &session_token)
         .await
-        .map_err(|e| format!("Failed to get canvas collaboration session: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
 /// Join canvas collaboration session
@@ -349,7 +344,7 @@ pub async fn get_canvas_collaboration_session(
 pub async fn join_canvas_collaboration_session(
     session_token: String,
     participant_name: String,
-) -> Result<(), StoryWeaverError> {
+) -> Result<()> {
     let pool = get_pool()?;
     
     let session = crate::database::operations::canvas::get_canvas_collaboration_session(&pool, &session_token)
@@ -394,7 +389,7 @@ pub async fn join_canvas_collaboration_session(
 pub async fn leave_canvas_collaboration_session(
     session_token: String,
     participant_name: String,
-) -> Result<(), StoryWeaverError> {
+) -> Result<()> {
     let pool = get_pool()?;
     
     let session = crate::database::operations::canvas::get_canvas_collaboration_session(&pool, &session_token)
@@ -425,7 +420,7 @@ pub async fn leave_canvas_collaboration_session(
 pub async fn join_canvas_collaboration(
     canvas_id: String,
     user_name: String,
-) -> Result<String, StoryWeaverError> {
+) -> Result<String> {
     let pool = get_pool()?;
     
     // Check if there's an existing session for this canvas
@@ -468,7 +463,7 @@ pub async fn join_canvas_collaboration(
             updated_at: chrono::Utc::now(),
         };
         
-        crate::database::operations::canvas::create_canvas_collaboration_session(&pool, session)
+        crate::database::operations::canvas::create_canvas_collaboration_session_from_struct(&pool, session)
             .await
             .map_err(|e| StoryWeaverError::database(e.to_string()))?;
         
@@ -481,7 +476,7 @@ pub async fn join_canvas_collaboration(
 pub async fn leave_canvas_collaboration(
     session_token: String,
     user_name: String,
-) -> Result<(), StoryWeaverError> {
+) -> Result<()> {
     let pool = get_pool()?;
     
     let session = crate::database::operations::canvas::get_canvas_collaboration_session(&pool, &session_token)
@@ -515,7 +510,7 @@ pub async fn record_canvas_operation(
     element_id: Option<String>,
     operation_data: Value,
     user_id: Option<String>,
-) -> Result<(), StoryWeaverError> {
+) -> Result<()> {
     let pool = get_pool()?;
     
     let operation_type_enum = match operation_type.as_str() {
@@ -547,10 +542,10 @@ pub async fn get_canvas_operations(
     canvas_id: String,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<Vec<CanvasOperation>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<CanvasOperation>> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     crate::database::operations::canvas::get_canvas_operations(&pool, &canvas_id, Some(limit.unwrap_or(50)), Some(offset.unwrap_or(0)))
         .await
-        .map_err(|e| format!("Failed to get canvas operations: {}", e))
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
 }

@@ -19,8 +19,8 @@ pub async fn create_plugin(
     temperature: Option<f64>,
     max_tokens: Option<i32>,
     tags: Option<Vec<String>>,
-) -> Result<Plugin, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Plugin, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = match category.as_str() {
         "writing" => PluginCategory::Writing,
@@ -30,14 +30,14 @@ pub async fn create_plugin(
         "research" => PluginCategory::Research,
         "formatting" => PluginCategory::Formatting,
         "other" => PluginCategory::Other,
-        _ => return Err("Invalid plugin category".to_string()),
+        _ => return Err(StoryWeaverError::invalid_input("Invalid plugin category")),
     };
     
     let visibility_enum = match visibility.as_str() {
         "published" => PluginVisibility::Published,
         "private" => PluginVisibility::Private,
         "unlisted" => PluginVisibility::Unlisted,
-        _ => return Err("Invalid plugin visibility".to_string()),
+        _ => return Err(StoryWeaverError::invalid_input("Invalid plugin visibility")),
     };
     
     let plugin = Plugin {
@@ -63,19 +63,19 @@ pub async fn create_plugin(
     
     create_plugin(&pool, plugin)
         .await
-        .map_err(|e| format!("Failed to create plugin: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin: {}", e)))
 }
 
 /// Get plugin by ID
 #[tauri::command]
 pub async fn get_plugin(
     plugin_id: i32,
-) -> Result<Option<Plugin>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Option<Plugin>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     get_plugin_by_id(&pool, plugin_id)
         .await
-        .map_err(|e| format!("Failed to get plugin: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin: {}", e)))
 }
 
 /// Search plugins
@@ -88,8 +88,8 @@ pub async fn search_plugins(
     sort_by: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<Vec<PluginSearchResult>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<PluginSearchResult>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = if let Some(cat) = category {
         Some(match cat.as_str() {
@@ -103,7 +103,7 @@ pub async fn search_plugins(
             "theme" => PluginCategory::Theme,
             "workflow" => PluginCategory::Workflow,
             "collaboration" => PluginCategory::Collaboration,
-            _ => return Err("Invalid plugin category".to_string()),
+            _ => return Err(StoryWeaverError::invalid_input("Invalid plugin category")),
         })
     } else {
         None
@@ -133,7 +133,7 @@ pub async fn search_plugins(
         offset.unwrap_or(0),
     )
     .await
-    .map_err(|e| format!("Failed to search plugins: {}", e))
+    .map_err(|e| StoryWeaverError::database(format!("Failed to search plugins: {}", e)))
 }
 
 /// Update plugin
@@ -151,8 +151,8 @@ pub async fn update_plugin(
     documentation_url: Option<String>,
     repository_url: Option<String>,
     tags: Option<Vec<String>>,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<(), StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = if let Some(cat) = category {
         Some(match cat.as_str() {
@@ -166,7 +166,7 @@ pub async fn update_plugin(
             "theme" => PluginCategory::Theme,
             "workflow" => PluginCategory::Workflow,
             "collaboration" => PluginCategory::Collaboration,
-            _ => return Err("Invalid plugin category".to_string()),
+            _ => return Err(StoryWeaverError::invalid_input("Invalid plugin category")),
         })
     } else {
         None
@@ -177,7 +177,7 @@ pub async fn update_plugin(
             "public" => PluginVisibility::Public,
             "private" => PluginVisibility::Private,
             "unlisted" => PluginVisibility::Unlisted,
-            _ => return Err("Invalid plugin visibility".to_string()),
+            _ => return Err(StoryWeaverError::invalid_input("Invalid plugin visibility")),
         })
     } else {
         None
@@ -206,12 +206,12 @@ pub async fn update_plugin(
 #[tauri::command]
 pub async fn delete_plugin(
     plugin_id: i32,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<(), StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     delete_plugin(&pool, plugin_id)
         .await
-        .map_err(|e| format!("Failed to delete plugin: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to delete plugin: {}", e)))
 }
 
 /// Execute plugin
@@ -221,14 +221,14 @@ pub async fn execute_plugin(
     input_data: Value,
     variables: Option<Value>,
     user_id: Option<String>,
-) -> Result<PluginExecutionResult, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<PluginExecutionResult, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     // Get the plugin
     let plugin = get_plugin_by_id(&pool, plugin_id)
         .await
-        .map_err(|e| format!("Failed to get plugin: {}", e))?
-        .ok_or("Plugin not found")?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin: {}", e)))?
+        .ok_or_else(|| StoryWeaverError::not_found("Plugin not found".to_string()))?;
     
     // Create execution request
     let request = PluginExecutionRequest {
@@ -256,12 +256,12 @@ pub async fn execute_plugin(
     // Record execution history
     record_plugin_execution(&pool, &request, &result)
         .await
-        .map_err(|e| format!("Failed to record plugin execution: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))?;
     
     // Update usage statistics
     update_plugin_usage_stats(&pool, plugin_id)
         .await
-        .map_err(|e| format!("Failed to update usage stats: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to update usage stats: {}", e)))?;
     
     Ok(result)
 }
@@ -273,11 +273,11 @@ pub async fn rate_plugin(
     rating: i32,
     review: Option<String>,
     user_id: String,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<(), StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     if rating < 1 || rating > 5 {
-        return Err("Rating must be between 1 and 5".to_string());
+        return Err(StoryWeaverError::invalid_input("Rating must be between 1 and 5"));
     }
     
     let plugin_rating = PluginRating {
@@ -291,7 +291,7 @@ pub async fn rate_plugin(
     
     create_plugin_rating(&pool, plugin_rating)
         .await
-        .map_err(|e| format!("Failed to rate plugin: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to rate plugin: {}", e)))
 }
 
 /// Get plugin ratings
@@ -300,24 +300,24 @@ pub async fn get_plugin_ratings(
     plugin_id: i32,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<Vec<PluginRating>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<PluginRating>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     get_plugin_ratings(&pool, plugin_id, limit.unwrap_or(10), offset.unwrap_or(0))
         .await
-        .map_err(|e| format!("Failed to get plugin ratings: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin ratings: {}", e)))
 }
 
 /// Get plugin usage statistics
 #[tauri::command]
 pub async fn get_plugin_usage_stats(
     plugin_id: i32,
-) -> Result<Option<PluginUsageStats>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Option<PluginUsageStats>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     get_plugin_usage_stats(&pool, plugin_id)
         .await
-        .map_err(|e| format!("Failed to get plugin usage stats: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin usage stats: {}", e)))
 }
 
 /// Get plugin execution history
@@ -327,8 +327,8 @@ pub async fn get_plugin_execution_history(
     user_id: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<Vec<PluginExecutionHistory>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<PluginExecutionHistory>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     get_plugin_execution_history(
         &pool,
@@ -338,15 +338,15 @@ pub async fn get_plugin_execution_history(
         offset.unwrap_or(0),
     )
     .await
-    .map_err(|e| format!("Failed to get plugin execution history: {}", e))
+    .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin execution history: {}", e)))
 }
 
 /// Get plugin templates
 #[tauri::command]
 pub async fn get_plugin_templates(
     category: Option<String>,
-) -> Result<Vec<PluginTemplate>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<PluginTemplate>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = if let Some(cat) = category {
         Some(match cat.as_str() {
@@ -360,7 +360,7 @@ pub async fn get_plugin_templates(
             "theme" => PluginCategory::Theme,
             "workflow" => PluginCategory::Workflow,
             "collaboration" => PluginCategory::Collaboration,
-            _ => return Err("Invalid plugin category".to_string()),
+            _ => return Err(StoryWeaverError::invalid_input("Invalid plugin category")),
         })
     } else {
         None
@@ -368,7 +368,7 @@ pub async fn get_plugin_templates(
     
     get_plugin_templates(&pool, category_enum)
         .await
-        .map_err(|e| format!("Failed to get plugin templates: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin templates: {}", e)))
 }
 
 /// Get all plugins
@@ -377,8 +377,8 @@ pub async fn get_plugins(
     category: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<Vec<Plugin>, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Vec<Plugin>, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = if let Some(cat) = category {
         Some(match cat.as_str() {
@@ -389,7 +389,7 @@ pub async fn get_plugins(
             "research" => PluginCategory::Research,
             "formatting" => PluginCategory::Formatting,
             "other" => PluginCategory::Other,
-            _ => return Err("Invalid plugin category".to_string()),
+            _ => return Err(StoryWeaverError::invalid_input("Invalid plugin category")),
         })
     } else {
         None
@@ -397,7 +397,7 @@ pub async fn get_plugins(
     
     get_plugins(&pool, category_enum, limit.unwrap_or(20), offset.unwrap_or(0))
         .await
-        .map_err(|e| format!("Failed to get plugins: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugins: {}", e)))
 }
 
 /// Record plugin execution
@@ -410,8 +410,8 @@ pub async fn record_plugin_execution(
     success: bool,
     error_message: Option<String>,
     user_id: Option<String>,
-) -> Result<(), String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<(), StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let request = PluginExecutionRequest {
         plugin_id,
@@ -435,7 +435,7 @@ pub async fn record_plugin_execution(
     
     record_plugin_execution(&pool, &request, &result)
         .await
-        .map_err(|e| format!("Failed to record plugin execution: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))
 }
 
 /// Apply plugin template
@@ -444,14 +444,14 @@ pub async fn apply_plugin_template(
     template_id: i32,
     name: String,
     variables: Option<Value>,
-) -> Result<Plugin, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<Plugin, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     // Get the template
     let template = get_plugin_template_by_id(&pool, template_id)
         .await
-        .map_err(|e| format!("Failed to get plugin template: {}", e))?
-        .ok_or("Plugin template not found")?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin template: {}", e)))?
+        .ok_or_else(|| StoryWeaverError::not_found("Plugin template not found".to_string()))?;
     
     // Create plugin from template
     let plugin = Plugin {
@@ -477,7 +477,7 @@ pub async fn apply_plugin_template(
     
     create_plugin(&pool, plugin)
         .await
-        .map_err(|e| format!("Failed to create plugin from template: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin from template: {}", e)))
 }
 
 /// Create plugin template
@@ -489,8 +489,8 @@ pub async fn create_plugin_template(
     template_code: String,
     variables_schema: Option<Value>,
     example_usage: Option<String>,
-) -> Result<PluginTemplate, String> {
-    let pool = get_pool().map_err(|e| format!("Failed to get database pool: {}", e))?;
+) -> Result<PluginTemplate, StoryWeaverError> {
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = match category.as_str() {
         "writing" => PluginCategory::Writing,
@@ -500,7 +500,7 @@ pub async fn create_plugin_template(
         "research" => PluginCategory::Research,
         "formatting" => PluginCategory::Formatting,
         "other" => PluginCategory::Other,
-        _ => return Err("Invalid plugin category".to_string()),
+        _ => return Err(StoryWeaverError::invalid_input("Invalid plugin category")),
     };
     
     let template = PluginTemplate {
@@ -517,5 +517,5 @@ pub async fn create_plugin_template(
     
     create_plugin_template(&pool, template)
         .await
-        .map_err(|e| format!("Failed to create plugin template: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin template: {}", e)))
 }

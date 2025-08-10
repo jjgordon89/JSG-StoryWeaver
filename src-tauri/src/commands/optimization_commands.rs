@@ -1,5 +1,6 @@
 use crate::database::optimization::{OptimizationManager, DatabaseOptimizationStats};
 use crate::database::DbPool;
+use crate::error::StoryWeaverError;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -31,45 +32,45 @@ pub struct IndexRecommendation {
 #[tauri::command]
 pub async fn get_optimization_stats(
     pool: State<'_, DbPool>,
-) -> Result<DatabaseOptimizationStats, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<DatabaseOptimizationStats, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     optimization_manager
         .get_optimization_stats()
         .await
-        .map_err(|e| format!("Failed to get optimization stats: {}", e))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get optimization stats: {}", e)))
 }
 
 #[tauri::command]
 pub async fn run_database_optimization(
     pool: State<'_, DbPool>,
     config: OptimizationConfig,
-) -> Result<OptimizationReport, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<OptimizationReport, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     // Run optimization based on config
     if config.enable_auto_indexing {
         optimization_manager
             .create_recommended_indexes()
             .await
-            .map_err(|e| format!("Failed to create indexes: {}", e))?;
+            .map_err(|e| StoryWeaverError::database(format!("Failed to create indexes: {}", e)))?;
     }
     
     // Perform maintenance
     optimization_manager
         .perform_maintenance()
         .await
-        .map_err(|e| format!("Failed to perform maintenance: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to perform maintenance: {}", e)))?;
     
     // Get updated stats
     let stats = optimization_manager
         .get_optimization_stats()
         .await
-        .map_err(|e| format!("Failed to get stats after optimization: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get stats after optimization: {}", e)))?;
     
     // Generate recommendations
     let recommendations = generate_recommendations(&stats);
@@ -86,15 +87,15 @@ pub async fn run_database_optimization(
 #[tauri::command]
 pub async fn get_index_recommendations(
     pool: State<'_, DbPool>,
-) -> Result<Vec<IndexRecommendation>, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<Vec<IndexRecommendation>, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let recommendations = optimization_manager
         .analyze_query_patterns()
         .await
-        .map_err(|e| format!("Failed to analyze query patterns: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to analyze query patterns: {}", e)))?;
     
     Ok(recommendations
         .into_iter()
@@ -114,15 +115,15 @@ pub async fn create_index(
     table_name: String,
     columns: Vec<String>,
     index_type: Option<String>,
-) -> Result<String, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<String, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let index_name = optimization_manager
         .create_custom_index(&table_name, &columns, index_type.as_deref())
         .await
-        .map_err(|e| format!("Failed to create index: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create index: {}", e)))?;
     
     Ok(format!("Created index: {}", index_name))
 }
@@ -131,17 +132,17 @@ pub async fn create_index(
 pub async fn drop_unused_indexes(
     pool: State<'_, DbPool>,
     min_usage_threshold: Option<f64>,
-) -> Result<Vec<String>, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<Vec<String>, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let threshold = min_usage_threshold.unwrap_or(0.1); // 10% default threshold
     
     let dropped_indexes = optimization_manager
         .cleanup_unused_indexes(threshold)
         .await
-        .map_err(|e| format!("Failed to cleanup indexes: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to cleanup indexes: {}", e)))?;
     
     Ok(dropped_indexes)
 }
@@ -150,17 +151,17 @@ pub async fn drop_unused_indexes(
 pub async fn clear_ai_cache(
     pool: State<'_, DbPool>,
     older_than_hours: Option<u64>,
-) -> Result<usize, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<usize, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let hours = older_than_hours.unwrap_or(24); // Default to 24 hours
     
     let cleared_count = optimization_manager
         .clear_ai_cache(hours)
         .await
-        .map_err(|e| format!("Failed to clear AI cache: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to clear AI cache: {}", e)))?;
     
     Ok(cleared_count)
 }
@@ -169,17 +170,17 @@ pub async fn clear_ai_cache(
 pub async fn optimize_memory_usage(
     pool: State<'_, DbPool>,
     target_mb: Option<usize>,
-) -> Result<String, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<String, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let target = target_mb.unwrap_or(256); // Default to 256MB
     
     optimization_manager
         .optimize_memory_usage(target)
         .await
-        .map_err(|e| format!("Failed to optimize memory usage: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to optimize memory usage: {}", e)))?;
     
     Ok(format!("Memory usage optimized to target: {}MB", target))
 }
@@ -187,35 +188,35 @@ pub async fn optimize_memory_usage(
 #[tauri::command]
 pub async fn get_cache_statistics(
     pool: State<'_, DbPool>,
-) -> Result<serde_json::Value, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<serde_json::Value, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let stats = optimization_manager
         .get_cache_statistics()
         .await
-        .map_err(|e| format!("Failed to get cache statistics: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get cache statistics: {}", e)))?;
     
     Ok(serde_json::to_value(stats)
-        .map_err(|e| format!("Failed to serialize cache statistics: {}", e))?)
+        .map_err(|e| StoryWeaverError::serialization(format!("Failed to serialize cache statistics: {}", e)))?)
 }
 
 #[tauri::command]
 pub async fn run_performance_analysis(
     pool: State<'_, DbPool>,
-) -> Result<serde_json::Value, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<serde_json::Value, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let analysis = optimization_manager
         .run_performance_analysis()
         .await
-        .map_err(|e| format!("Failed to run performance analysis: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to run performance analysis: {}", e)))?;
     
     Ok(serde_json::to_value(analysis)
-        .map_err(|e| format!("Failed to serialize performance analysis: {}", e))?)
+        .map_err(|e| StoryWeaverError::serialization(format!("Failed to serialize performance analysis: {}", e)))?)
 }
 
 #[tauri::command]
@@ -223,15 +224,15 @@ pub async fn schedule_maintenance(
     pool: State<'_, DbPool>,
     maintenance_type: String,
     schedule_cron: String,
-) -> Result<String, String> {
-    let optimization_manager = OptimizationManager::new(pool.inner().clone())
+) -> Result<String, StoryWeaverError> {
+    let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
-        .map_err(|e| format!("Failed to create optimization manager: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     optimization_manager
         .schedule_maintenance(&maintenance_type, &schedule_cron)
         .await
-        .map_err(|e| format!("Failed to schedule maintenance: {}", e))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to schedule maintenance: {}", e)))?;
     
     Ok(format!(
         "Scheduled {} maintenance with cron: {}",

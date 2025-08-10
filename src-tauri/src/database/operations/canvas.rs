@@ -595,8 +595,8 @@ pub async fn get_canvas_collaboration_session_by_canvas(
     Ok(result)
 }
 
-/// Create canvas collaboration session (overloaded version)
-pub async fn create_canvas_collaboration_session(
+/// Create canvas collaboration session from struct
+pub async fn create_canvas_collaboration_session_from_struct(
     pool: &SqlitePool,
     session: CanvasCollaborationSession,
 ) -> Result<CanvasCollaborationSession, sqlx::Error> {

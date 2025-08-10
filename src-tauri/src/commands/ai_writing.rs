@@ -1,7 +1,7 @@
 //! AI Writing Commands for StoryWeaver
 
 use crate::commands::CommandResponse;
-use crate::error::StoryWeaverError;
+use crate::error::{StoryWeaverError, Result};
 use crate::ai::{AIProviderManager, AIContext, RewriteStyle, TextStream};
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, State, Manager, Window};
@@ -173,9 +173,9 @@ pub async fn auto_write(
     document_id: i32,
     cursor_position: usize,
     settings: WriteSettings,
-) -> std::result::Result<WriteResult, String> {
+) -> Result<WriteResult> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
-    processor.auto_write(document_id, cursor_position, settings).await.map_err(|e| e.to_string())
+    processor.auto_write(document_id, cursor_position, settings).await
 }
 
 #[tauri::command]
@@ -184,9 +184,9 @@ pub async fn guided_write(
     document_id: i32,
     user_prompt: String,
     settings: WriteSettings,
-) -> std::result::Result<WriteResult, String> {
+) -> Result<WriteResult> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
-    processor.guided_write(document_id, &user_prompt, settings).await.map_err(|e| e.to_string())
+    processor.guided_write(document_id, &user_prompt, settings).await
 }
 
 // Streaming Tauri Commands
@@ -197,7 +197,7 @@ pub async fn auto_write_stream(
     document_id: i32,
     cursor_position: usize,
     settings: WriteSettings,
-) -> std::result::Result<StreamStartResponse, String> {
+) -> Result<StreamStartResponse> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     let stream_id = format!("auto_write_{}_{}", document_id, chrono::Utc::now().timestamp_millis());
     let stream_id_clone = stream_id.clone();
@@ -255,7 +255,7 @@ pub async fn guided_write_stream(
     document_id: i32,
     user_prompt: String,
     settings: WriteSettings,
-) -> std::result::Result<StreamStartResponse, String> {
+) -> Result<StreamStartResponse> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     let stream_id = format!("guided_write_{}_{}", document_id, chrono::Utc::now().timestamp_millis());
     let stream_id_clone = stream_id.clone();
@@ -334,7 +334,7 @@ pub async fn rewrite_text(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     settings: RewriteSettings,
-) -> std::result::Result<String, String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let rewrite_style = match settings.style.as_str() {
@@ -348,9 +348,9 @@ pub async fn rewrite_text(
                 _ => crate::ai::RewriteStyle::Rephrase,
             };
             
-            provider.rewrite_text(&text, &rewrite_style).await.map_err(|e| e.to_string())
+            provider.rewrite_text(&text, &rewrite_style).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -359,7 +359,7 @@ pub async fn expand_text(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     settings: ExpandSettings,
-) -> std::result::Result<String, String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -372,9 +372,9 @@ pub async fn expand_text(
                 options
             });
             
-            provider.expand_text(&text, &context).await.map_err(|e| e.to_string())
+            provider.expand_text(&text, &context).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -383,7 +383,7 @@ pub async fn describe_scene(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     focus: Option<String>,
-) -> std::result::Result<String, String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -396,9 +396,9 @@ pub async fn describe_scene(
                 });
             }
             
-            provider.describe_scene(&text, &context).await.map_err(|e| e.to_string())
+            provider.describe_scene(&text, &context).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -407,7 +407,7 @@ pub async fn brainstorm(
     state: State<'_, Arc<AIProviderManager>>,
     prompt: String,
     settings: BrainstormSettings,
-) -> std::result::Result<Vec<String>, String> {
+) -> Result<Vec<String>> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -419,9 +419,9 @@ pub async fn brainstorm(
                 options
             });
             
-            provider.brainstorm(&prompt, &context).await.map_err(|e| e.to_string())
+            provider.brainstorm(&prompt, &context).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -429,12 +429,12 @@ pub async fn brainstorm(
 pub async fn visualize_scene(
     state: State<'_, Arc<AIProviderManager>>,
     description: String,
-) -> std::result::Result<String, String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
-            provider.generate_image(&description).await.map_err(|e| e.to_string())
+            provider.generate_image(&description).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -443,12 +443,12 @@ pub async fn quick_edit(
     state: State<'_, Arc<AIProviderManager>>,
     text: String,
     instruction: String,
-) -> std::result::Result<String, String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
-            provider.quick_edit(&text, &instruction).await.map_err(|e| e.to_string())
+            provider.quick_edit(&text, &instruction).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -457,7 +457,7 @@ pub async fn quick_chat(
     state: State<'_, Arc<AIProviderManager>>,
     message: String,
     context: Option<String>,
-) -> std::result::Result<String, String> {
+) -> Result<String> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut ai_context = crate::ai::AIContext::default();
@@ -465,9 +465,9 @@ pub async fn quick_chat(
                 ai_context.story_context = Some(ctx);
             }
             
-            provider.quick_chat(&message, &ai_context).await.map_err(|e| e.to_string())
+            provider.quick_chat(&message, &ai_context).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }
 
@@ -478,14 +478,14 @@ pub async fn tone_shift_write(
     cursor_position: usize,
     tone: String,
     settings: WriteSettings,
-) -> std::result::Result<WriteResult, String> {
+) -> Result<WriteResult> {
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     
     // Create modified settings with the specified tone
     let mut tone_settings = settings;
     tone_settings.tone = tone;
     
-    processor.auto_write(document_id, cursor_position, tone_settings).await.map_err(|e| e.to_string())
+    processor.auto_write(document_id, cursor_position, tone_settings).await
 }
 
 #[tauri::command]
@@ -493,7 +493,7 @@ pub async fn get_related_words(
     state: State<'_, Arc<AIProviderManager>>,
     word: String,
     context: Option<String>,
-) -> std::result::Result<Vec<String>, String> {
+) -> Result<Vec<String>> {
     match state.get_default_provider() {
         Some(provider) => {
             let mut ai_context = crate::ai::AIContext::default();
@@ -501,8 +501,8 @@ pub async fn get_related_words(
                 ai_context.preceding_text = Some(ctx);
             }
             
-            provider.related_words(&word, &ai_context).await.map_err(|e| e.to_string())
+            provider.related_words(&word, &ai_context).await.map_err(StoryWeaverError::ai)
         }
-        None => Err("No AI provider available".to_string()),
+        None => Err(StoryWeaverError::ai("No AI provider available")),
     }
 }

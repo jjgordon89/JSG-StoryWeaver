@@ -18,6 +18,7 @@ pub async fn create_shared_document(
     let share_token = Uuid::new_v4().to_string();
     let expires_at = settings.expires_at;
 
+    let now = Utc::now();
     let result = sqlx::query!(
         r#"
         INSERT INTO shared_documents (
@@ -36,14 +37,14 @@ pub async fn create_shared_document(
         0, // current_uses starts at 0
         true, // is_active
         created_by,
-        Utc::now(),
-        Utc::now()
+        now,
+        now
     )
     .fetch_one(pool)
     .await?;
 
     Ok(SharedDocument {
-        id: result.id,
+        id: result.id as i32,
         document_id: document_id.to_string(),
         project_id: project_id.to_string(),
         share_token,
@@ -54,8 +55,8 @@ pub async fn create_shared_document(
         current_uses: 0,
         is_active: true,
         created_by: created_by.map(|s| s.to_string()),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: now,
+        updated_at: now,
     })
 }
 
@@ -64,11 +65,9 @@ pub async fn get_shared_document_by_token(
     pool: &SqlitePool,
     token: &str,
 ) -> Result<Option<SharedDocument>, sqlx::Error> {
-    let result = sqlx::query_as!(
-        SharedDocument,
+    let result = sqlx::query!(
         r#"
-        SELECT id, document_id as "document_id: String", project_id as "project_id: String", 
-               share_token as "share_token: String", share_type as "share_type: String", 
+        SELECT id, document_id, project_id, share_token, share_type, 
                password_hash, expires_at, max_uses, current_uses, is_active, 
                created_by, created_at, updated_at
         FROM shared_documents
@@ -79,7 +78,25 @@ pub async fn get_shared_document_by_token(
     .fetch_optional(pool)
     .await?;
 
-    Ok(result)
+    if let Some(row) = result {
+        Ok(Some(SharedDocument {
+            id: row.id as i32,
+            document_id: row.document_id,
+            project_id: row.project_id,
+            share_token: row.share_token,
+            share_type: row.share_type,
+            password_hash: row.password_hash,
+            expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
+            max_uses: row.max_uses,
+            current_uses: row.current_uses.unwrap_or(0) as i32,
+            is_active: row.is_active.unwrap_or(false),
+            created_by: row.created_by,
+            created_at: DateTime::from_naive_utc_and_offset(row.created_at, Utc),
+            updated_at: DateTime::from_naive_utc_and_offset(row.updated_at, Utc),
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Increment share usage count
@@ -87,13 +104,14 @@ pub async fn increment_share_usage(
     pool: &SqlitePool,
     shared_doc_id: i32,
 ) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
     sqlx::query!(
         r#"
         UPDATE shared_documents
         SET current_uses = current_uses + 1, updated_at = ?
         WHERE id = ?
         "#,
-        Utc::now(),
+        now,
         shared_doc_id
     )
     .execute(pool)
@@ -107,6 +125,7 @@ pub async fn create_comment(
     pool: &SqlitePool,
     request: CommentRequest,
 ) -> Result<Comment, sqlx::Error> {
+    let now = Utc::now();
     let result = sqlx::query!(
         r#"
         INSERT INTO document_comments (
@@ -128,8 +147,8 @@ pub async fn create_comment(
         request.comment_type.to_string(),
         "open", // default status
         false, // default is_resolved
-        Utc::now(),
-        Utc::now()
+        now,
+        now
     )
     .fetch_one(pool)
     .await?;
@@ -149,8 +168,8 @@ pub async fn create_comment(
         is_resolved: false,
         resolved_by: None,
         resolved_at: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: now,
+        updated_at: now,
     })
 }
 
@@ -159,12 +178,11 @@ pub async fn get_document_comments(
     pool: &SqlitePool,
     document_id: &str,
 ) -> Result<Vec<Comment>, sqlx::Error> {
-    let comments = sqlx::query_as!(
-        Comment,
+    let rows = sqlx::query!(
         r#"
-        SELECT id, document_id, parent_comment_id, user_name, user_token,
-               comment_text, start_position, end_position, is_author_comment,
-               is_resolved, created_at, updated_at
+        SELECT id, document_id, parent_comment_id, author_name, author_identifier,
+               content, position_start, position_end, selected_text, comment_type,
+               status, is_resolved, resolved_by, resolved_at, created_at, updated_at
         FROM document_comments
         WHERE document_id = ?
         ORDER BY created_at ASC
@@ -173,6 +191,25 @@ pub async fn get_document_comments(
     )
     .fetch_all(pool)
     .await?;
+
+    let comments = rows.into_iter().map(|row| Comment {
+        id: row.id as i32,
+        document_id: row.document_id,
+        parent_comment_id: row.parent_comment_id.map(|id| id as i32),
+        author_name: row.author_name,
+        author_identifier: row.author_identifier,
+        content: row.content,
+        position_start: row.position_start.map(|p| p as i32),
+        position_end: row.position_end.map(|p| p as i32),
+        selected_text: row.selected_text,
+        comment_type: row.comment_type,
+        status: row.status,
+        is_resolved: row.is_resolved,
+        resolved_by: row.resolved_by,
+        resolved_at: row.resolved_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
+        created_at: DateTime::from_naive_utc_and_offset(row.created_at, Utc),
+        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at, Utc),
+    }).collect();
 
     Ok(comments)
 }
@@ -183,6 +220,7 @@ pub async fn resolve_comment(
     comment_id: i32,
     resolved_by: &str,
 ) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
     sqlx::query!(
         r#"
         UPDATE document_comments 
@@ -190,8 +228,8 @@ pub async fn resolve_comment(
         WHERE id = ?
         "#,
         resolved_by,
-        Utc::now(),
-        Utc::now(),
+        now,
+        now,
         comment_id
     )
     .execute(pool)
@@ -219,9 +257,10 @@ pub async fn create_collaboration_session(
     max_participants: i32,
     expires_in_hours: Option<i32>,
 ) -> Result<CollaborationSession, sqlx::Error> {
+    let now = Utc::now();
     let session_token = Uuid::new_v4().to_string();
     let expires_at = expires_in_hours.map(|hours| {
-        Utc::now() + chrono::Duration::hours(hours as i64)
+        now + chrono::Duration::hours(hours as i64)
     });
 
     let result = sqlx::query!(
@@ -236,20 +275,20 @@ pub async fn create_collaboration_session(
         session_token,
         max_participants,
         expires_at,
-        Utc::now()
+        now
     )
     .fetch_one(pool)
     .await?;
 
     Ok(CollaborationSession {
-        id: result.id,
+        id: result.id as i32,
         document_id: document_id.to_string(),
         session_token,
         session_name: None,
         is_active: true,
         allow_anonymous: false,
         max_participants,
-        created_at: Utc::now(),
+        created_at: now,
         expires_at,
     })
 }
@@ -259,11 +298,10 @@ pub async fn get_collaboration_session_by_token(
     pool: &SqlitePool,
     token: &str,
 ) -> Result<Option<CollaborationSession>, sqlx::Error> {
-    let result = sqlx::query_as!(
-        CollaborationSession,
+    let row = sqlx::query!(
         r#"
-        SELECT id, document_id, session_token, is_active, max_participants,
-               current_participants, created_at, expires_at
+        SELECT id, document_id, session_token, session_name, is_active,
+               allow_anonymous, max_participants, created_at, expires_at
         FROM collaboration_sessions
         WHERE session_token = ? AND is_active = 1
         "#,
@@ -272,25 +310,39 @@ pub async fn get_collaboration_session_by_token(
     .fetch_optional(pool)
     .await?;
 
-    Ok(result)
+    if let Some(row) = row {
+        Ok(Some(CollaborationSession {
+            id: row.id.unwrap_or(0) as i32,
+            document_id: row.document_id,
+            session_token: row.session_token,
+            session_name: row.session_name,
+            is_active: row.is_active.unwrap_or(false),
+            allow_anonymous: row.allow_anonymous.unwrap_or(false),
+            max_participants: row.max_participants.unwrap_or(0) as i32,
+            created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
+            expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
+        }))
+    } else {
+        Ok(None)
+    }
 }
 
 /// Update collaboration session participant count
-pub async fn update_session_participants(
-    pool: &SqlitePool,
-    session_id: i32,
-    participant_count: i32,
-) -> Result<(), sqlx::Error> {
-    sqlx::query!(
-        "UPDATE collaboration_sessions SET current_participants = ? WHERE id = ?",
-        participant_count,
-        session_id
-    )
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
+// Note: current_participants column removed from model
+// pub async fn update_session_participants(
+//     pool: &SqlitePool,
+//     session_id: i32,
+//     participant_count: i32,
+// ) -> Result<(), sqlx::Error> {
+//     sqlx::query!(
+//         "UPDATE collaboration_sessions SET current_participants = ? WHERE id = ?",
+//         participant_count,
+//         session_id
+//     )
+//     .execute(pool)
+//     .await?;
+//     Ok(())
+// }
 
 /// Get comment threads (organized by parent-child relationships)
 pub async fn get_comment_threads(
@@ -372,11 +424,10 @@ pub async fn duplicate_document_for_sharing(
     new_title: &str,
 ) -> Result<String, sqlx::Error> {
     // Get original document
-    let original = sqlx::query_as!(
-        Document,
+    let row = sqlx::query!(
         r#"
-        SELECT id as "id: String", project_id as "project_id: String", title as "title: String", content as "content: String", document_type as "document_type: DocumentType",
-               order_index as "order_index: i32", word_count as "word_count: i32", parent_id as "parent_id: Option<String>", created_at, updated_at, metadata, folder_id as "folder_id: Option<String>"
+        SELECT id, project_id, title, content, document_type,
+               order_index, word_count, parent_id, created_at, updated_at, metadata, folder_id
         FROM documents
         WHERE id = ?
         "#,
@@ -384,6 +435,21 @@ pub async fn duplicate_document_for_sharing(
     )
     .fetch_one(pool)
     .await?;
+    
+    let original = Document {
+        id: row.id.to_string(),
+        project_id: row.project_id,
+        title: row.title,
+        content: row.content,
+        document_type: serde_json::from_str(&row.document_type).unwrap(),
+        order_index: row.order_index.unwrap_or(0) as i32,
+        word_count: row.word_count.unwrap_or(0) as i32,
+        parent_id: row.parent_id.map(|id| id.to_string()),
+        created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
+        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),
+        metadata: row.metadata.unwrap_or_else(|| "{}".to_string()),
+        folder_id: row.folder_id,
+    };
 
     // Create new document with copied content
     let new_id = Uuid::new_v4().to_string();
@@ -421,13 +487,14 @@ pub async fn unpublish_shared_document(
     pool: &SqlitePool,
     share_token: &str,
 ) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
     sqlx::query!(
         r#"
         UPDATE shared_documents
-        SET is_active = 0, updated_at = ?
+        SET is_active = false, updated_at = ?
         WHERE share_token = ?
         "#,
-        Utc::now(),
+        now,
         share_token
     )
     .execute(pool)
@@ -441,13 +508,14 @@ pub async fn republish_shared_document(
     pool: &SqlitePool,
     share_token: &str,
 ) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
     sqlx::query!(
         r#"
         UPDATE shared_documents
-        SET is_active = 1, updated_at = ?
+        SET is_active = true, updated_at = ?
         WHERE share_token = ?
         "#,
-        Utc::now(),
+        now,
         share_token
     )
     .execute(pool)
@@ -461,11 +529,9 @@ pub async fn get_project_shared_documents(
     pool: &SqlitePool,
     project_id: &str,
 ) -> Result<Vec<SharedDocument>, sqlx::Error> {
-    let results = sqlx::query_as!(
-        SharedDocument,
+    let rows = sqlx::query!(
         r#"
-        SELECT id, document_id as "document_id: String", project_id as "project_id: String", 
-               share_token as "share_token: String", share_type as "share_type: String", 
+        SELECT id, document_id, project_id, share_token, share_type, 
                password_hash, expires_at, max_uses, current_uses, is_active, 
                created_by, created_at, updated_at
         FROM shared_documents
@@ -476,6 +542,22 @@ pub async fn get_project_shared_documents(
     )
     .fetch_all(pool)
     .await?;
+    
+    let results = rows.into_iter().map(|row| SharedDocument {
+        id: row.id as i32,
+        document_id: row.document_id,
+        project_id: row.project_id,
+        share_token: row.share_token,
+        share_type: row.share_type,
+        password_hash: row.password_hash,
+        expires_at: row.expires_at,
+        max_uses: row.max_uses,
+        current_uses: row.current_uses,
+        is_active: row.is_active != 0,
+        created_by: row.created_by,
+        created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
+        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),
+    }).collect();
 
     Ok(results)
 }
@@ -488,6 +570,7 @@ pub async fn create_notification(
     message: &str,
     recipient_token: Option<&str>,
 ) -> Result<CollaborationNotification, sqlx::Error> {
+    let now = Utc::now();
     let result = sqlx::query!(
         r#"
         INSERT INTO collaboration_notifications (
@@ -501,7 +584,7 @@ pub async fn create_notification(
         message,
         recipient_token,
         false, // is_read starts as false
-        Utc::now()
+        now
     )
     .fetch_one(pool)
     .await?;
@@ -513,7 +596,7 @@ pub async fn create_notification(
         message: message.to_string(),
         recipient_token: recipient_token.map(|s| s.to_string()),
         is_read: false,
-        created_at: Utc::now(),
+        created_at: now,
     })
 }
 
@@ -572,7 +655,7 @@ pub async fn mark_notification_read(
     notification_id: i32,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        "UPDATE collaboration_notifications SET is_read = 1 WHERE id = ?",
+        "UPDATE collaboration_notifications SET is_read = true WHERE id = ?",
         notification_id
     )
     .execute(pool)
@@ -587,7 +670,7 @@ pub async fn mark_all_notifications_read(
     recipient_token: &str,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        "UPDATE collaboration_notifications SET is_read = 1 WHERE recipient_token = ?",
+        "UPDATE collaboration_notifications SET is_read = true WHERE recipient_token = ?",
         recipient_token
     )
     .execute(pool)
@@ -602,7 +685,7 @@ pub async fn get_unread_notification_count(
     recipient_token: &str,
 ) -> Result<i32, sqlx::Error> {
     let result = sqlx::query!(
-        "SELECT COUNT(*) as count FROM collaboration_notifications WHERE recipient_token = ? AND is_read = 0",
+        "SELECT COUNT(*) as count FROM collaboration_notifications WHERE recipient_token = ? AND is_read = false",
         recipient_token
     )
     .fetch_one(pool)
@@ -616,7 +699,8 @@ pub async fn delete_old_notifications(
     pool: &SqlitePool,
     days_old: i32,
 ) -> Result<(), sqlx::Error> {
-    let cutoff_date = Utc::now() - chrono::Duration::days(days_old as i64);
+    let now = Utc::now();
+    let cutoff_date = now - chrono::Duration::days(days_old as i64);
     
     sqlx::query!(
         "DELETE FROM collaboration_notifications WHERE created_at < ?",
