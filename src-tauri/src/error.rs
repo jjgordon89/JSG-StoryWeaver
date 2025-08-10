@@ -388,7 +388,13 @@ impl From<i32> for StoryWeaverError {
 
 impl From<chrono::NaiveDateTime> for StoryWeaverError {
     fn from(err: chrono::NaiveDateTime) -> Self {
-        Self::Internal { message: err.to_string() }
+        Self::internal(format!("Invalid datetime: {}", err))
+    }
+}
+
+impl From<anyhow::Error> for StoryWeaverError {
+    fn from(err: anyhow::Error) -> Self {
+        Self::internal(format!("Anyhow error: {}", err))
     }
 }
 

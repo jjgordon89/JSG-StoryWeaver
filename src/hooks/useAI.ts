@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useAIStore, WriteSettings, RewriteSettings, ExpandSettings, BrainstormSettings, WriteResult, useAIStreaming } from '../stores/aiStore';
+import { useAIStore, WriteSettings, BrainstormSettings, WriteResult, useAIStreaming } from '../stores/aiStore';
 import { useCardStore } from '../stores/cardStore';
 import { AICard } from '../components/cards/CardSystem';
 import { invoke, listen } from '../utils/tauriSafe';
@@ -75,7 +75,7 @@ export const useAI = () => {
       }
       
       // Refresh cards in store
-      await cardStore.fetchCards(projectId, documentId);
+      await cardStore.fetchCards(projectId || 1, documentId);
       
       return cards;
     } catch (error) {
@@ -144,8 +144,8 @@ export const useAIWriteStream = () => {
       
       // Clean up listeners when streaming stops
       const cleanup = () => {
-        unlistenChunk();
-        unlistenError();
+        unlistenChunk?.();
+        unlistenError?.();
       };
       
       // Start the streaming command
@@ -170,16 +170,15 @@ export const useAIWriteStream = () => {
       }
       
       // Return a promise that resolves when streaming is complete
-      return new Promise<WriteResult>((resolve, reject) => {
+      return new Promise<WriteResult>((resolve) => {
         const checkComplete = () => {
           if (!streaming.isStreaming) {
             cleanup();
             resolve({
-              generated_text: streamedContent,
-              tokens_used: Math.floor(streamedContent.length / 4),
-              processing_time: Date.now() - parseInt(streamId.split('_')[1]),
-              context_used: '',
-              model_used: 'streaming'
+                generated_text: streamedContent,
+                tokens_used: Math.floor(streamedContent.length / 4),
+                credits_used: Math.floor(streamedContent.length / 10),
+                word_count: streamedContent.split(' ').length
             });
           } else {
             setTimeout(checkComplete, 100);
@@ -218,6 +217,8 @@ export const useAITextProcessor = () => {
     defaultRewriteSettings,
     defaultExpandSettings 
   } = useAIStore();
+  
+
   
   const [processedText, setProcessedText] = useState<string>('');
   const [originalText, setOriginalText] = useState<string>('');
@@ -294,7 +295,7 @@ export const useAICreative = () => {
     settings?: Partial<BrainstormSettings>
   ) => {
     try {
-      const result = await brainstorm(prompt, settings);
+      const result = await brainstorm(prompt, settings || {});
       setIdeas(result);
       return result;
     } catch (error) {

@@ -19,6 +19,7 @@ interface CreateForm {
   element_type: string;
   description: string;
   details: string;
+  significance?: string;
   visibility: 'always' | 'chapter' | 'never';
   series_shared: boolean;
 }
@@ -29,7 +30,7 @@ interface EditForm extends CreateForm {
 
 const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, seriesId }) => {
   const {
-    worldElements,
+    storyBible,
     filteredWorldElements,
     worldElementFilter,
     isLoadingWorldElements,
@@ -59,6 +60,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
     name: '',
     element_type: '',
     description: '',
+    details: '',
     significance: '',
     visibility: 'always',
     series_shared: false
@@ -201,13 +203,13 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
         element_type: createForm.element_type,
         element_name: createForm.name,
         story_context: storyBible?.braindump || '',
-        existing_elements: worldElements.map(el => el.name)
+        existing_elements: filteredWorldElements.map(el => el.name)
       };
       
       const generatedContent = await generateWorldBuilding(request);
       
       if (generatedContent) {
-        setCreateForm(prev => ({ ...prev, description: generatedContent }));
+        setCreateForm(prev => ({ ...prev, description: generatedContent.generated_content }));
       }
     } catch (err) {
       console.error('Failed to generate worldbuilding content:', err);
@@ -217,11 +219,11 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
   };
 
   const handleExportCSV = () => {
-    if (worldElements.length === 0) return;
+    if (filteredWorldElements.length === 0) return;
     
     // Create CSV content
     const headers = ['Name', 'Type', 'Description', 'Visibility', 'Series Shared'];
-    const rows = worldElements.map(element => [
+    const rows = filteredWorldElements.map(element => [
       element.name,
       getElementTypeLabel(element.element_type),
       element.description.replace(/"/g, '""'), // Escape quotes
@@ -248,9 +250,12 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
 
   const handleSearch = async () => {
     if (searchQuery.trim()) {
-      await searchWorldElements(projectId, searchQuery, seriesId);
+      await searchWorldElements({
+        project_id: projectId,
+        query: searchQuery
+      });
     } else {
-      await loadWorldElements(projectId, seriesId);
+      await loadWorldElements(projectId);
     }
   };
 
@@ -305,7 +310,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
           <Button
             onClick={handleExportCSV}
             variant="outline"
-            disabled={worldElements.length === 0}
+            disabled={filteredWorldElements.length === 0}
           >
             <Download className="h-4 w-4 mr-2" />
             Export CSV
@@ -462,7 +467,6 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                         variant="ghost"
                         size="sm"
                         onClick={() => openDetailModal(element)}
-                        title="View Details"
                       >
                         👁️
                       </Button>
@@ -470,7 +474,6 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditModal(element)}
-                        title="Edit"
                       >
                         ✏️
                       </Button>
@@ -478,7 +481,6 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDeleteElement(element.id)}
-                        title="Delete"
                       >
                         🗑️
                       </Button>
@@ -564,7 +566,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                 </div>
                 <Textarea
                   value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCreateForm({ ...createForm, description: e.target.value })}
                   placeholder="Describe this world element..."
                   rows={4}
                 />
@@ -579,7 +581,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                 <label className="text-sm font-medium mb-2 block">Significance (Optional):</label>
                 <Textarea
                   value={createForm.significance}
-                  onChange={(e) => setCreateForm({ ...createForm, significance: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCreateForm({ ...createForm, significance: e.target.value })}
                   placeholder="Why is this element important to your story?"
                   rows={2}
                 />
@@ -678,7 +680,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                 <label className="text-sm font-medium mb-2 block">Description:</label>
                 <Textarea
                   value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm({ ...editForm, description: e.target.value })}
                   placeholder="Describe this world element..."
                   rows={4}
                 />
@@ -688,7 +690,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                 <label className="text-sm font-medium mb-2 block">Significance (Optional):</label>
                 <Textarea
                   value={editForm.significance}
-                  onChange={(e) => setEditForm({ ...editForm, significance: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm({ ...editForm, significance: e.target.value })}
                   placeholder="Why is this element important to your story?"
                   rows={2}
                 />
@@ -748,7 +750,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
          <CSVImportDialog
            isOpen={showImportDialog}
            onClose={() => setShowImportDialog(false)}
-           onImport={async (elements, type) => {
+           onImport={async (elements, _type) => {
              try {
                // Handle the imported elements
                for (const element of elements) {
@@ -766,7 +768,7 @@ const WorldBuildingManager: React.FC<WorldBuildingManagerProps> = ({ projectId, 
                }
                
                // Refresh the elements list
-               await loadWorldElements();
+               await loadWorldElements(projectId);
                setShowImportDialog(false);
              } catch (error) {
                console.error('Import failed:', error);

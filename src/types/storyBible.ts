@@ -53,6 +53,7 @@ export interface WorldElement {
   name: string;
   description: string;
   details?: string;
+  significance?: string;
   visibility: 'always' | 'chapter' | 'never';
   series_shared: boolean;
   created_at: string;
@@ -283,12 +284,30 @@ export interface UseStoryBibleReturn {
   characters: Character[];
   characterTraits: CharacterTrait[];
   worldElements: WorldElement[];
+  filteredWorldElements: WorldElement[];
+  worldElementFilter: {
+    elementType?: string;
+    visibility?: 'always' | 'chapter' | 'never';
+    seriesShared?: boolean;
+  };
   outlines: Outline[];
   scenes: Scene[];
-  
+
   // Loading states
   isLoading: boolean;
+  isLoadingCharacters: boolean;
+  isLoadingTraits: boolean;
+  isLoadingWorldElements: boolean;
+  isLoadingOutlines: boolean;
+  isLoadingScenes: boolean;
+  
+  // Error states
   error: string | null;
+  charactersError: string | null;
+  traitsError: string | null;
+  worldElementsError: string | null;
+  outlinesError: string | null;
+  scenesError: string | null;
   
   // Actions
   createOrUpdateStoryBible: (request: CreateStoryBibleRequest | UpdateStoryBibleRequest) => Promise<void>;

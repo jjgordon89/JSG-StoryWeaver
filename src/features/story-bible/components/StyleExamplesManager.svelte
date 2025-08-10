@@ -67,7 +67,7 @@
       styleExamples = examples as StyleExample[];
     } catch (error) {
       console.error('Failed to load style examples:', error);
-      showToast('Failed to load style examples', 'error');
+      showToast.error('Failed to load style examples');
     } finally {
       isLoading = false;
     }
@@ -75,12 +75,12 @@
 
   async function createStyleExample() {
     if (!newExampleText.trim()) {
-      showToast('Please enter some example text', 'error');
+      showToast.error('Please enter some example text');
       return;
     }
 
     if (newExampleText.split(' ').length > 1000) {
-      showToast('Example text must be 1000 words or less', 'error');
+      showToast.error('Example text must be 1000 words or less');
       return;
     }
 
@@ -95,10 +95,10 @@
       styleExamples = [newExample as StyleExample, ...styleExamples];
       newExampleText = '';
       showCreateModal = false;
-      showToast('Style example created successfully', 'success');
+      showToast.success('Style example created successfully');
     } catch (error) {
       console.error('Failed to create style example:', error);
-      showToast('Failed to create style example', 'error');
+      showToast.error('Failed to create style example');
     }
   }
 
@@ -117,10 +117,10 @@
           : ex
       );
 
-      showToast('Style analysis completed', 'success');
+      showToast.success('Style analysis completed');
     } catch (error) {
       console.error('Failed to analyze style example:', error);
-      showToast('Failed to analyze style example', 'error');
+      showToast.error('Failed to analyze style example');
     } finally {
       isAnalyzing = false;
     }
@@ -144,10 +144,10 @@
       
       editingExample = null;
       isEditing = false;
-      showToast('Style example updated successfully', 'success');
+      showToast.success('Style example updated successfully');
     } catch (error) {
       console.error('Failed to update style example:', error);
-      showToast('Failed to update style example', 'error');
+      showToast.error('Failed to update style example');
     }
   }
 
@@ -157,10 +157,10 @@
     try {
       await invoke('delete_style_example', { id: example.id });
       styleExamples = styleExamples.filter(ex => ex.id !== example.id);
-      showToast('Style example deleted successfully', 'success');
+      showToast.success('Style example deleted successfully');
     } catch (error) {
       console.error('Failed to delete style example:', error);
-      showToast('Failed to delete style example', 'error');
+      showToast.error('Failed to delete style example');
     }
   }
 

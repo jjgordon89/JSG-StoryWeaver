@@ -176,6 +176,13 @@ impl OptimizationManager {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MemoryStats {
+    pub total_usage_mb: f64,
+    pub cache_stats: CacheStats,
+    pub component_breakdown: std::collections::HashMap<String, f64>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct OptimizationStats {
     pub database: DatabaseOptimizationStats,
     pub memory: MemoryStats,

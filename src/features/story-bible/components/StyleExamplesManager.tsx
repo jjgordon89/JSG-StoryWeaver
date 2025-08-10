@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
-import Card from '../../../components/ui/Card';
+import { Input } from '../../../components/ui/input';
+import { Card } from '../../../components/ui/Card';
 import Modal from '../../../components/ui/Modal';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { showToast } from '../../../utils/toast';
@@ -79,7 +79,7 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
       setStyleExamples(examples);
     } catch (error) {
       console.error('Failed to load style examples:', error);
-      showToast('Failed to load style examples', 'error');
+      showToast.error('Failed to load style examples');
     } finally {
       setIsLoading(false);
     }
@@ -87,12 +87,12 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
 
   const createStyleExample = async () => {
     if (!newExampleText.trim()) {
-      showToast('Please enter some example text', 'error');
+      showToast.error('Please enter some example text');
       return;
     }
 
     if (getWordCount(newExampleText) > 1000) {
-      showToast('Example text must be 1000 words or less', 'error');
+      showToast.error('Example text must be 1000 words or less');
       return;
     }
 
@@ -107,10 +107,10 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
       setStyleExamples(prev => [newExample, ...prev]);
       setNewExampleText('');
       setShowCreateModal(false);
-      showToast('Style example created successfully', 'success');
+      showToast.success('Style example created successfully');
     } catch (error) {
       console.error('Failed to create style example:', error);
-      showToast('Failed to create style example', 'error');
+      showToast.error('Failed to create style example');
     }
   };
 
@@ -129,10 +129,10 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
           : ex
       ));
 
-      showToast('Style analysis completed', 'success');
+      showToast.success('Style analysis completed');
     } catch (error) {
       console.error('Failed to analyze style example:', error);
-      showToast('Failed to analyze style example', 'error');
+      showToast.error('Failed to analyze style example');
     } finally {
       setIsAnalyzing(false);
     }
@@ -156,10 +156,10 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
       
       setEditingExample(null);
       setIsEditing(false);
-      showToast('Style example updated successfully', 'success');
+      showToast.success('Style example updated successfully');
     } catch (error) {
       console.error('Failed to update style example:', error);
-      showToast('Failed to update style example', 'error');
+      showToast.error('Failed to update style example');
     }
   };
 
@@ -169,10 +169,10 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
     try {
       await invoke('delete_style_example', { id: example.id });
       setStyleExamples(prev => prev.filter(ex => ex.id !== example.id));
-      showToast('Style example deleted successfully', 'success');
+      showToast.success('Style example deleted successfully');
     } catch (error) {
       console.error('Failed to delete style example:', error);
-      showToast('Failed to delete style example', 'error');
+      showToast.error('Failed to delete style example');
     }
   };
 
@@ -237,7 +237,7 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
           <div className="search-bar">
             <Input
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               placeholder="Search style examples..."
               className="search-input"
             />
@@ -543,7 +543,7 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
         </div>
       </Modal>
 
-      <style jsx>{`
+      <style>{`
         .style-examples-manager {
           display: flex;
           flex-direction: column;

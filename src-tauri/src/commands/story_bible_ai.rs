@@ -4,7 +4,7 @@ use crate::commands::CommandResponse;
 use crate::error::{Result};
 use crate::ai::{AIProviderManager, AIContext, WritingFeature, AIProvider};
 use crate::database::{get_pool};
-use crate::database::operations::{StoryBibleOps, CharacterTraitOps, StyleExampleOps};
+use crate::database::operations::{StoryBibleOps, CharacterTraitOps, StyleExampleOps, OutlineOps};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::collections::HashMap;
@@ -96,23 +96,36 @@ pub async fn generate_synopsis(
         let story_bible = StoryBibleOps::get_by_project(&pool, &request.project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
-            project_id: request.project_id.clone(),
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::SynopsisGeneration,
+        let context = AIContext {
+            project_id: Some(request.project_id.clone()),
+            document_id: None,
+            preceding_text: Some(request.braindump.clone()),
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: request.style.clone(),
+            tone: None,
+            creativity_level: request.creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: request.genre.clone(),
+            key_details: None,
         };
         
         // Generate synopsis
-        let result = ai_manager.generate_text(&context, &request.braindump).await?;
+        let result = ai_manager.generate_text(&request.braindump, &context).await?;
         
         Ok(AIGenerationResponse {
-            generated_content: result.content,
-            tokens_used: result.tokens_used,
-            cost_estimate: result.cost_estimate,
-            provider: result.provider,
-            model: result.model,
+            generated_content: result,
+            tokens_used: 0, // TODO: Implement token counting
+            cost_estimate: 0.0, // TODO: Implement cost estimation
+            provider: ai_manager.get_provider_name().to_string(),
+            model: ai_manager.get_model_name().to_string(),
         })
     }
     
@@ -129,23 +142,40 @@ pub async fn generate_character_traits(
         let pool = get_pool()?;
         
         // Get character and story bible for context
-        let character = CharacterTraitOps::get_character(&pool, &request.character_id).await?;
+        let character = sqlx::query_as::<_, crate::database::models::Character>("SELECT * FROM characters WHERE id = ?")
+            .bind(&request.character_id)
+            .fetch_one(&*pool)
+            .await
+            .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to get character: {}", e)))?;
         let story_bible = StoryBibleOps::get_by_project(&pool, &character.project_id).await?;
         
         // Build AI context
         let mut context = AIContext {
-            project_id: character.project_id,
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::CharacterDevelopment,
+            project_id: Some(character.project_id),
+            document_id: None,
+            preceding_text: Some(request.story_context.clone()),
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: request.creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Generate traits
-        let result = ai_manager.generate_text(&context, &format!("Generate character traits for {}", request.character_name)).await?;
+        let result = ai_manager.generate_text(&format!("Generate character traits for {}", request.character_name), &context).await?;
         
         // Parse traits from response
-        let traits = result.content
+        let traits = result
             .lines()
             .filter_map(|line| {
                 let line = line.trim();
@@ -178,23 +208,36 @@ pub async fn generate_world_element(
         
         // Build AI context
         let mut context = AIContext {
-            project_id: request.project_id.clone(),
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::WorldBuilding,
+            project_id: Some(request.project_id.clone()),
+            document_id: None,
+            preceding_text: Some(request.story_context.clone()),
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: request.creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Generate world element
         let prompt = format!("Generate {}: {}", request.element_type, request.name);
-        let result = ai_manager.generate_text(&context, &prompt).await?;
+        let result = ai_manager.generate_text(&prompt, &context).await?;
         
         Ok(AIGenerationResponse {
-            generated_content: result.content,
-            tokens_used: result.tokens_used,
-            cost_estimate: result.cost_estimate,
-            provider: result.provider,
-            model: result.model,
+            generated_content: result,
+            tokens_used: 0, // TODO: Implement token counting
+            cost_estimate: 0.0, // TODO: Implement cost estimation
+            provider: ai_manager.get_provider_name().to_string(),
+            model: ai_manager.get_model_name().to_string(),
         })
     }
     
@@ -217,23 +260,36 @@ pub async fn generate_outline_from_story_bible(
         
         // Build AI context
         let mut context = AIContext {
-            project_id: project_id.clone(),
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::OutlineGeneration,
+            project_id: Some(project_id.clone()),
+            document_id: None,
+            preceding_text: None,
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Generate outline
         let prompt = custom_prompt.unwrap_or_else(|| "Generate a detailed story outline".to_string());
-        let result = ai_manager.generate_text(&context, &prompt).await?;
+        let result = ai_manager.generate_text(&prompt, &context).await?;
         
         Ok(AIGenerationResponse {
-            generated_content: result.content,
-            tokens_used: result.tokens_used,
-            cost_estimate: result.cost_estimate,
-            provider: result.provider,
-            model: result.model,
+            generated_content: result,
+            tokens_used: 0, // TODO: Implement token counting
+            cost_estimate: 0.0, // TODO: Implement cost estimation
+            provider: ai_manager.get_provider_name().to_string(),
+            model: ai_manager.get_model_name().to_string(),
         })
     }
     
@@ -261,28 +317,41 @@ pub async fn generate_scene_content(
         let pool = get_pool()?;
         
         // Get outline and story bible for context
-        let outline = StyleExampleOps::get_outline(&pool, &outline_id).await?;
+        let outline = OutlineOps::get_by_id(&pool, &outline_id).await?;
         let story_bible = StoryBibleOps::get_by_project(&pool, &outline.project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
-            project_id: outline.project_id,
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::SceneGeneration,
+        let context = AIContext {
+            project_id: Some(outline.project_id),
+            document_id: None,
+            preceding_text: None,
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Generate scene content
         let prompt = custom_prompt.unwrap_or_else(|| format!("Generate scene content for: {}", scene_title));
-        let result = ai_manager.generate_text(&context, &prompt).await?;
+        let result = ai_manager.generate_text(&prompt, &context).await?;
         
         Ok(AIGenerationResponse {
-            generated_content: result.content,
-            tokens_used: result.tokens_used,
-            cost_estimate: result.cost_estimate,
-            provider: result.provider,
-            model: result.model,
+            generated_content: result,
+            tokens_used: 0, // TODO: Implement token counting
+            cost_estimate: 0.0, // TODO: Implement cost estimation
+            provider: ai_manager.get_provider_name().to_string(),
+            model: ai_manager.get_model_name().to_string(),
         })
     }
     
@@ -302,25 +371,38 @@ pub async fn analyze_style_example(
         let story_bible = StoryBibleOps::get_by_project(&pool, &request.project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
-            project_id: request.project_id.clone(),
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::StyleAnalysis,
+        let context = AIContext {
+            project_id: Some(request.project_id.clone()),
+            document_id: None,
+            preceding_text: Some(request.example_text.clone()),
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: request.creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Analyze style
         let prompt = request.custom_prompt.unwrap_or_else(|| "Analyze the writing style and generate a style prompt".to_string());
-        let result = ai_manager.generate_text(&context, &prompt).await?;
+        let result = ai_manager.generate_text(&prompt, &context).await?;
         
         Ok(StyleAnalysisResponse {
-            analysis_result: result.content.clone(),
-            generated_style_prompt: result.content,
-            tokens_used: result.tokens_used,
-            cost_estimate: result.cost_estimate,
-            provider: result.provider,
-            model: result.model,
+            analysis_result: result.clone(),
+            generated_style_prompt: result,
+            tokens_used: 0, // TODO: Implement token counting
+            cost_estimate: 0.0, // TODO: Implement cost estimation
+            provider: ai_manager.get_provider_name().to_string(),
+            model: ai_manager.get_model_name().to_string(),
         })
     }
     
@@ -340,24 +422,37 @@ pub async fn generate_outline_from_text(
         let story_bible = StoryBibleOps::get_by_project(&pool, &request.project_id).await?;
         
         // Build AI context
-        let mut context = AIContext {
-            project_id: request.project_id.clone(),
-            story_bible: Some(story_bible),
-            current_document: None,
-            user_preferences: HashMap::new(),
-            writing_feature: WritingFeature::OutlineGeneration,
+        let context = AIContext {
+            project_id: Some(request.project_id.clone()),
+            document_id: None,
+            preceding_text: Some(request.input_text.clone()),
+            following_text: None,
+            selected_text: None,
+            story_context: story_bible.synopsis.clone(),
+            characters: None,
+            locations: None,
+            plot_threads: None,
+            user_preferences: Some(HashMap::new()),
+            writing_style: None,
+            tone: None,
+            creativity_level: request.creativity.map(|c| (c * 10.0) as u8),
+            feature_type: Some(WritingFeature::Write),
+            feature_options: None,
+            word_count_target: None,
+            genre: None,
+            key_details: None,
         };
         
         // Generate outline
         let prompt = request.custom_prompt.unwrap_or_else(|| "Generate an outline from the provided text".to_string());
-        let result = ai_manager.generate_text(&context, &prompt).await?;
+        let result = ai_manager.generate_text(&prompt, &context).await?;
         
         Ok(AIGenerationResponse {
-            generated_content: result.content,
-            tokens_used: result.tokens_used,
-            cost_estimate: result.cost_estimate,
-            provider: result.provider,
-            model: result.model,
+            generated_content: result,
+            tokens_used: 0, // TODO: Implement token counting
+            cost_estimate: 0.0, // TODO: Implement cost estimation
+            provider: ai_manager.get_provider_name().to_string(),
+            model: ai_manager.get_model_name().to_string(),
         })
     }
     

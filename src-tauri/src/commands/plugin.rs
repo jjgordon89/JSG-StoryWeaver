@@ -1,6 +1,7 @@
 //! Tauri commands for plugin system features
 
 use crate::database::{get_pool, models::plugin::*, operations::plugin::*};
+use crate::database::models::plugin::{Plugin, PluginCategory, PluginVisibility, PluginSearchResult, PluginExecutionResult, PluginRating, PluginUsageStats, PluginExecutionHistory, PluginTemplate, PluginSortOrder, PluginExecutionRequest};
 use crate::error::{Result, StoryWeaverError};
 use serde_json::Value;
 

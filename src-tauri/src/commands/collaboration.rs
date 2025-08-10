@@ -2,6 +2,7 @@
 
 use crate::database::{get_pool, operations::collaboration::*};
 use crate::database::models::{SharedDocument, ShareType, ShareSettings, Comment, CommentType, CollaborationSession, CollaborationNotification, NotificationType, CommentThread};
+use crate::database::models::collaboration::CommentRequest;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
 use serde_json::Value;

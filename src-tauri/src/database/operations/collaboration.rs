@@ -544,16 +544,16 @@ pub async fn get_project_shared_documents(
     .await?;
     
     let results = rows.into_iter().map(|row| SharedDocument {
-        id: row.id as i32,
+        id: row.id.unwrap_or(0) as i32,
         document_id: row.document_id,
         project_id: row.project_id,
         share_token: row.share_token,
         share_type: row.share_type,
         password_hash: row.password_hash,
         expires_at: row.expires_at,
-        max_uses: row.max_uses,
-        current_uses: row.current_uses,
-        is_active: row.is_active != 0,
+        max_uses: row.max_uses.map(|v| v as i32),
+        current_uses: row.current_uses.unwrap_or(0) as i32,
+        is_active: row.is_active.map(|v| v != 0),
         created_by: row.created_by,
         created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
         updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),
@@ -571,6 +571,7 @@ pub async fn create_notification(
     recipient_token: Option<&str>,
 ) -> Result<CollaborationNotification, sqlx::Error> {
     let now = Utc::now();
+    let notification_type_str = notification_type.to_string();
     let result = sqlx::query!(
         r#"
         INSERT INTO collaboration_notifications (
@@ -580,7 +581,7 @@ pub async fn create_notification(
         RETURNING id
         "#,
         document_id,
-        notification_type.to_string(),
+        notification_type_str,
         message,
         recipient_token,
         false, // is_read starts as false
@@ -590,7 +591,7 @@ pub async fn create_notification(
     .await?;
 
     Ok(CollaborationNotification {
-        id: result.id,
+        id: result.id as i32,
         document_id: document_id.to_string(),
         notification_type,
         message: message.to_string(),
@@ -635,13 +636,13 @@ pub async fn get_notifications_for_user(
             };
             
             CollaborationNotification {
-                id: row.id,
+                id: row.id.unwrap_or(0) as i32,
                 document_id: row.document_id,
                 notification_type,
                 message: row.message,
                 recipient_token: row.recipient_token,
                 is_read: row.is_read,
-                created_at: row.created_at,
+                created_at: DateTime::from_naive_utc_and_offset(row.created_at, Utc),
             }
         })
         .collect();

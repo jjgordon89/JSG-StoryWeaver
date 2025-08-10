@@ -14,9 +14,9 @@ mod document_version;
 mod deleted_item;
 mod app_settings;
 mod performance_metric;
-mod collaboration;
-mod plugin;
-mod canvas;
+pub mod collaboration;
+pub mod plugin;
+pub mod canvas;
 
 // Re-export all models
 pub use folder::*;

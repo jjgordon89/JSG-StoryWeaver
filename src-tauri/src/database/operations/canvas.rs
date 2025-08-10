@@ -12,32 +12,32 @@ pub async fn create_canvas(
     project_id: &str,
     name: &str,
     description: Option<&str>,
-    canvas_type: CanvasType,
+    _canvas_type: CanvasType,
     settings: Option<Value>,
 ) -> Result<Canvas, sqlx::Error> {
     let now = Utc::now();
 
-    let result = sqlx::query!(
+    let result = sqlx::query(
         r#"
         INSERT INTO canvas (
             project_id, name, description, canvas_data, template_type, width, height,
             zoom_level, viewport_x, viewport_y, created_at, updated_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
-        project_id,
-        name,
-        description,
-        "[]", // Empty canvas data initially
-        None::<String>, // template_type
-        1920, // width
-        1080, // height
-        1.0, // zoom_level
-        0.0, // viewport_x
-        0.0, // viewport_y
-        now,
-        now
+        "#
     )
+    .bind(project_id)
+    .bind(name)
+    .bind(description)
+    .bind("[]") // Empty canvas data initially
+    .bind(None::<String>) // template_type
+    .bind(1920) // width
+    .bind(1080) // height
+    .bind(1.0) // zoom_level
+    .bind(0.0) // viewport_x
+    .bind(0.0) // viewport_y
+    .bind(now)
+    .bind(now)
     .execute(pool)
     .await?;
 
@@ -65,33 +65,33 @@ pub async fn get_canvas_by_id(
     pool: &SqlitePool,
     canvas_id: &str,
 ) -> Result<Option<Canvas>, sqlx::Error> {
-    let result = sqlx::query!(
+    let result = sqlx::query(
         r#"
         SELECT id, project_id, canvas_data, template_type, width, height,
                zoom_level, viewport_x, viewport_y, created_at, updated_at
         FROM canvas
         WHERE id = ?
-        "#,
-        canvas_id
+        "#
     )
+    .bind(canvas_id)
     .fetch_optional(pool)
     .await?;
 
     if let Some(row) = result {
         Ok(Some(Canvas {
-            id: row.id,
-            project_id: row.project_id,
+            id: row.get("id"),
+            project_id: row.get("project_id"),
             name: String::new(),
             description: None,
-            canvas_data: row.canvas_data.unwrap_or_default(),
-            template_type: row.template_type,
-            width: row.width.unwrap_or(1920),
-            height: row.height.unwrap_or(1080),
-            zoom_level: row.zoom_level.unwrap_or(1.0),
-            viewport_x: row.viewport_x.unwrap_or(0.0),
-            viewport_y: row.viewport_y.unwrap_or(0.0),
-            created_at: row.created_at,
-            updated_at: row.updated_at,
+            canvas_data: row.get::<Option<String>, _>("canvas_data").unwrap_or_default(),
+            template_type: row.get("template_type"),
+            width: row.get::<Option<i32>, _>("width").unwrap_or(1920),
+            height: row.get::<Option<i32>, _>("height").unwrap_or(1080),
+            zoom_level: row.get::<Option<f64>, _>("zoom_level").unwrap_or(1.0) as f32,
+            viewport_x: row.get::<Option<f64>, _>("viewport_x").unwrap_or(0.0) as f32,
+            viewport_y: row.get::<Option<f64>, _>("viewport_y").unwrap_or(0.0) as f32,
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         }))
     } else {
         Ok(None)
@@ -119,19 +119,19 @@ pub async fn get_project_canvases(
     let mut canvases = Vec::new();
     for row in results {
         canvases.push(Canvas {
-            id: row.id,
-            project_id: row.project_id,
+            id: row.id.unwrap_or(0) as i32,
+            project_id: row.project_id.to_string(),
             name: String::new(),
             description: None,
             canvas_data: row.canvas_data.unwrap_or_default(),
-            template_type: row.template_type,
-            width: row.width.unwrap_or(1920),
-            height: row.height.unwrap_or(1080),
-            zoom_level: row.zoom_level.unwrap_or(1.0),
-            viewport_x: row.viewport_x.unwrap_or(0.0),
-            viewport_y: row.viewport_y.unwrap_or(0.0),
+            template_type: row.template_type.and_then(|s| s.parse().ok()),
+            width: row.width.unwrap_or(1920) as i32,
+            height: row.height.unwrap_or(1080) as i32,
+            zoom_level: row.zoom_level.unwrap_or(1.0) as f32,
+            viewport_x: row.viewport_x.unwrap_or(0.0) as f32,
+            viewport_y: row.viewport_y.unwrap_or(0.0) as f32,
             created_at: row.created_at,
-            updated_at: row.updated_at,
+            updated_at: row.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
         });
     }
 
@@ -148,11 +148,14 @@ pub async fn create_canvas_element(
     width: f64,
     height: f64,
     content: Value,
-    style: Option<Value>,
+    _style: Option<Value>,
 ) -> Result<CanvasElement, sqlx::Error> {
     let now = Utc::now();
-    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
 
+    let element_type_str = element_type.to_string();
+    let content_str = content.to_string();
+    
     let result = sqlx::query!(
         r#"
         INSERT INTO canvas_elements (
@@ -162,13 +165,13 @@ pub async fn create_canvas_element(
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
         canvas_id_int,
-        element_type.to_string(),
+        element_type_str,
         position_x,
         position_y,
         width,
         height,
         "", // title
-        content.to_string(),
+        content_str,
         "#000000", // default color
         "{}", // empty metadata
         "[]", // empty connections
@@ -205,37 +208,42 @@ pub async fn get_canvas_elements(
     pool: &SqlitePool,
     canvas_id: &str,
 ) -> Result<Vec<CanvasElement>, sqlx::Error> {
-    let results = sqlx::query!(
+    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
+    
+    let results = sqlx::query(
         r#"
-        SELECT id, canvas_id, element_type, position_x, position_y, width, height,
-               content, created_at, updated_at
+        SELECT id, canvas_id, element_type, title, content, position_x, position_y, width, height,
+               color, metadata, connections, order_index, created_at, updated_at
         FROM canvas_elements
         WHERE canvas_id = ?
         ORDER BY order_index ASC, created_at ASC
-        "#,
-        canvas_id
+        "#
     )
+    .bind(canvas_id_int)
     .fetch_all(pool)
     .await?;
 
     let mut elements = Vec::new();
     for row in results {
+        let element_type_str: String = row.get("element_type");
+        let element_type = element_type_str.parse().unwrap_or(CanvasElementType::TextBox);
+        
         elements.push(CanvasElement {
-            id: row.id,
-            canvas_id: row.canvas_id,
-            element_type: row.element_type.parse().unwrap_or(CanvasElementType::TextBox),
-            title: String::new(), // Default title
-            content: row.content.unwrap_or_default(),
-            position_x: row.position_x.unwrap_or(0.0) as f32,
-            position_y: row.position_y.unwrap_or(0.0) as f32,
-            width: row.width.unwrap_or(100.0) as f32,
-            height: row.height.unwrap_or(100.0) as f32,
-            color: "#000000".to_string(), // Default color
-            metadata: "{}".to_string(), // Default metadata
-            connections: "[]".to_string(), // Default connections
-            order_index: 0, // Default order
-            created_at: row.created_at,
-            updated_at: row.updated_at,
+            id: row.get("id"),
+            canvas_id: row.get("canvas_id"),
+            element_type,
+            title: row.get::<Option<String>, _>("title").unwrap_or_default(),
+            content: row.get::<Option<String>, _>("content").unwrap_or_default(),
+            position_x: row.get::<Option<f64>, _>("position_x").unwrap_or(0.0) as f32,
+            position_y: row.get::<Option<f64>, _>("position_y").unwrap_or(0.0) as f32,
+            width: row.get::<Option<f64>, _>("width").unwrap_or(100.0) as f32,
+            height: row.get::<Option<f64>, _>("height").unwrap_or(100.0) as f32,
+            color: row.get::<Option<String>, _>("color").unwrap_or_else(|| "#000000".to_string()),
+            metadata: row.get::<Option<String>, _>("metadata").unwrap_or_else(|| "{}".to_string()),
+            connections: row.get::<Option<String>, _>("connections").unwrap_or_else(|| "[]".to_string()),
+            order_index: row.get::<Option<i32>, _>("order_index").unwrap_or(0),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         });
     }
 
@@ -251,9 +259,9 @@ pub async fn update_canvas_element(
     width: Option<f64>,
     height: Option<f64>,
     content: Option<Value>,
-    style: Option<Value>,
-    z_index: Option<i32>,
-    is_locked: Option<bool>,
+    _style: Option<Value>,
+    _z_index: Option<i32>,
+    _is_locked: Option<bool>,
 ) -> Result<(), sqlx::Error> {
     let now = Utc::now();
     
@@ -288,9 +296,10 @@ pub async fn update_canvas_element(
     }
     
     if let Some(c) = content {
+        let content_str = c.to_string();
         sqlx::query!(
             "UPDATE canvas_elements SET content = ?, updated_at = ? WHERE id = ?",
-            c.to_string(), now, element_id
+            content_str, now, element_id
         ).execute(pool).await?;
     }
 
@@ -322,42 +331,35 @@ pub async fn create_outline_template(
     is_public: bool,
     created_by: Option<&str>,
 ) -> Result<OutlineTemplate, sqlx::Error> {
-    let id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
-    sqlx::query!(
+    let result = sqlx::query(
         r#"
         INSERT INTO outline_templates (
-            id, name, description, template_type, structure, is_public,
-            usage_count, created_by, created_at, updated_at
+            name, description, template_type, template_data, is_official, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
-        id,
-        name,
-        description,
-        template_type.to_string(),
-        structure.to_string(),
-        is_public,
-        0,
-        created_by,
-        now,
-        now
+        VALUES (?, ?, ?, ?, ?, ?)
+        "#
     )
+    .bind(name)
+    .bind(description)
+    .bind(template_type.to_string())
+    .bind(structure.to_string())
+    .bind(!is_public) // Convert is_public to is_official (inverse logic)
+    .bind(now)
     .execute(pool)
     .await?;
+
+    let id = result.last_insert_rowid() as i32;
 
     Ok(OutlineTemplate {
         id,
         name: name.to_string(),
         description: description.to_string(),
         template_type,
-        structure,
-        is_public,
-        usage_count: 0,
-        created_by: created_by.map(|s| s.to_string()),
+        template_data: structure.to_string(),
+        is_official: !is_public, // Convert is_public to is_official (inverse logic)
         created_at: now,
-        updated_at: now,
     })
 }
 
@@ -410,9 +412,10 @@ pub async fn increment_template_usage(
     pool: &SqlitePool,
     template_id: &str,
 ) -> Result<(), sqlx::Error> {
+    let now = Utc::now();
     sqlx::query!(
         "UPDATE outline_templates SET usage_count = usage_count + 1, updated_at = ? WHERE id = ?",
-        Utc::now(),
+        now,
         template_id
     )
     .execute(pool)
@@ -428,7 +431,7 @@ pub async fn create_canvas_snapshot(
     name: &str,
     snapshot_data: Value,
 ) -> Result<CanvasSnapshot, sqlx::Error> {
-    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
     let now = Utc::now();
     let canvas_data_str = serde_json::to_string(&snapshot_data).unwrap_or_default();
 
@@ -463,7 +466,7 @@ pub async fn get_canvas_snapshots(
     pool: &SqlitePool,
     canvas_id: &str,
 ) -> Result<Vec<CanvasSnapshot>, sqlx::Error> {
-    let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
+    let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
     
     let results = sqlx::query!(
         r#"
@@ -480,10 +483,10 @@ pub async fn get_canvas_snapshots(
     let mut snapshots = Vec::new();
     for row in results {
         snapshots.push(CanvasSnapshot {
-            id: row.id,
+            id: row.id.unwrap_or(0),
             canvas_id: row.canvas_id,
-            snapshot_name: row.snapshot_name,
-            canvas_data: row.canvas_data,
+            snapshot_name: row.snapshot_name.unwrap_or_default(),
+            canvas_data: row.canvas_data.unwrap_or_default(),
             created_at: row.created_at,
         });
     }
@@ -565,18 +568,28 @@ pub async fn get_canvas_collaboration_session(
     pool: &SqlitePool,
     session_token: &str,
 ) -> Result<Option<CanvasCollaborationSession>, sqlx::Error> {
-    let result = sqlx::query_as!(
-        CanvasCollaborationSession,
+    let result = sqlx::query(
         r#"
         SELECT id, canvas_id, session_token, host_user, participants,
                is_active, created_at, updated_at, expires_at
         FROM canvas_collaboration_sessions
         WHERE session_token = ? AND is_active = 1
-        "#,
-        session_token
+        "#
     )
+    .bind(session_token)
     .fetch_optional(pool)
-    .await?;
+    .await?
+    .map(|row| CanvasCollaborationSession {
+        id: row.get("id"),
+        canvas_id: row.get("canvas_id"),
+        session_token: row.get("session_token"),
+        host_user: row.get("host_user"),
+        participants: row.get("participants"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+        expires_at: row.get("expires_at"),
+    });
 
     Ok(result)
 }
@@ -588,8 +601,7 @@ pub async fn get_canvas_collaboration_session_by_canvas(
 ) -> Result<Option<CanvasCollaborationSession>, sqlx::Error> {
     let canvas_id_int: i64 = canvas_id.parse().unwrap_or(0);
     
-    let result = sqlx::query_as!(
-        CanvasCollaborationSession,
+    let result = sqlx::query(
         r#"
         SELECT id, canvas_id, session_token, host_user, participants,
                is_active, created_at, updated_at, expires_at
@@ -597,11 +609,22 @@ pub async fn get_canvas_collaboration_session_by_canvas(
         WHERE canvas_id = ? AND is_active = 1
         ORDER BY created_at DESC
         LIMIT 1
-        "#,
-        canvas_id_int
+        "#
     )
+    .bind(canvas_id_int)
     .fetch_optional(pool)
-    .await?;
+    .await?
+    .map(|row| CanvasCollaborationSession {
+        id: row.get("id"),
+        canvas_id: row.get("canvas_id"),
+        session_token: row.get("session_token"),
+        host_user: row.get("host_user"),
+        participants: row.get("participants"),
+        is_active: row.get("is_active"),
+        created_at: row.get("created_at"),
+        updated_at: row.get("updated_at"),
+        expires_at: row.get("expires_at"),
+    });
 
     Ok(result)
 }

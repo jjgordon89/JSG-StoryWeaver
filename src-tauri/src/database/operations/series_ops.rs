@@ -138,15 +138,14 @@ impl super::SeriesOps {
     
     /// Get series with project counts
     pub async fn get_series_with_counts(pool: &Pool<Sqlite>) -> Result<Vec<SeriesWithCount>> {
-        let series = sqlx::query_as!(
-            SeriesWithCount,
+        let series = sqlx::query(
             r#"
             SELECT 
                 s.id,
                 s.name,
                 s.description,
                 s.folder_id, 
-                s.created_at as "created_at!: chrono::DateTime<chrono::Utc>",
+                s.created_at,
                 CAST(COUNT(p.id) AS INTEGER) as project_count
             FROM 
                 series s
@@ -160,7 +159,19 @@ impl super::SeriesOps {
         )
         .fetch_all(&*pool)
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get series with counts: {}", e)))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get series with counts: {}", e)))?
+        .into_iter()
+        .map(|row| {
+            SeriesWithCount {
+                id: row.get::<String, _>("id"),
+                name: row.get::<String, _>("name"),
+                description: row.get::<Option<String>, _>("description"),
+                folder_id: row.get::<Option<String>, _>("folder_id"),
+                created_at: row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+                project_count: row.get::<i64, _>("project_count"),
+            }
+        })
+        .collect();
         
         Ok(series)
     }

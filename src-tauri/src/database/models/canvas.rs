@@ -124,6 +124,48 @@ pub enum CanvasElementType {
     StickyNote,
 }
 
+impl std::fmt::Display for CanvasElementType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            CanvasElementType::PlotPoint => "plot_point",
+            CanvasElementType::CharacterArc => "character_arc",
+            CanvasElementType::Scene => "scene",
+            CanvasElementType::Chapter => "chapter",
+            CanvasElementType::Act => "act",
+            CanvasElementType::Note => "note",
+            CanvasElementType::Connection => "connection",
+            CanvasElementType::TimelineEvent => "timeline_event",
+            CanvasElementType::Theme => "theme",
+            CanvasElementType::Conflict => "conflict",
+            CanvasElementType::TextBox => "text_box",
+            CanvasElementType::StickyNote => "sticky_note",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl std::str::FromStr for CanvasElementType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "plot_point" => Ok(CanvasElementType::PlotPoint),
+            "character_arc" => Ok(CanvasElementType::CharacterArc),
+            "scene" => Ok(CanvasElementType::Scene),
+            "chapter" => Ok(CanvasElementType::Chapter),
+            "act" => Ok(CanvasElementType::Act),
+            "note" => Ok(CanvasElementType::Note),
+            "connection" => Ok(CanvasElementType::Connection),
+            "timeline_event" => Ok(CanvasElementType::TimelineEvent),
+            "theme" => Ok(CanvasElementType::Theme),
+            "conflict" => Ok(CanvasElementType::Conflict),
+            "text_box" => Ok(CanvasElementType::TextBox),
+            "sticky_note" => Ok(CanvasElementType::StickyNote),
+            _ => Err(format!("Unknown canvas element type: {}", s)),
+        }
+    }
+}
+
 /// Outline template type enumeration
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "text")]

@@ -137,14 +137,13 @@ impl super::DocumentLinkOps {
         document_id: &str
     ) -> Result<LinkedDocuments> {
         // Get previous documents (documents that link to this one)
-        let previous = sqlx::query_as!(
-            LinkedDocument,
+        let previous = sqlx::query(
             r#"
             SELECT 
                 CAST(d.id as TEXT) as id, 
                 d.title, 
-                d.document_type as "document_type: _", 
-                dl.link_order as "link_order?: i32"
+                d.document_type, 
+                dl.link_order
             FROM 
                 documents d
             JOIN 
@@ -153,22 +152,31 @@ impl super::DocumentLinkOps {
                 dl.to_document_id = ?
             ORDER BY 
                 dl.link_order
-            "#,
-            document_id
+            "#
         )
+        .bind(document_id)
         .fetch_all(&*pool)
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get previous documents: {}", e)))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get previous documents: {}", e)))?
+        .into_iter()
+        .map(|row| {
+            LinkedDocument {
+                id: row.get::<String, _>("id"),
+                title: row.get::<String, _>("title"),
+                document_type: row.get::<String, _>("document_type").parse().unwrap_or(crate::database::models::DocumentType::Chapter),
+                link_order: row.get::<Option<i32>, _>("link_order"),
+            }
+        })
+        .collect();
         
         // Get next documents (documents that this one links to)
-        let next = sqlx::query_as!(
-            LinkedDocument,
+        let next = sqlx::query(
             r#"
             SELECT 
                 CAST(d.id as TEXT) as id, 
                 d.title, 
-                d.document_type as "document_type: _", 
-                dl.link_order as "link_order?: i32"
+                d.document_type, 
+                dl.link_order
             FROM 
                 documents d
             JOIN 
@@ -177,12 +185,22 @@ impl super::DocumentLinkOps {
                 dl.from_document_id = ?
             ORDER BY 
                 dl.link_order
-            "#,
-            document_id
+            "#
         )
+        .bind(document_id)
         .fetch_all(&*pool)
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get next documents: {}", e)))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get next documents: {}", e)))?
+        .into_iter()
+        .map(|row| {
+            LinkedDocument {
+                id: row.get::<String, _>("id"),
+                title: row.get::<String, _>("title"),
+                document_type: row.get::<String, _>("document_type").parse().unwrap_or(crate::database::models::DocumentType::Chapter),
+                link_order: row.get::<Option<i32>, _>("link_order"),
+            }
+        })
+        .collect();
         
         Ok(LinkedDocuments { previous, next })
     }

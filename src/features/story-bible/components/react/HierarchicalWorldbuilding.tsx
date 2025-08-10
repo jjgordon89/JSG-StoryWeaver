@@ -37,6 +37,7 @@ interface WorldElement {
   element_type: string;
   description: string;
   details?: string;
+  significance?: string;
   visibility: 'always' | 'chapter' | 'never';
   series_shared: boolean;
   parent_id?: string;

@@ -685,6 +685,31 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
+  const generateSceneContent = useCallback(async (outlineId: string, sceneTitle: string, sceneSummary: string, customPrompt?: string, creativity?: number): Promise<AIGenerationResponse | null> => {
+    setState(prevState => ({ ...prevState, isLoadingScenes: true, scenesError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<AIGenerationResponse>>('generate_scene_content', { 
+        outlineId, 
+        sceneTitle, 
+        sceneSummary, 
+        customPrompt, 
+        creativity 
+      });
+      
+      if (response.success) {
+        setState(prevState => ({ ...prevState, isLoadingScenes: false, scenesError: null }));
+        return response.data || null;
+      } else {
+        handleError(response.error, 'scenesError');
+        return null;
+      }
+    } catch (error) {
+      handleError(error, 'scenesError');
+      return null;
+    }
+  }, [handleError]);
+
   // UI state management
   const setActiveTab = useCallback((tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes'): void => {
     setState(prevState => ({ ...prevState, activeTab: tab }));
@@ -737,7 +762,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
       const { visibility, traitType } = state.characterTraitFilter;
       
       if (visibility && trait.visibility !== visibility) return false;
-      if (traitType && trait.trait_type !== traitType) return false;
+      if (traitType && trait.trait_name !== traitType) return false;
       
       return true;
     });
@@ -776,14 +801,26 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     characters: state.characters,
     characterTraits: filteredCharacterTraits,
     worldElements: filteredWorldElements,
+    filteredWorldElements,
+    worldElementFilter: state.worldElementFilter,
     outlines: filteredOutlines,
     scenes: scenesForSelectedOutline,
     
     // Loading states
     isLoading: state.isLoading,
     isLoadingCharacters: state.isLoadingCharacters,
-    charactersError: state.charactersError,
+    isLoadingTraits: state.isLoadingTraits,
+    isLoadingWorldElements: state.isLoadingWorldElements,
+    isLoadingOutlines: state.isLoadingOutlines,
+    isLoadingScenes: state.isLoadingScenes,
+    
+    // Error states
     error: state.error,
+    charactersError: state.charactersError,
+    traitsError: state.traitsError,
+    worldElementsError: state.worldElementsError,
+    outlinesError: state.outlinesError,
+    scenesError: state.scenesError,
     
     // Core operations
     createOrUpdateStoryBible,
@@ -825,6 +862,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     generateOutline,
     generateScenes,
     generateWorldBuilding,
+    generateSceneContent,
     
     // UI state management
     setActiveTab,

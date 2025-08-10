@@ -1,5 +1,6 @@
-import { defineStore } from 'pinia';
-import { invoke } from '@tauri-apps/api/tauri';
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
+import { invoke } from '../utils/tauriSafe';
 import type {
   AdvancedAIState,
   ProseGenerationRequest,
@@ -17,12 +18,63 @@ import type {
   StoryBibleElements,
   StreamingStatus,
   SmartImportRequest,
-  SmartImportResult,
-  AdvancedAIResponse
+  SmartImportResult
 } from '../types/advancedAI';
 
-export const useAdvancedAIStore = defineStore('advancedAI', {
-  state: (): AdvancedAIState => ({
+interface AdvancedAIActions {
+  // Initialize the store
+  initialize: () => Promise<void>;
+  
+  // Prose Mode Management
+  loadAvailableProseModes: () => Promise<void>;
+  getProseMode: (modeName: string) => Promise<ProseMode | null>;
+  setCurrentProseMode: (modeName: string) => void;
+  
+  // Generation Methods
+  generateWithProseMode: (request: ProseGenerationRequest) => Promise<AdvancedGenerationResult>;
+  startStreamingGeneration: (request: ProseGenerationRequest) => Promise<string>;
+  pollStreamingStatus: (streamId: string) => Promise<void>;
+  
+  // Image Generation
+  generateImage: (request: ImageGenerationRequest) => Promise<GeneratedImage>;
+  loadProjectImages: (projectId: string) => Promise<void>;
+  deleteGeneratedImage: (imageId: string) => Promise<void>;
+  
+  // Brainstorming
+  createBrainstormSession: (request: BrainstormSessionRequest) => Promise<string>;
+  getBrainstormSession: (sessionId: string) => Promise<BrainstormSession | null>;
+  rateIdea: (sessionId: string, ideaId: string, rating: number) => Promise<void>;
+  markIdeaAsKeeper: (sessionId: string, ideaId: string, isKeeper: boolean) => Promise<void>;
+  setCurrentBrainstormSession: (sessionId: string | undefined) => void;
+  
+  // Style Management
+  addStyleExample: (request: StyleExampleRequest) => Promise<StyleExample>;
+  analyzeTextStyle: (content: string) => Promise<StyleAnalysis>;
+  toggleStyleExample: (exampleId: string, active: boolean) => void;
+  
+  // Credits and Usage
+  updateCreditUsage: (projectId: string) => Promise<void>;
+  
+  // Saliency Engine
+  buildSaliencyContext: (projectId: string, textContext: string, storyBible: StoryBibleElements) => Promise<SaliencyContext>;
+  toggleSaliencyEngine: (enabled: boolean) => void;
+  
+  // Smart Import
+  smartImportContent: (request: SmartImportRequest) => Promise<SmartImportResult>;
+  
+  // Settings
+  toggleUltraCreativeMode: (enabled: boolean) => void;
+  toggleAutoEnhancePrompts: (enabled: boolean) => void;
+  toggleClicheDetection: (enabled: boolean) => void;
+  
+  // Utility Methods
+  clearLastGeneration: () => void;
+  clearBrainstormSessions: () => void;
+  clearGeneratedImages: () => void;
+  handleError: (error: any, context: string) => void;
+}
+
+export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(devtools((set, get) => ({
     // Prose Modes
     availableProseModes: [],
     currentProseMode: 'Excellent',
@@ -59,48 +111,50 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     // Settings
     ultraCreativeMode: false,
     autoEnhancePrompts: true,
-    clicheDetectionEnabled: true
-  }),
+    clicheDetectionEnabled: true,
 
-  getters: {
-    currentProseModeDetails: (state) => {
-      return state.availableProseModes.find(mode => mode.name === state.currentProseMode);
+    // Computed getters as properties
+    get currentProseModeDetails() {
+      return get().availableProseModes.find(mode => mode.name === get().currentProseMode);
     },
     
-    activeStyleExamplesList: (state) => {
+    get activeStyleExamplesList() {
+      const state = get();
       return state.styleExamples.filter(example => 
         state.activeStyleExamples.includes(example.id) && example.is_active
       );
     },
     
-    totalCreditsUsed: (state) => {
-      return state.creditUsage.project_usage;
+    get totalCreditsUsed() {
+      return get().creditUsage.project_usage;
     },
     
-    remainingCredits: (state) => {
+    get remainingCredits() {
+      const state = get();
       if (state.creditUsage.monthly_limit) {
         return Math.max(0, state.creditUsage.monthly_limit - state.creditUsage.project_usage);
       }
       return undefined;
     },
     
-    canGenerate: (state) => {
+    get canGenerate() {
+      const state = get();
       return !state.isGenerating && !state.isGeneratingImage;
     },
     
-    currentBrainstormSessionData: (state) => {
+    get currentBrainstormSessionData() {
+      const state = get();
       if (!state.currentBrainstormSession) return null;
       return state.activeBrainstormSessions.find(session => 
         session.id === state.currentBrainstormSession
       );
-    }
-  },
+    },
 
-  actions: {
+    // Actions
     // Initialize the store
     async initialize() {
       try {
-        await this.loadAvailableProseModes();
+        await get().loadAvailableProseModes();
         // Load other initial data as needed
       } catch (error) {
         console.error('Failed to initialize advanced AI store:', error);
@@ -111,7 +165,7 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     async loadAvailableProseModes() {
       try {
         const response = await invoke<ProseMode[]>('get_available_prose_modes');
-        this.availableProseModes = response;
+        set({ availableProseModes: response });
       } catch (error) {
         console.error('Failed to load prose modes:', error);
         throw error;
@@ -129,47 +183,50 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     },
 
     setCurrentProseMode(modeName: string) {
-      if (this.availableProseModes.some(mode => mode.name === modeName)) {
-        this.currentProseMode = modeName;
+      const { availableProseModes } = get();
+      if (availableProseModes.some(mode => mode.name === modeName)) {
+        set({ currentProseMode: modeName });
       }
     },
 
     // Advanced Text Generation
     async generateWithProseMode(request: ProseGenerationRequest): Promise<AdvancedGenerationResult> {
-      this.isGenerating = true;
+      set({ isGenerating: true });
       try {
         const response = await invoke<AdvancedGenerationResult>('generate_with_prose_mode', { request });
-        this.lastGenerationResult = response;
+        set({ lastGenerationResult: response });
         
         // Update credit usage
-        await this.updateCreditUsage(request.project_id);
+        await get().updateCreditUsage(request.project_id);
         
         return response;
       } catch (error) {
         console.error('Failed to generate with prose mode:', error);
         throw error;
       } finally {
-        this.isGenerating = false;
+        set({ isGenerating: false });
       }
     },
 
     // Streaming Generation
     async startStreamingGeneration(request: ProseGenerationRequest): Promise<string> {
-      this.isGenerating = true;
+      set({ isGenerating: true });
       try {
         const streamId = await invoke<string>('start_streaming_generation', { request });
-        this.streamingStatus = {
-          status: 'pending',
-          progress: 0
-        };
+        set({ 
+          streamingStatus: {
+            status: 'pending',
+            progress: 0
+          }
+        });
         
         // Start polling for status updates
-        this.pollStreamingStatus(streamId);
+        get().pollStreamingStatus(streamId);
         
         return streamId;
       } catch (error) {
         console.error('Failed to start streaming generation:', error);
-        this.isGenerating = false;
+        set({ isGenerating: false });
         throw error;
       }
     },
@@ -179,60 +236,66 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
         try {
           const status = await invoke<Record<string, any>>('get_stream_status', { streamId });
           
-          this.streamingStatus = {
-            status: status.status as any,
-            progress: status.progress || 0,
-            current_text: status.current_text,
-            error_message: status.error_message,
-            estimated_completion: status.estimated_completion
-          };
+          set({ 
+            streamingStatus: {
+              status: status.status as any,
+              progress: status.progress || 0,
+              current_text: status.current_text,
+              error_message: status.error_message,
+              estimated_completion: status.estimated_completion
+            }
+          });
           
           if (status.status === 'completed' || status.status === 'error') {
             clearInterval(pollInterval);
-            this.isGenerating = false;
+            set({ isGenerating: false });
             
             if (status.status === 'completed') {
               // Handle completion
-              this.lastGenerationResult = {
-                generated_text: status.current_text || '',
-                prose_mode_used: this.currentProseMode,
-                token_count: 0,
-                credits_used: 0,
-                generation_id: streamId
-              };
+              const { currentProseMode } = get();
+              set({
+                lastGenerationResult: {
+                  generated_text: status.current_text || '',
+                  prose_mode_used: currentProseMode,
+                  token_count: 0,
+                  credits_used: 0,
+                  generation_id: streamId
+                }
+              });
             }
           }
         } catch (error) {
           console.error('Failed to poll streaming status:', error);
           clearInterval(pollInterval);
-          this.isGenerating = false;
+          set({ isGenerating: false });
         }
       }, 1000); // Poll every second
     },
 
     // Image Generation
     async generateImage(request: ImageGenerationRequest): Promise<GeneratedImage> {
-      this.isGeneratingImage = true;
+      set({ isGeneratingImage: true });
       try {
         const response = await invoke<GeneratedImage>('generate_image', { request });
-        this.generatedImages.unshift(response); // Add to beginning of array
+        const { generatedImages } = get();
+        set({ generatedImages: [response, ...generatedImages] }); // Add to beginning of array
         
         // Update credit usage
-        await this.updateCreditUsage(request.project_id);
+        await get().updateCreditUsage(request.project_id);
         
         return response;
       } catch (error) {
         console.error('Failed to generate image:', error);
         throw error;
       } finally {
-        this.isGeneratingImage = false;
+        set({ isGeneratingImage: false });
       }
     },
 
     async loadProjectImages(projectId: string) {
       try {
         const response = await invoke<GeneratedImage[]>('get_project_images', { projectId });
-        this.generatedImages = response;
+        set({ generatedImages: response });
       } catch (error) {
         console.error('Failed to load project images:', error);
         throw error;
@@ -242,7 +305,8 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     async deleteGeneratedImage(imageId: string) {
       try {
         await invoke('delete_generated_image', { imageId });
-        this.generatedImages = this.generatedImages.filter(img => img.id !== imageId);
+        const { generatedImages } = get();
+        set({ generatedImages: generatedImages.filter(img => img.id !== imageId) });
       } catch (error) {
         console.error('Failed to delete generated image:', error);
         throw error;
@@ -255,14 +319,17 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
         const sessionId = await invoke<string>('create_brainstorm_session', { request });
         
         // Load the created session
-        const session = await this.getBrainstormSession(sessionId);
+        const session = await get().getBrainstormSession(sessionId);
         if (session) {
-          this.activeBrainstormSessions.unshift(session);
-          this.currentBrainstormSession = sessionId;
+          const { activeBrainstormSessions } = get();
+          set({ 
+            activeBrainstormSessions: [session, ...activeBrainstormSessions],
+            currentBrainstormSession: sessionId
+          });
         }
         
         // Update credit usage
-        await this.updateCreditUsage(request.project_id);
+        await get().updateCreditUsage(request.project_id);
         
         return sessionId;
       } catch (error) {
@@ -286,13 +353,19 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
         await invoke('rate_brainstorm_idea', { sessionId, ideaId, rating });
         
         // Update local state
-        const session = this.activeBrainstormSessions.find(s => s.id === sessionId);
-        if (session) {
-          const idea = session.ideas.find(i => i.id === ideaId);
-          if (idea) {
-            idea.rating = rating;
+        const { activeBrainstormSessions } = get();
+        const updatedSessions = activeBrainstormSessions.map(session => {
+          if (session.id === sessionId) {
+            return {
+              ...session,
+              ideas: session.ideas.map(idea => 
+                idea.id === ideaId ? { ...idea, rating } : idea
+              )
+            };
           }
-        }
+          return session;
+        });
+        set({ activeBrainstormSessions: updatedSessions });
       } catch (error) {
         console.error('Failed to rate idea:', error);
         throw error;
@@ -304,13 +377,19 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
         await invoke('mark_idea_as_keeper', { sessionId, ideaId, isKeeper });
         
         // Update local state
-        const session = this.activeBrainstormSessions.find(s => s.id === sessionId);
-        if (session) {
-          const idea = session.ideas.find(i => i.id === ideaId);
-          if (idea) {
-            idea.is_keeper = isKeeper;
+        const { activeBrainstormSessions } = get();
+        const updatedSessions = activeBrainstormSessions.map(session => {
+          if (session.id === sessionId) {
+            return {
+              ...session,
+              ideas: session.ideas.map(idea => 
+                idea.id === ideaId ? { ...idea, is_keeper: isKeeper } : idea
+              )
+            };
           }
-        }
+          return session;
+        });
+        set({ activeBrainstormSessions: updatedSessions });
       } catch (error) {
         console.error('Failed to mark idea as keeper:', error);
         throw error;
@@ -318,17 +397,19 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     },
 
     setCurrentBrainstormSession(sessionId: string | undefined) {
-      this.currentBrainstormSession = sessionId;
+      set({ currentBrainstormSession: sessionId });
     },
 
     // Style Examples
     async addStyleExample(request: StyleExampleRequest): Promise<StyleExample> {
       try {
         const response = await invoke<StyleExample>('add_style_example', { request });
-        this.styleExamples.unshift(response);
+        const { styleExamples, activeStyleExamples } = get();
+        
+        set({ styleExamples: [response, ...styleExamples] });
         
         if (response.is_active) {
-          this.activeStyleExamples.push(response.id);
+          set({ activeStyleExamples: [...activeStyleExamples, response.id] });
         }
         
         return response;
@@ -349,24 +430,26 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     },
 
     toggleStyleExample(exampleId: string, active: boolean) {
-      if (active && !this.activeStyleExamples.includes(exampleId)) {
-        this.activeStyleExamples.push(exampleId);
+      const { activeStyleExamples, styleExamples } = get();
+      
+      if (active && !activeStyleExamples.includes(exampleId)) {
+        set({ activeStyleExamples: [...activeStyleExamples, exampleId] });
       } else if (!active) {
-        this.activeStyleExamples = this.activeStyleExamples.filter(id => id !== exampleId);
+        set({ activeStyleExamples: activeStyleExamples.filter(id => id !== exampleId) });
       }
       
       // Update the example's active status
-      const example = this.styleExamples.find(ex => ex.id === exampleId);
-      if (example) {
-        example.is_active = active;
-      }
+      const updatedExamples = styleExamples.map(example => 
+        example.id === exampleId ? { ...example, is_active: active } : example
+      );
+      set({ styleExamples: updatedExamples });
     },
 
     // Credit Management
     async updateCreditUsage(projectId: string) {
       try {
         const response = await invoke<CreditUsageResponse>('get_credit_usage', { projectId });
-        this.creditUsage = response;
+        set({ creditUsage: response });
       } catch (error) {
         console.error('Failed to update credit usage:', error);
       }
@@ -384,7 +467,7 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
           textContext,
           storyBible
         });
-        this.lastSaliencyContext = response;
+        set({ lastSaliencyContext: response });
         return response;
       } catch (error) {
         console.error('Failed to build saliency context:', error);
@@ -393,7 +476,7 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
     },
 
     toggleSaliencyEngine(enabled: boolean) {
-      this.saliencyEnabled = enabled;
+      set({ saliencyEnabled: enabled });
     },
 
     // Smart Import
@@ -418,30 +501,34 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
 
     // Settings
     toggleUltraCreativeMode(enabled: boolean) {
-      this.ultraCreativeMode = enabled;
+      set({ ultraCreativeMode: enabled });
     },
 
     toggleAutoEnhancePrompts(enabled: boolean) {
-      this.autoEnhancePrompts = enabled;
+      set({ autoEnhancePrompts: enabled });
     },
 
     toggleClicheDetection(enabled: boolean) {
-      this.clicheDetectionEnabled = enabled;
+      set({ clicheDetectionEnabled: enabled });
     },
 
     // Utility Methods
     clearLastGeneration() {
-      this.lastGenerationResult = undefined;
-      this.streamingStatus = undefined;
+      set({ 
+        lastGenerationResult: undefined,
+        streamingStatus: undefined 
+      });
     },
 
     clearBrainstormSessions() {
-      this.activeBrainstormSessions = [];
-      this.currentBrainstormSession = undefined;
+      set({ 
+        activeBrainstormSessions: [],
+        currentBrainstormSession: undefined 
+      });
     },
 
     clearGeneratedImages() {
-      this.generatedImages = [];
+      set({ generatedImages: [] });
     },
 
     // Error Handling
@@ -449,11 +536,15 @@ export const useAdvancedAIStore = defineStore('advancedAI', {
       console.error(`Advanced AI Error in ${context}:`, error);
       
       // Reset loading states
-      this.isGenerating = false;
-      this.isGeneratingImage = false;
+      set({ 
+        isGenerating: false,
+        isGeneratingImage: false 
+      });
       
       // You could emit events here for global error handling
       // or show notifications
     }
   }
-});
+)));
+
+export default useAdvancedAIStore;

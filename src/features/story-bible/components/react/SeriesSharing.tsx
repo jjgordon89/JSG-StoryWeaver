@@ -24,6 +24,7 @@ interface WorldElement {
   name: string;
   element_type: string;
   description: string;
+  significance?: string;
   series_shared: boolean;
   visibility: 'always' | 'chapter' | 'never';
   project_id: string;

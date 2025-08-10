@@ -58,7 +58,7 @@ pub enum PluginVariableType {
 }
 
 /// Plugin category enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
 #[sqlx(type_name = "text")]
 pub enum PluginCategory {
     #[sqlx(rename = "writing")]
@@ -88,6 +88,7 @@ pub enum PluginCategory {
     #[sqlx(rename = "collaboration")]
     Collaboration,
     #[sqlx(rename = "other")]
+    #[default]
     Other,
 }
 
@@ -190,7 +191,7 @@ pub struct PluginRating {
     pub created_at: DateTime<Utc>,
 }
 
-/// Plugin usage statistics
+/// Plugin usage statistics (user-specific)
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PluginUsageStats {
     pub id: i32,
@@ -200,6 +201,19 @@ pub struct PluginUsageStats {
     pub total_credits_used: i32,
     pub last_used: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+}
+
+/// Plugin daily statistics (aggregated by date)
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PluginDailyStats {
+    pub id: i32,
+    pub plugin_id: i32,
+    pub date: chrono::NaiveDate,
+    pub total_executions: i32,
+    pub successful_executions: i32,
+    pub failed_executions: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// Plugin search result

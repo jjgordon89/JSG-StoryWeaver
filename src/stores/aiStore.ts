@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { invoke } from '../utils/tauriSafe';
-import { AICard } from '../components/cards/CardSystem';
 
 // Types for AI writing functionality
 export interface WriteSettings {

@@ -1,7 +1,7 @@
 //! Tauri commands for canvas and visual story planning features
 
 use crate::database::{get_pool, models::canvas::*, operations::canvas::*};
-use crate::database::models::canvas::{Canvas, CanvasElement, OutlineTemplate, CanvasCollaborationSession, CanvasSnapshot, CanvasExportResult, CanvasOperation, OutlineTemplateType, ExportFormat};
+use crate::database::models::canvas::{Canvas, CanvasElement, OutlineTemplate, CanvasCollaborationSession, CanvasSnapshot, CanvasExportResult, CanvasExportRequest, CanvasOperation, OutlineTemplateType, ExportFormat, CanvasType, CanvasElementType, CanvasOperationType};
 use crate::error::{Result, StoryWeaverError};
 use serde_json::Value;
 
@@ -52,7 +52,7 @@ pub async fn get_project_canvases(
 ) -> Result<Vec<Canvas>> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    crate::database::operations::canvas::get_canvases_by_project(&pool, &project_id)
+    crate::database::operations::canvas::get_project_canvases(&pool, &project_id)
         .await
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }

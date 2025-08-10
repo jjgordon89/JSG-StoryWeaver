@@ -177,17 +177,16 @@ impl super::DocumentVersionOps {
     
     /// Get version history with metadata
     pub async fn get_version_history(pool: &Pool<Sqlite>, document_id: &str) -> Result<Vec<VersionHistoryItem>> {
-        let versions = sqlx::query_as!(
-            VersionHistoryItem,
+        let versions = sqlx::query(
             r#"
             SELECT 
                 v.id,
-                v.version_number as "version_number: i32",
-                v.word_count as "word_count: i32",
-                v.created_at as "created_at: chrono::NaiveDateTime",
+                v.version_number,
+                v.word_count,
+                v.created_at,
                 v.created_by,
                 v.comment,
-                (v.word_count - COALESCE(prev.word_count, 0)) as "word_count_change: i32"
+                (v.word_count - COALESCE(prev.word_count, 0)) as word_count_change
             FROM 
                 document_versions v
             LEFT JOIN 
@@ -197,12 +196,25 @@ impl super::DocumentVersionOps {
                 v.document_id = ?
             ORDER BY 
                 v.version_number DESC
-            "#,
-            document_id
+            "#
         )
+        .bind(document_id)
         .fetch_all(&*pool)
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get version history: {}", e)))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get version history: {}", e)))?
+        .into_iter()
+        .map(|row| {
+            VersionHistoryItem {
+                id: row.get::<Option<String>, _>("id"),
+                version_number: row.get::<i32, _>("version_number"),
+                word_count: row.get::<i32, _>("word_count"),
+                created_at: row.get::<chrono::NaiveDateTime, _>("created_at"),
+                created_by: row.get::<Option<String>, _>("created_by"),
+                comment: row.get::<Option<String>, _>("comment"),
+                word_count_change: row.get::<i32, _>("word_count_change"),
+            }
+        })
+        .collect();
         
         Ok(versions)
     }

@@ -186,3 +186,15 @@ pub enum NotificationType {
     #[sqlx(rename = "document_updated")]
     DocumentUpdated,
 }
+
+impl ToString for NotificationType {
+    fn to_string(&self) -> String {
+        match self {
+            NotificationType::NewComment => "new_comment".to_string(),
+            NotificationType::CommentReply => "comment_reply".to_string(),
+            NotificationType::CommentResolved => "comment_resolved".to_string(),
+            NotificationType::ParticipantJoined => "participant_joined".to_string(),
+            NotificationType::DocumentUpdated => "document_updated".to_string(),
+        }
+    }
+}

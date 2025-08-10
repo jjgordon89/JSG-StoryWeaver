@@ -68,15 +68,15 @@ impl super::BackgroundTaskOps {
     
     /// Get a task by ID
     pub async fn get_task(pool: &Pool<Sqlite>, task_id: &str) -> Result<Task> {
-        let record = sqlx::query!(
+        let record = sqlx::query(
             r#"
             SELECT id, task_type, description, status, priority, progress,
                    created_at, started_at, completed_at, error_message,
                    user_initiated, project_id, document_id, metadata
              FROM background_tasks WHERE id = ?
-            "#,
-            task_id
+            "#
         )
+        .bind(task_id)
         .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get task: {}", e)))?
@@ -87,7 +87,7 @@ impl super::BackgroundTaskOps {
     
     /// Get all tasks
     pub async fn get_all_tasks(pool: &Pool<Sqlite>) -> Result<Vec<Task>> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT id, task_type, description, status, priority, progress,
                    created_at, started_at, completed_at, error_message,
