@@ -1,7 +1,7 @@
 use crate::database::models::DocumentVersion;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, Row};
 use uuid::Uuid;
 
 /// DocumentVersion operations
@@ -109,8 +109,8 @@ impl super::DocumentVersionOps {
         let version = DocumentVersion {
             id: Uuid::new_v4().to_string(),
             document_id: document_id.to_string(),
-            content: document.content.unwrap_or_default(),
-            word_count: document.word_count.unwrap_or(0) as i32,
+            content: document.content,
+            word_count: document.word_count as i32,
             version_number,
             created_at: Utc::now(),
             created_by,

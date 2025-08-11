@@ -2,7 +2,6 @@
 //! Comprehensive error handling for all application components
 
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use thiserror::Error;
 
 /// Main error type for StoryWeaver application
@@ -287,6 +286,13 @@ impl StoryWeaverError {
     /// Create a system error
     pub fn system<S: Into<String>>(message: S) -> Self {
         Self::Internal {
+            message: message.into(),
+        }
+    }
+    
+    /// Create an invalid input error
+    pub fn invalid_input<S: Into<String>>(message: S) -> Self {
+        Self::InvalidInput {
             message: message.into(),
         }
     }

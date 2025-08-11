@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::{
-    prose_modes::{ProseModelManager, GenerationSettings, ProseMode},
+    prose_modes::{ProseModelManager, ProseMode},
     saliency_engine::{SaliencyEngine, SaliencyContext, StoryBibleElements},
     visualize::{VisualizeEngine, VisualizeRequest, GeneratedImage},
     brainstorm::{BrainstormEngine, BrainstormRequest, BrainstormSession},
-    AIProvider, AIContext, TextStream,
+    AIProvider, AIContext,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,8 +103,28 @@ impl CreditTracker {
         self.project_usage.get(project_id).copied().unwrap_or(0)
     }
 
-    pub fn get_daily_usage(&self, date: &str) -> i32 {
+    pub fn get_daily_usage_for_date(&self, date: &str) -> i32 {
         self.daily_usage.get(date).copied().unwrap_or(0)
+    }
+
+    // Method for getting today's usage (no parameters)
+    pub fn get_daily_usage(&self) -> i32 {
+        let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+        self.daily_usage.get(&today).copied().unwrap_or(0)
+    }
+
+    pub fn get_monthly_limit(&self) -> Option<i32> {
+        // Return a default monthly limit or None
+        Some(10000) // Default monthly limit
+    }
+
+    pub fn get_remaining_credits(&self) -> Option<i32> {
+        if let Some(limit) = self.get_monthly_limit() {
+            let total_usage: i32 = self.project_usage.values().sum();
+            Some((limit - total_usage).max(0))
+        } else {
+            None
+        }
     }
 
     pub fn check_limit(&self, project_id: &str, additional_credits: i32) -> bool {
@@ -242,7 +262,7 @@ impl AdvancedAIManager {
         }
 
         // Generate image using visualize engine
-        let mut generated_image = self.visualize_engine.generate_image(request).await?;
+        let generated_image = self.visualize_engine.generate_image(request).await?;
 
         // Get appropriate AI provider for image generation
         if let Some(provider) = self.ai_providers.get_mut("openai") {
@@ -571,8 +591,61 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         self.brainstorm_engine.get_session(session_id)
     }
 
-    pub fn get_generated_images(&self, project_id: &str) -> Vec<&GeneratedImage> {
-        self.visualize_engine.list_project_images(project_id)
+    pub async fn get_generated_images(&self, project_id: &str) -> Result<Vec<GeneratedImage>, Box<dyn std::error::Error>> {
+        Ok(self.visualize_engine.list_project_images(project_id).into_iter().cloned().collect())
+    }
+
+    pub async fn delete_generated_image(&mut self, image_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        self.visualize_engine.delete_image(image_id)?;
+        Ok(())
+    }
+
+    pub fn rate_brainstorm_idea(&mut self, session_id: &str, idea_id: &str, rating: u32) -> Result<(), Box<dyn std::error::Error>> {
+        self.brainstorm_engine.rate_idea(session_id, idea_id, rating)
+    }
+
+    pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, is_keeper: bool) -> Result<(), Box<dyn std::error::Error>> {
+        self.brainstorm_engine.mark_as_keeper(session_id, is_keeper)
+    }
+
+    pub async fn get_daily_usage(&self) -> i32 {
+        self.credit_tracker.get_daily_usage()
+    }
+
+    pub async fn get_credit_status(&self) -> (Option<i32>, Option<i32>) {
+        (self.credit_tracker.get_monthly_limit(), self.credit_tracker.get_remaining_credits())
+    }
+
+    pub async fn build_saliency_context(
+        &self,
+        project_id: &str,
+        text_context: &str,
+        story_bible: StoryBibleElements,
+    ) -> Result<SaliencyContext, Box<dyn std::error::Error>> {
+        self.saliency_engine.build_context(project_id, text_context, story_bible).await
+    }
+
+    pub async fn start_streaming_generation(
+        &mut self,
+        request: AdvancedGenerationRequest,
+        story_bible: Option<StoryBibleElements>,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let _ = request;
+        // For now, return a placeholder stream ID
+        // This would be implemented with actual streaming in the future
+        let stream_id = uuid::Uuid::new_v4().to_string();
+        Ok(stream_id)
+    }
+
+    pub async fn get_stream_status(
+        &self,
+        stream_id: &str,
+    ) -> Result<std::collections::HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
+        // Placeholder implementation for streaming status
+        let mut status = std::collections::HashMap::new();
+        status.insert("status".to_string(), serde_json::Value::String("completed".to_string()));
+        status.insert("progress".to_string(), serde_json::Value::Number(serde_json::Number::from(100)));
+        Ok(status)
     }
 
     pub async fn analyze_content_for_import(

@@ -3,7 +3,7 @@
 //! This module provides functionality to count tokens and estimate costs
 //! for different AI providers and models.
 
-use crate::error::{Result, StoryWeaverError};
+use crate::error::Result;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 

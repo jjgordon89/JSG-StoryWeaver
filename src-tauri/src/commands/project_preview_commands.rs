@@ -98,10 +98,10 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
         .map_err(|e| crate::error::StoryWeaverError::database(format!("Failed to fetch recent documents: {}", e)))?
         .into_iter()
         .map(|row| DocumentSummary {
-            id: row.id.to_string(),
+            id: row.id.unwrap_or_default(),
             title: row.title,
             document_type: row.document_type,
-            word_count: row.word_count.unwrap_or(0) as i32,
+            word_count: row.word_count as i32,
             updated_at: row.updated_at.map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
         })
         .collect();

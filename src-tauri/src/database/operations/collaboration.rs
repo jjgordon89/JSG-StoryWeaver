@@ -19,6 +19,7 @@ pub async fn create_shared_document(
     let expires_at = settings.expires_at;
 
     let now = Utc::now();
+    let share_type_str = share_type.to_string();
     let result = sqlx::query!(
         r#"
         INSERT INTO shared_documents (
@@ -31,7 +32,7 @@ pub async fn create_shared_document(
         document_id,
         project_id,
         share_token,
-        share_type.to_string(),
+        share_type_str,
         expires_at,
         settings.max_uses,
         0, // current_uses starts at 0
@@ -48,7 +49,7 @@ pub async fn create_shared_document(
         document_id: document_id.to_string(),
         project_id: project_id.to_string(),
         share_token,
-        share_type: share_type.to_string(),
+        share_type: share_type_str,
         password_hash: settings.password.map(|p| format!("hashed_{}", p)), // Simple hash for now
         expires_at: settings.expires_at,
         max_uses: settings.max_uses,
@@ -80,7 +81,7 @@ pub async fn get_shared_document_by_token(
 
     if let Some(row) = result {
         Ok(Some(SharedDocument {
-            id: row.id as i32,
+            id: row.id.map(|id| id as i32).unwrap_or(0),
             document_id: row.document_id.to_string(),
             project_id: row.project_id.to_string(),
             share_token: row.share_token,
@@ -91,8 +92,14 @@ pub async fn get_shared_document_by_token(
             current_uses: row.current_uses.unwrap_or(0) as i32,
             is_active: row.is_active.unwrap_or(false),
             created_by: row.created_by,
-            created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap_or_default(), Utc),
-            updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap_or_default(), Utc),
+            created_at: DateTime::from_naive_utc_and_offset(
+                row.created_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
+                Utc
+            ),
+            updated_at: DateTime::from_naive_utc_and_offset(
+                row.updated_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
+                Utc
+            ),
         }))
     } else {
         Ok(None)
@@ -126,6 +133,7 @@ pub async fn create_comment(
     request: CommentRequest,
 ) -> Result<Comment, sqlx::Error> {
     let now = Utc::now();
+    let comment_type_str = request.comment_type.to_string();
     let result = sqlx::query!(
         r#"
         INSERT INTO document_comments (
@@ -144,7 +152,7 @@ pub async fn create_comment(
         request.position_start,
         request.position_end,
         request.selected_text,
-        request.comment_type.to_string(),
+        comment_type_str,
         "open", // default status
         false, // default is_resolved
         now,
@@ -154,7 +162,7 @@ pub async fn create_comment(
     .await?;
 
     Ok(Comment {
-        id: result.id,
+        id: result.id as i32,
         document_id: request.document_id.clone(),
         parent_comment_id: request.parent_comment_id,
         author_name: request.author_name.clone(),
@@ -193,7 +201,7 @@ pub async fn get_document_comments(
     .await?;
 
     let comments = rows.into_iter().map(|row| Comment {
-        id: row.id as i32,
+        id: row.id.unwrap_or(0) as i32,
         document_id: row.document_id.to_string(),
         parent_comment_id: row.parent_comment_id.map(|id| id as i32),
         author_name: row.author_name,
@@ -207,8 +215,14 @@ pub async fn get_document_comments(
         is_resolved: row.is_resolved.unwrap_or(false),
         resolved_by: row.resolved_by,
         resolved_at: row.resolved_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-        created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap_or_default(), Utc),
-        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap_or_default(), Utc),
+        created_at: DateTime::from_naive_utc_and_offset(
+            row.created_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
+            Utc
+        ),
+        updated_at: DateTime::from_naive_utc_and_offset(
+            row.updated_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
+            Utc
+        ),
     }).collect();
 
     Ok(comments)
@@ -313,7 +327,7 @@ pub async fn get_collaboration_session_by_token(
     if let Some(row) = row {
         Ok(Some(CollaborationSession {
             id: row.id.unwrap_or(0) as i32,
-            document_id: row.document_id,
+            document_id: row.document_id.to_string(),
             session_token: row.session_token,
             session_name: row.session_name,
             is_active: row.is_active.unwrap_or(false),
@@ -437,23 +451,30 @@ pub async fn duplicate_document_for_sharing(
     .await?;
     
     let original = Document {
-        id: row.id.to_string(),
-        project_id: row.project_id,
+        id: row.id.unwrap_or_default(),
+        project_id: row.project_id.to_string(),
         title: row.title,
         content: row.content,
         document_type: serde_json::from_str(&row.document_type).unwrap(),
-        order_index: row.order_index.unwrap_or(0) as i32,
-        word_count: row.word_count.unwrap_or(0) as i32,
+        order_index: row.order_index as i32,
+        word_count: row.word_count as i32,
         parent_id: row.parent_id.map(|id| id.to_string()),
-        created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
-        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),
-        metadata: row.metadata.unwrap_or_else(|| "{}".to_string()),
+        created_at: DateTime::from_naive_utc_and_offset(
+            row.created_at, 
+            Utc
+        ),
+        updated_at: DateTime::from_naive_utc_and_offset(
+            row.updated_at, 
+            Utc
+        ),
+        metadata: row.metadata,
         folder_id: row.folder_id,
     };
 
     // Create new document with copied content
     let new_id = Uuid::new_v4().to_string();
     let now = Utc::now();
+    let document_type_str = original.document_type.to_string();
     
     sqlx::query!(
         r#"
@@ -467,7 +488,7 @@ pub async fn duplicate_document_for_sharing(
         original.project_id,
         new_title,
         original.content,
-        original.document_type.to_string(),
+        document_type_str,
         original.order_index,
         original.word_count,
         original.parent_id,
@@ -544,16 +565,16 @@ pub async fn get_project_shared_documents(
     .await?;
     
     let results = rows.into_iter().map(|row| SharedDocument {
-        id: row.id.unwrap_or(0) as i32,
-        document_id: row.document_id,
-        project_id: row.project_id,
+        id: row.id.map(|id| id as i32).unwrap_or(0),
+        document_id: row.document_id.to_string(),
+        project_id: row.project_id.to_string(),
         share_token: row.share_token,
-        share_type: row.share_type,
+        share_type: row.share_type.unwrap_or_default(),
         password_hash: row.password_hash,
-        expires_at: row.expires_at,
+        expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
         max_uses: row.max_uses.map(|v| v as i32),
         current_uses: row.current_uses.unwrap_or(0) as i32,
-        is_active: row.is_active.map(|v| v != 0).unwrap_or(false),
+        is_active: row.is_active.unwrap_or(false),
         created_by: row.created_by,
         created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
         updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),
@@ -637,7 +658,7 @@ pub async fn get_notifications_for_user(
             
             CollaborationNotification {
                 id: row.id.unwrap_or(0) as i32,
-                document_id: row.document_id,
+                document_id: row.document_id.to_string(),
                 notification_type,
                 message: row.message,
                 recipient_token: row.recipient_token,

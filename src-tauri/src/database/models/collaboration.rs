@@ -15,6 +15,10 @@ pub enum CommentType {
     Question,
     #[serde(rename = "issue")]
     Issue,
+    #[serde(rename = "praise")]
+    Praise,
+    #[serde(rename = "criticism")]
+    Criticism,
 }
 
 impl ToString for CommentType {
@@ -24,6 +28,8 @@ impl ToString for CommentType {
             CommentType::Suggestion => "suggestion".to_string(),
             CommentType::Question => "question".to_string(),
             CommentType::Issue => "issue".to_string(),
+            CommentType::Praise => "praise".to_string(),
+            CommentType::Criticism => "criticism".to_string(),
         }
     }
 }

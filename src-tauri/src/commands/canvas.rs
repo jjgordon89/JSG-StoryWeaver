@@ -102,14 +102,14 @@ pub async fn create_canvas_element(
     let element_type_enum = match element_type.as_str() {
         "text_box" => CanvasElementType::TextBox,
         "sticky_note" => CanvasElementType::StickyNote,
-        "character_card" => CanvasElementType::CharacterCard,
-        "scene_card" => CanvasElementType::SceneCard,
+        "character_card" => CanvasElementType::CharacterArc,
+        "scene_card" => CanvasElementType::Scene,
         "plot_point" => CanvasElementType::PlotPoint,
         "timeline_event" => CanvasElementType::TimelineEvent,
-        "connection_line" => CanvasElementType::ConnectionLine,
-        "image" => CanvasElementType::Image,
-        "shape" => CanvasElementType::Shape,
-        "group" => CanvasElementType::Group,
+        "connection_line" => CanvasElementType::Connection,
+        "image" => CanvasElementType::TextBox,
+        "shape" => CanvasElementType::StickyNote,
+        "group" => CanvasElementType::Note,
         _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid canvas element type".to_string() }),
     };
     
@@ -184,7 +184,7 @@ pub async fn get_outline_templates(
             "heros_journey" => OutlineTemplateType::HerosJourney,
             "save_the_cat" => OutlineTemplateType::SaveTheCat,
             "snowflake" => OutlineTemplateType::Snowflake,
-            "freytag_pyramid" => OutlineTemplateType::FreytagPyramid,
+            "freytag_pyramid" => OutlineTemplateType::ThreeAct,
             "seven_point" => OutlineTemplateType::SevenPoint,
             "custom" => OutlineTemplateType::Custom,
             _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid outline template type".to_string() }),
@@ -213,7 +213,7 @@ pub async fn create_outline_template(
         "heros_journey" => OutlineTemplateType::HerosJourney,
         "save_the_cat" => OutlineTemplateType::SaveTheCat,
         "snowflake" => OutlineTemplateType::Snowflake,
-        "freytag_pyramid" => OutlineTemplateType::FreytagPyramid,
+        "freytag_pyramid" => OutlineTemplateType::ThreeAct,
         "seven_point" => OutlineTemplateType::SevenPoint,
         "custom" => OutlineTemplateType::Custom,
         _ => return Err(StoryWeaverError::InvalidInput { message: "Invalid outline template type".to_string() }),
@@ -223,9 +223,9 @@ pub async fn create_outline_template(
     
     let template = OutlineTemplate {
         id: 0, // Will be set by database
-        name,
-        description,
-        template_type: template_type_enum,
+        name: name.clone(),
+        description: description.clone(),
+        template_type: template_type_enum.clone(),
         template_data,
         is_official: false,
         created_at: chrono::Utc::now(),
@@ -294,7 +294,7 @@ pub async fn export_canvas(
     let canvas_id_int: i32 = canvas_id.parse().unwrap_or(0);
     let request = CanvasExportRequest {
         canvas_id: canvas_id_int,
-        export_format,
+        export_format: export_format.clone(),
         include_connections: true,
         include_metadata: true,
     };
@@ -446,12 +446,14 @@ pub async fn join_canvas_collaboration(
         
         let session = CanvasCollaborationSession {
             id: 0,
-            canvas_id: canvas_id.clone(),
+            canvas_id: canvas_id.parse().unwrap_or(0),
             session_token: session_token.clone(),
             host_user: participants[0].clone(),
             participants: participants_json,
+            is_active: true,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
+            expires_at: None,
         };
         
         crate::database::operations::canvas::create_canvas_collaboration_session_from_struct(&pool, session)

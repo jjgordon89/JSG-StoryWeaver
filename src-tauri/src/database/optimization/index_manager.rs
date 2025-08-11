@@ -619,7 +619,7 @@ impl IndexManager {
     }
 
     /// Analyze query patterns to generate index recommendations
-    async fn analyze_query_patterns(&self) -> Result<Vec<IndexRecommendation>> {
+    pub async fn analyze_query_patterns(&self) -> Result<Vec<IndexRecommendation>> {
         let mut recommendations = Vec::new();
         
         // Example recommendations based on common query patterns

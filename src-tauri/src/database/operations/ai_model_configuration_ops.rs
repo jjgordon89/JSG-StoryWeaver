@@ -74,8 +74,8 @@ impl super::AIModelConfigurationOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI model configuration: {}", e)))?;
 
         Ok(row.map(|r| AIModelConfiguration {
-            id: r.id.map(|id| id as i32),
-            provider_id: r.provider_id.parse().unwrap_or(0),
+            id: Some(r.id as i32),
+            provider_id: r.provider_id as i32,
             model_name: r.model_name,
             display_name: r.display_name,
             context_window: r.context_window as i32,
@@ -108,12 +108,12 @@ impl super::AIModelConfigurationOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI model configurations by provider: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| AIModelConfiguration {
-            id: r.id.map(|id| id as i32),
-            provider_id: r.provider_id.parse().unwrap_or(0),
+            id: Some(r.id as i32),
+            provider_id: r.provider_id as i32,
             model_name: r.model_name,
             display_name: r.display_name,
-            context_window: r.context_window.map(|c| c as i32).unwrap_or(0),
-            max_output_tokens: r.max_output_tokens.map(|m| m as i32).unwrap_or(0),
+            context_window: r.context_window as i32,
+            max_output_tokens: r.max_output_tokens as i32,
             supports_streaming: r.supports_streaming.unwrap_or(true),
             supports_images: r.supports_images.unwrap_or(false),
             cost_per_input_token: r.cost_per_input_token,
@@ -141,12 +141,12 @@ impl super::AIModelConfigurationOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list AI model configurations: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| AIModelConfiguration {
-            id: r.id.map(|id| id as i32),
-            provider_id: r.provider_id.parse().unwrap_or(0),
+            id: Some(r.id as i32),
+            provider_id: r.provider_id as i32,
             model_name: r.model_name,
             display_name: r.display_name,
-            context_window: r.context_window.map(|c| c as i32).unwrap_or(0),
-            max_output_tokens: r.max_output_tokens.map(|m| m as i32).unwrap_or(0),
+            context_window: r.context_window as i32,
+            max_output_tokens: r.max_output_tokens as i32,
             supports_streaming: r.supports_streaming.unwrap_or(true),
             supports_images: r.supports_images.unwrap_or(false),
             cost_per_input_token: r.cost_per_input_token,

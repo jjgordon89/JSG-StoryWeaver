@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneratedImage {
-    pub id: Option<i32>,
-    pub project_id: i32,
+    pub id: Option<String>,
+    pub project_id: String,
     pub prompt: String,
     pub negative_prompt: Option<String>,
     pub model_used: String,
@@ -76,15 +76,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated image: {}", e)))?;
 
         Ok(row.map(|r| GeneratedImage {
-            id: Some(r.id.unwrap_or_else(|| String::new()).parse().unwrap_or(0)),
-            project_id: r.project_id.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            id: r.id,
+            project_id: r.project_id,
             prompt: r.prompt.unwrap_or_else(|| String::new()),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_else(|| String::new()),
             image_url: r.image_url.unwrap_or_else(|| String::new()),
             local_path: r.local_path,
-            width: r.width.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
-            height: r.height.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            width: r.width.unwrap_or(0) as i32,
+            height: r.height.unwrap_or(0) as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -111,15 +111,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated images by project: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: Some(r.id.unwrap_or_else(|| String::new()).parse().unwrap_or(0)),
-            project_id: r.project_id.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            id: r.id,
+            project_id: r.project_id,
             prompt: r.prompt.unwrap_or_else(|| String::new()),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_else(|| String::new()),
             image_url: r.image_url.unwrap_or_else(|| String::new()),
             local_path: r.local_path,
-            width: r.width.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
-            height: r.height.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            width: r.width.unwrap_or(0) as i32,
+            height: r.height.unwrap_or(0) as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -145,15 +145,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list generated images: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: Some(r.id.unwrap_or_else(|| String::new()).parse().unwrap_or(0)),
-            project_id: r.project_id.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            id: r.id,
+            project_id: r.project_id,
             prompt: r.prompt.unwrap_or_else(|| String::new()),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_else(|| String::new()),
             image_url: r.image_url.unwrap_or_else(|| String::new()),
             local_path: r.local_path,
-            width: r.width.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
-            height: r.height.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            width: r.width.unwrap_or(0) as i32,
+            height: r.height.unwrap_or(0) as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -238,15 +238,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated images by model: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: Some(r.id.unwrap_or_else(|| String::new()).parse().unwrap_or(0)),
-            project_id: r.project_id.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            id: r.id,
+            project_id: r.project_id,
             prompt: r.prompt.unwrap_or_else(|| String::new()),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_else(|| String::new()),
             image_url: r.image_url.unwrap_or_else(|| String::new()),
             local_path: r.local_path,
-            width: r.width.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
-            height: r.height.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            width: r.width.unwrap_or(0) as i32,
+            height: r.height.unwrap_or(0) as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,
@@ -273,15 +273,15 @@ impl super::GeneratedImageOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent generated images: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| GeneratedImage {
-            id: Some(r.id.unwrap_or_else(|| String::new()).parse().unwrap_or(0)),
-            project_id: r.project_id.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            id: r.id,
+            project_id: r.project_id,
             prompt: r.prompt.unwrap_or_else(|| String::new()),
             negative_prompt: r.negative_prompt,
             model_used: r.model_used.unwrap_or_else(|| String::new()),
             image_url: r.image_url.unwrap_or_else(|| String::new()),
             local_path: r.local_path,
-            width: r.width.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
-            height: r.height.unwrap_or_else(|| String::new()).parse().unwrap_or(0),
+            width: r.width.unwrap_or(0) as i32,
+            height: r.height.unwrap_or(0) as i32,
             seed: r.seed,
             steps: r.steps.map(|s| s as i32),
             cfg_scale: r.cfg_scale,

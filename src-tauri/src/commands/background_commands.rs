@@ -78,6 +78,7 @@ pub async fn create_background_task(
         &task_manager,
     )
     .await
+    .map(CommandResponse::success)
     .map_err(|e| e.into())
 }
 
@@ -90,7 +91,7 @@ pub async fn get_background_task(task_id: String) -> Result<CommandResponse<Task
         Ok(TaskResponse::from(task))
     }
     
-    get(task_id).await.map_err(|e| e.into())
+    get(task_id).await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
 /// Get all tasks
@@ -102,7 +103,7 @@ pub async fn get_all_background_tasks() -> Result<CommandResponse<Vec<TaskRespon
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_all().await.map_err(|e| e.into())
+    get_all().await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
 /// Get tasks by status
@@ -125,7 +126,7 @@ pub async fn get_background_tasks_by_status(status: String) -> Result<CommandRes
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_by_status(status).await.map_err(|e| e.into())
+    get_by_status(status).await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
 /// Get tasks by project ID
@@ -137,7 +138,7 @@ pub async fn get_background_tasks_by_project(project_id: String) -> Result<Comma
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_by_project(project_id).await.map_err(|e| e.into())
+    get_by_project(project_id).await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
 /// Get tasks by document ID
@@ -149,7 +150,7 @@ pub async fn get_background_tasks_by_document(document_id: String) -> Result<Com
         Ok(tasks.into_iter().map(TaskResponse::from).collect())
     }
     
-    get_by_document(document_id).await.map_err(|e| e.into())
+    get_by_document(document_id).await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
 /// Cancel a task
@@ -163,10 +164,9 @@ pub async fn cancel_background_task(
         Ok(cancelled)
     }
     
-    cancel(task_id, &task_manager).await.map_err(|e| e.into())
+    cancel(task_id, &task_manager).await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
-/// Clean up old tasks
 #[tauri::command]
 pub async fn cleanup_old_background_tasks(days: i64) -> Result<CommandResponse<usize>> {
     async fn cleanup(days: i64) -> Result<usize> {
@@ -175,7 +175,7 @@ pub async fn cleanup_old_background_tasks(days: i64) -> Result<CommandResponse<u
         Ok(count)
     }
     
-    cleanup(days).await.map_err(|e| e.into())
+    cleanup(days).await.map(CommandResponse::success).map_err(|e| e.into())
 }
 
 /// Task response for frontend

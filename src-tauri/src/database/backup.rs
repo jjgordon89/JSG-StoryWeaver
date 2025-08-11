@@ -156,7 +156,7 @@ impl BackupManager {
         
         let backups = sqlx::query_as!(
             BackupRecord,
-            r#"SELECT id, filename, created_at, is_auto, comment FROM backups ORDER BY created_at DESC"#
+            r#"SELECT id, filename, created_at as "created_at: DateTime<Utc>", is_auto as "is_auto: bool", comment FROM backups ORDER BY created_at DESC"#
         )
         .fetch_all(&*pool)
         .await
@@ -261,7 +261,7 @@ impl BackupManager {
         
         // Get the last auto backup time
         let last_auto_backup = sqlx::query_scalar::<_, Option<DateTime<Utc>>>(
-            "SELECT MAX(created_at) FROM backups WHERE is_auto = 1"
+            "SELECT MAX(created_at) as 'created_at: DateTime<Utc>' FROM backups WHERE is_auto = 1"
         )
         .fetch_one(&*pool)
         .await

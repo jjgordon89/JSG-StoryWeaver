@@ -4,7 +4,7 @@
 //! practices, including data minimization, anonymization, and consent management.
 
 use crate::error::StoryWeaverError;
-use crate::security::encryption::{encrypt_string, decrypt_string};
+use crate::security::encryption::encrypt_string;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use crate::database::get_pool;
@@ -174,7 +174,8 @@ async fn load_privacy_settings() -> Result<PrivacySettings, StoryWeaverError> {
     match row {
         Some(row) => {
             // Parse the settings from JSON
-            let settings: PrivacySettings = serde_json::from_str(&row.value)
+            let value_str = row.value.as_deref().unwrap_or("{}");
+            let settings: PrivacySettings = serde_json::from_str(value_str)
                 .map_err(|e| StoryWeaverError::Deserialization{ message: format!("Failed to parse privacy settings: {}", e) })?;
             
             Ok(settings)

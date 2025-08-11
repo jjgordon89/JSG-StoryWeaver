@@ -87,6 +87,8 @@ pub enum PluginCategory {
     Workflow,
     #[sqlx(rename = "collaboration")]
     Collaboration,
+    #[sqlx(rename = "utility")]
+    Utility,
     #[sqlx(rename = "other")]
     #[default]
     Other,
@@ -110,6 +112,7 @@ impl std::str::FromStr for PluginCategory {
             "theme" => Ok(PluginCategory::Theme),
             "workflow" => Ok(PluginCategory::Workflow),
             "collaboration" => Ok(PluginCategory::Collaboration),
+            "utility" => Ok(PluginCategory::Utility),
             "other" => Ok(PluginCategory::Other),
             _ => Err(format!("Invalid plugin category: {}", s)),
         }
@@ -187,7 +190,7 @@ pub struct PluginRating {
     pub plugin_id: i32,
     pub user_identifier: String, // Anonymous identifier
     pub rating: i32, // 1-5 stars
-    pub review_text: Option<String>,
+    pub review: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -278,6 +281,7 @@ impl std::fmt::Display for PluginCategory {
             PluginCategory::Theme => write!(f, "theme"),
             PluginCategory::Workflow => write!(f, "workflow"),
             PluginCategory::Collaboration => write!(f, "collaboration"),
+            PluginCategory::Utility => write!(f, "utility"),
             PluginCategory::Other => write!(f, "other"),
         }
     }

@@ -83,13 +83,13 @@ pub async fn get_canvas_by_id(
             project_id: row.get("project_id"),
             name: String::new(),
             description: None,
-            canvas_data: row.get::<Option<String>, _>("canvas_data").unwrap_or_default(),
+            canvas_data: row.get("canvas_data"),
             template_type: row.get("template_type"),
-            width: row.get::<Option<i32>, _>("width").unwrap_or(1920),
-            height: row.get::<Option<i32>, _>("height").unwrap_or(1080),
-            zoom_level: row.get::<Option<f64>, _>("zoom_level").unwrap_or(1.0) as f32,
-            viewport_x: row.get::<Option<f64>, _>("viewport_x").unwrap_or(0.0) as f32,
-            viewport_y: row.get::<Option<f64>, _>("viewport_y").unwrap_or(0.0) as f32,
+            width: row.get("width"),
+            height: row.get("height"),
+            zoom_level: row.get::<f64, _>("zoom_level") as f32,
+            viewport_x: row.get::<f64, _>("viewport_x") as f32,
+            viewport_y: row.get::<f64, _>("viewport_y") as f32,
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
         }))
@@ -119,17 +119,17 @@ pub async fn get_project_canvases(
     let mut canvases = Vec::new();
     for row in results {
         canvases.push(Canvas {
-            id: row.id.unwrap_or(0) as i32,
+            id: row.id.map(|id| id as i32).unwrap_or(0),
             project_id: row.project_id.to_string(),
             name: String::new(),
             description: None,
-            canvas_data: row.canvas_data.unwrap_or_default(),
+            canvas_data: row.canvas_data,
             template_type: row.template_type.and_then(|s| s.parse().ok()),
-            width: row.width.unwrap_or(1920) as i32,
-            height: row.height.unwrap_or(1080) as i32,
-            zoom_level: row.zoom_level.unwrap_or(1.0) as f32,
-            viewport_x: row.viewport_x.unwrap_or(0.0) as f32,
-            viewport_y: row.viewport_y.unwrap_or(0.0) as f32,
+            width: row.width as i32,
+            height: row.height as i32,
+            zoom_level: row.zoom_level as f32,
+            viewport_x: row.viewport_x as f32,
+            viewport_y: row.viewport_y as f32,
             created_at: row.created_at,
             updated_at: row.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
         });
@@ -234,14 +234,14 @@ pub async fn get_canvas_elements(
             element_type,
             title: row.get::<Option<String>, _>("title").unwrap_or_default(),
             content: row.get::<Option<String>, _>("content").unwrap_or_default(),
-            position_x: row.get::<Option<f64>, _>("position_x").unwrap_or(0.0) as f32,
-            position_y: row.get::<Option<f64>, _>("position_y").unwrap_or(0.0) as f32,
-            width: row.get::<Option<f64>, _>("width").unwrap_or(100.0) as f32,
-            height: row.get::<Option<f64>, _>("height").unwrap_or(100.0) as f32,
+            position_x: row.get::<f64, _>("position_x") as f32,
+            position_y: row.get::<f64, _>("position_y") as f32,
+            width: row.get::<f64, _>("width") as f32,
+            height: row.get::<f64, _>("height") as f32,
             color: row.get::<Option<String>, _>("color").unwrap_or_else(|| "#000000".to_string()),
             metadata: row.get::<Option<String>, _>("metadata").unwrap_or_else(|| "{}".to_string()),
             connections: row.get::<Option<String>, _>("connections").unwrap_or_else(|| "[]".to_string()),
-            order_index: row.get::<Option<i32>, _>("order_index").unwrap_or(0),
+            order_index: row.get("order_index"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
         });
@@ -483,10 +483,10 @@ pub async fn get_canvas_snapshots(
     let mut snapshots = Vec::new();
     for row in results {
         snapshots.push(CanvasSnapshot {
-            id: row.id.unwrap_or(0),
+            id: row.id,
             canvas_id: row.canvas_id,
-            snapshot_name: row.snapshot_name.unwrap_or_default(),
-            canvas_data: row.canvas_data.unwrap_or_default(),
+            snapshot_name: row.snapshot_name,
+            canvas_data: row.canvas_data,
             created_at: row.created_at,
         });
     }

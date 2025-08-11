@@ -1,8 +1,8 @@
 ﻿cargo :     Checking storyweaver v0.1.0 
 (C:\Users\jjgor\JSG-StoryWeaver\src-tauri)
 At line:1 char:1
-+ cargo check 2>&1 | Out-File -FilePath 
-latest_cargo_errors.txt -Encodi ...
++ cargo check 2>&1 | Out-File -FilePath current_errors.txt 
+-Encoding UT ...
 + ~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (    Checking st.. 
    .aver\src-tauri):String) [], RemoteException
@@ -5108,21 +5108,35 @@ error[E0599]: `i64` is not an iterator
            `i64: Iterator`
            which is required by `&mut i64: Iterator`
 
+error[E0605]: non-primitive cast: `std::option::Option<i64>` 
+as `i32`
+   --> src\database\operations\streaming_session_ops.rs:142:22
+    |
+142 |             id: Some(r.id as i32),
+    |                      ^^^^^^^^^^^ an `as` expression can 
+be used to convert enum types to numeric types only if the 
+enum type is unit-only or field-less
+    |
+    = note: see https://doc.rust-lang.org/reference/items/enume
+rations.html#casting for more information
+
+error[E0605]: non-primitive cast: `std::option::Option<i64>` 
+as `i32`
+   --> src\database\operations\streaming_session_ops.rs:176:23
+    |
+176 |              id: Some(r.id as i32),
+    |                       ^^^^^^^^^^^ an `as` expression can 
+be used to convert enum types to numeric types only if the 
+enum type is unit-only or field-less
+    |
+    = note: see https://doc.rust-lang.org/reference/items/enume
+rations.html#casting for more information
+
 error[E0599]: `i64` is not an iterator
    --> src\database\operations\streaming_session_ops.rs:209:22
     |
 209 |             id: r.id.map(|id| id as i32),
     |                      ^^^ `i64` is not an iterator
-    |
-    = note: the following trait bounds were not satisfied:
-            `i64: Iterator`
-            which is required by `&mut i64: Iterator`
-
-error[E0599]: `i64` is not an iterator
-   --> src\database\operations\streaming_session_ops.rs:408:23
-    |
-408 |              id: r.id.map(|id| id as i32),
-    |                       ^^^ `i64` is not an iterator
     |
     = note: the following trait bounds were not satisfied:
             `i64: Iterator`
@@ -6087,5 +6101,5 @@ E0277, E0308, E0382, E0425, E0533, E0560...
 For more information about an error, try `rustc --explain 
 E0004`.
 warning: `storyweaver` (lib) generated 116 warnings
-error: could not compile `storyweaver` (lib) due to 231 
+error: could not compile `storyweaver` (lib) due to 232 
 previous errors; 116 warnings emitted

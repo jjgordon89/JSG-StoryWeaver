@@ -98,6 +98,36 @@ pub enum DocumentType {
     Synopsis,
 }
 
+impl std::str::FromStr for DocumentType {
+    type Err = String;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "chapter" => Ok(DocumentType::Chapter),
+            "scene" => Ok(DocumentType::Scene),
+            "outline" => Ok(DocumentType::Outline),
+            "notes" => Ok(DocumentType::Notes),
+            "research" => Ok(DocumentType::Research),
+            "synopsis" => Ok(DocumentType::Synopsis),
+            _ => Err(format!("Invalid document type: {}", s)),
+        }
+    }
+}
+
+impl std::fmt::Display for DocumentType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            DocumentType::Chapter => "chapter",
+            DocumentType::Scene => "scene",
+            DocumentType::Outline => "outline",
+            DocumentType::Notes => "notes",
+            DocumentType::Research => "research",
+            DocumentType::Synopsis => "synopsis",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 /// Character model - represents characters in the story bible
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Character {

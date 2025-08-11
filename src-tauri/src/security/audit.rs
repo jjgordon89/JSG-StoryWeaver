@@ -6,10 +6,9 @@
 use crate::error::StoryWeaverError;
 use crate::database::get_pool;
 use sqlx::{Pool, Sqlite};
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// Audit event severity levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,7 +176,7 @@ impl AuditLogger {
                     context_data: row.context_data,
                     project_id: row.project_id,
                     document_id: row.document_id,
-                    created_at: row.created_at.map(|dt| DateTime::<Utc>::from_utc(dt, Utc)),
+                    created_at: row.created_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
                 }
             })
             .collect();

@@ -6,9 +6,9 @@
 use crate::error::StoryWeaverError;
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use keyring::{Entry, Error as KeyringError};
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 
 const SERVICE: &str = "storyweaver";
 const OPENAI_KEY: &str = "openai";

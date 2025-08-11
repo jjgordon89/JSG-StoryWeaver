@@ -167,20 +167,20 @@ pub async fn get_plugin_by_id(
         Ok(Some(Plugin {
             id: row.id as i32,
             name: row.name,
-            description: row.description.unwrap_or_default(),
-            prompt_template: row.prompt_template.unwrap_or_default(),
-            variables: row.variables.unwrap_or_default(),
-            ai_model: row.ai_model.unwrap_or_default(),
+            description: row.description.unwrap_or_else(|| String::new()),
+            prompt_template: row.prompt_template.unwrap_or_else(|| String::new()),
+            variables: row.variables.unwrap_or_else(|| String::new()),
+            ai_model: row.ai_model.unwrap_or_else(|| String::new()),
             temperature: row.temperature.unwrap_or(0.7) as f32,
             max_tokens: row.max_tokens.map(|v| v as i32),
             stop_sequences: row.stop_sequences,
-            category: row.category.and_then(|s| s.parse().ok()).unwrap_or_default(),
-            tags: row.tags.unwrap_or_default(),
+            category: row.category.and_then(|s| s.parse().ok()).unwrap_or(crate::database::models::plugin::PluginCategory::Other),
+            tags: row.tags.unwrap_or_else(|| String::new()),
             is_multi_stage: row.is_multi_stage.unwrap_or(false),
             stage_count: row.stage_count.unwrap_or(1) as i32,
             creator_id: row.creator_id,
             is_public: row.is_public.unwrap_or(false),
-            version: row.version,
+            version: row.version.unwrap_or_default(),
             created_at: row.created_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
             updated_at: row.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
         }))
@@ -317,6 +317,89 @@ pub async fn increment_plugin_downloads(
     Ok(())
 }
 
+/// Get plugin execution history
+pub async fn get_plugin_execution_history(
+    pool: &SqlitePool,
+    plugin_id: Option<i32>,
+    user_identifier: Option<&str>,
+    limit: i32,
+    offset: i32,
+) -> Result<Vec<PluginExecutionHistory>, sqlx::Error> {
+    match (plugin_id, user_identifier) {
+        (Some(pid), Some(uid)) => {
+            sqlx::query_as!(
+                PluginExecutionHistory,
+                r#"
+                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
+                       credits_used, execution_time_ms, success, error_message, created_at
+                FROM plugin_execution_history
+                WHERE plugin_id = ? AND user_identifier = ?
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                "#,
+                pid,
+                uid,
+                limit,
+                offset
+            )
+            .fetch_all(pool)
+            .await
+        },
+        (Some(pid), None) => {
+            sqlx::query_as!(
+                PluginExecutionHistory,
+                r#"
+                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
+                       credits_used, execution_time_ms, success, error_message, created_at
+                FROM plugin_execution_history
+                WHERE plugin_id = ?
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                "#,
+                pid,
+                limit,
+                offset
+            )
+            .fetch_all(pool)
+            .await
+        },
+        (None, Some(uid)) => {
+            sqlx::query_as!(
+                PluginExecutionHistory,
+                r#"
+                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
+                       credits_used, execution_time_ms, success, error_message, created_at
+                FROM plugin_execution_history
+                WHERE user_identifier = ?
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                "#,
+                uid,
+                limit,
+                offset
+            )
+            .fetch_all(pool)
+            .await
+        },
+        (None, None) => {
+            sqlx::query_as!(
+                PluginExecutionHistory,
+                r#"
+                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
+                       credits_used, execution_time_ms, success, error_message, created_at
+                FROM plugin_execution_history
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                "#,
+                limit,
+                offset
+            )
+            .fetch_all(pool)
+            .await
+        }
+    }
+}
+
 /// Create plugin rating
 pub async fn create_plugin_rating(
     pool: &SqlitePool,
@@ -353,7 +436,7 @@ pub async fn create_plugin_rating(
         plugin_id,
         user_identifier: user_identifier.to_string(),
         rating,
-        review_text: review.map(|s| s.to_string()),
+        review: review.map(|s| s.to_string()),
         created_at: now,
     })
 }
@@ -389,6 +472,32 @@ async fn update_plugin_rating_average(
     .await?;
 
     Ok(())
+}
+
+/// Get plugin ratings
+pub async fn get_plugin_ratings(
+    pool: &SqlitePool,
+    plugin_id: i32,
+    limit: i32,
+    offset: i32,
+) -> Result<Vec<crate::database::models::plugin::PluginRating>, sqlx::Error> {
+    let ratings = sqlx::query_as!(
+        crate::database::models::plugin::PluginRating,
+        r#"
+        SELECT id, plugin_id, user_identifier, rating, review_text as review, created_at
+        FROM plugin_ratings
+        WHERE plugin_id = ?
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        "#,
+        plugin_id,
+        limit,
+        offset
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(ratings)
 }
 
 /// Record plugin execution
@@ -489,41 +598,41 @@ pub async fn update_plugin_usage_stats(
 /// Get plugin usage statistics
 pub async fn get_plugin_usage_stats(
     pool: &SqlitePool,
-    plugin_id: &str,
+    plugin_id: i32,
     days: i32,
 ) -> Result<Vec<crate::database::models::plugin::PluginDailyStats>, sqlx::Error> {
     let start_date = Utc::now().date_naive() - chrono::Duration::days(days as i64);
 
-    let stats = sqlx::query(
+    let rows = sqlx::query!(
         r#"
         SELECT id, plugin_id, date, total_executions, successful_executions,
                failed_executions, created_at, updated_at
         FROM plugin_usage_stats
         WHERE plugin_id = ? AND date >= ?
         ORDER BY date DESC
-        "#
+        "#,
+        plugin_id,
+        start_date
     )
-    .bind(plugin_id)
-    .bind(start_date)
     .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|row| {
-        Ok(crate::database::models::plugin::PluginDailyStats {
-            id: row.get::<i32, _>("id"),
-            plugin_id: row.get::<i32, _>("plugin_id"),
-            date: row.get::<chrono::NaiveDate, _>("date"),
-            total_executions: row.get::<i32, _>("total_executions"),
-            successful_executions: row.get::<i32, _>("successful_executions"),
-            failed_executions: row.get::<i32, _>("failed_executions"),
-            created_at: row.get::<DateTime<Utc>, _>("created_at"),
-            updated_at: row.get::<DateTime<Utc>, _>("updated_at"),
-        })
-    })
-    .collect::<Result<Vec<_>, sqlx::Error>>()?;
+    .await?;
+
+    let stats = rows.into_iter().map(|row| {
+        crate::database::models::plugin::PluginDailyStats {
+            id: row.id as i32,
+            plugin_id: row.plugin_id as i32,
+            date: row.date,
+            total_executions: row.total_executions as i32,
+            successful_executions: row.successful_executions as i32,
+            failed_executions: row.failed_executions as i32,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        }
+    }).collect();
 
     Ok(stats)
 }
+
 
 /// Get plugin templates
 pub async fn get_plugin_templates(
@@ -741,6 +850,71 @@ pub async fn delete_plugin(
     Ok(())
 }
 
+/// Get plugins with optional filtering
+pub async fn get_plugins(
+    pool: &SqlitePool,
+    category: Option<PluginCategory>,
+    limit: i32,
+    offset: i32,
+) -> Result<Vec<Plugin>, sqlx::Error> {
+    let mut sql = String::from(
+        r#"
+        SELECT id, name, description, prompt_template, variables, ai_model,
+               temperature, max_tokens, stop_sequences, category, tags,
+               is_multi_stage, stage_count, creator_id, is_public, version,
+               created_at, updated_at
+        FROM plugins
+        WHERE 1=1
+        "#
+    );
+
+    let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Sqlite> + Send + Sync>> = Vec::new();
+    let mut param_index = 1;
+
+    if let Some(cat) = category {
+        sql.push_str(&format!(" AND category = ?{}", param_index));
+        params.push(Box::new(cat.to_string()));
+        param_index += 1;
+    }
+
+    sql.push_str(&format!(" ORDER BY created_at DESC LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
+    params.push(Box::new(limit));
+    params.push(Box::new(offset));
+
+    let mut query = sqlx::query(&sql);
+    for param in params {
+        query = query.bind(param);
+    }
+
+    let results = query.fetch_all(pool).await?;
+
+    let mut plugins = Vec::new();
+    for row in results {
+        plugins.push(Plugin {
+            id: row.get::<i32, _>("id"),
+            name: row.get::<String, _>("name"),
+            description: row.get::<Option<String>, _>("description").unwrap_or_else(|| String::new()),
+            prompt_template: row.get::<Option<String>, _>("prompt_template").unwrap_or_else(|| String::new()),
+            variables: row.get::<Option<String>, _>("variables").unwrap_or_else(|| String::new()),
+            ai_model: row.get::<Option<String>, _>("ai_model").unwrap_or_else(|| String::new()),
+            temperature: row.get::<Option<f64>, _>("temperature").unwrap_or(0.7) as f32,
+            max_tokens: row.get::<Option<i32>, _>("max_tokens"),
+            stop_sequences: row.get::<Option<String>, _>("stop_sequences"),
+            category: row.get::<Option<String>, _>("category").and_then(|s| s.parse().ok()).unwrap_or(crate::database::models::plugin::PluginCategory::Other),
+            tags: row.get::<Option<String>, _>("tags").unwrap_or_else(|| String::new()),
+            is_multi_stage: row.get::<Option<bool>, _>("is_multi_stage").unwrap_or(false),
+            stage_count: row.get::<Option<i32>, _>("stage_count").unwrap_or(1),
+            creator_id: row.get::<Option<String>, _>("creator_id"),
+            is_public: row.get::<Option<bool>, _>("is_public").unwrap_or(false),
+            version: row.get::<Option<String>, _>("version").unwrap_or_else(|| "1.0.0".to_string()),
+            created_at: row.get::<DateTime<Utc>, _>("created_at"),
+            updated_at: row.get::<DateTime<Utc>, _>("updated_at"),
+        });
+    }
+
+    Ok(plugins)
+}
+
 /// Get user's plugins
 pub async fn get_user_plugins(
     pool: &SqlitePool,
@@ -766,20 +940,20 @@ pub async fn get_user_plugins(
         plugins.push(Plugin {
             id: row.id as i32,
             name: row.name,
-            description: row.description.unwrap_or_default(),
-            prompt_template: row.prompt_template.unwrap_or_default(),
-            variables: row.variables.unwrap_or_default(),
-            ai_model: row.ai_model.unwrap_or_default(),
+            description: row.description.unwrap_or_else(|| String::new()),
+            prompt_template: row.prompt_template.unwrap_or_else(|| String::new()),
+            variables: row.variables.unwrap_or_else(|| String::new()),
+            ai_model: row.ai_model.unwrap_or_else(|| String::new()),
             temperature: row.temperature.unwrap_or(0.7) as f32,
             max_tokens: row.max_tokens.map(|v| v as i32),
             stop_sequences: row.stop_sequences,
-            category: row.category.and_then(|s| s.parse().ok()).unwrap_or_default(),
-            tags: row.tags.unwrap_or_default(),
+            category: row.category.and_then(|s| s.parse().ok()).unwrap_or(crate::database::models::plugin::PluginCategory::General),
+            tags: row.tags.unwrap_or_else(|| String::new()),
             is_multi_stage: row.is_multi_stage.unwrap_or(false),
             stage_count: row.stage_count.unwrap_or(1) as i32,
             creator_id: row.creator_id,
             is_public: row.is_public.unwrap_or(false),
-            version: row.version,
+            version: row.version.unwrap_or_else(|| String::new()),
             created_at: row.created_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
             updated_at: row.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
         });

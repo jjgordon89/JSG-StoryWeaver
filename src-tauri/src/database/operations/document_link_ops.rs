@@ -1,7 +1,7 @@
 use crate::database::models::DocumentLink;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, Row};
 use uuid::Uuid;
 
 /// DocumentLink operations

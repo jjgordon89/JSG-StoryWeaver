@@ -93,6 +93,7 @@ pub async fn get_index_recommendations(
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let recommendations = optimization_manager
+        .index_manager
         .analyze_query_patterns()
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to analyze query patterns: {}", e)))?;
@@ -101,10 +102,10 @@ pub async fn get_index_recommendations(
         .into_iter()
         .map(|rec| IndexRecommendation {
             table_name: rec.table_name,
-            columns: rec.columns,
-            index_type: rec.index_type,
+            columns: rec.column_names,
+            index_type: format!("{:?}", rec.index_type),
             estimated_benefit: rec.estimated_benefit,
-            reason: rec.reason,
+            reason: format!("Priority: {:?}", rec.priority),
         })
         .collect())
 }

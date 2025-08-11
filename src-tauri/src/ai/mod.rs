@@ -19,7 +19,6 @@ pub use ai_history::{AIInteraction, AIHistoryManager, AIInteractionBuilder};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// AI Context with more detailed information for better generation
 #[derive(Debug, Default, Clone)]

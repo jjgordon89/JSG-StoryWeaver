@@ -1,7 +1,7 @@
 //! Tauri commands for plugin system features
 
 use crate::database::{get_pool, models::plugin::*, operations::plugin::*};
-use crate::database::models::plugin::{Plugin, PluginCategory, PluginVisibility, PluginSearchResult, PluginExecutionResult, PluginRating, PluginUsageStats, PluginExecutionHistory, PluginTemplate, PluginSortOrder, PluginExecutionRequest};
+use crate::database::models::plugin::{Plugin, PluginCategory, PluginVisibility, PluginSearchResult, PluginExecutionResult, PluginRating, PluginUsageStats, PluginExecutionHistory, PluginTemplate, PluginSortOrder, PluginExecutionRequest, PluginDailyStats};
 use crate::error::{Result, StoryWeaverError};
 use serde_json::Value;
 
@@ -46,7 +46,7 @@ pub async fn create_plugin(
         name,
         description,
         prompt_template,
-        variables: variables.map(|v| v.to_string()),
+        variables: variables.map(|v| serde_json::to_string(&v).unwrap_or_default()).unwrap_or_default(),
         ai_model: ai_model.unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
         temperature,
         max_tokens,
@@ -255,9 +255,21 @@ pub async fn execute_plugin(
     };
     
     // Record execution history
-    record_plugin_execution(&pool, &request, &result)
-        .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))?;
+    // Store execution record in database
+    crate::database::operations::plugin::create_plugin_execution(
+        &pool,
+        plugin_id,
+        &request.input_data,
+        &result.output_data,
+        execution_time_ms,
+        success,
+        error_message.as_deref(),
+        user_id.as_deref()
+    )
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))?;
+    
+    Ok(result)
     
     // Update usage statistics
           update_plugin_usage_stats(&*pool, &plugin_id)
@@ -304,7 +316,7 @@ pub async fn get_plugin_ratings(
 ) -> Result<Vec<PluginRating>, StoryWeaverError> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_plugin_ratings(&pool, plugin_id, limit.unwrap_or(10), offset.unwrap_or(0))
+    database::operations::plugin::get_plugin_ratings(&pool, plugin_id, limit.unwrap_or(10), offset.unwrap_or(0))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin ratings: {}", e)))
 }
@@ -313,10 +325,10 @@ pub async fn get_plugin_ratings(
 #[tauri::command]
 pub async fn get_plugin_usage_stats(
     plugin_id: i32,
-) -> Result<Option<PluginUsageStats>, StoryWeaverError> {
+) -> Result<Vec<PluginDailyStats>, StoryWeaverError> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_plugin_usage_stats(&pool, plugin_id)
+    database::operations::plugin::get_plugin_usage_stats(&pool, plugin_id, 30)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin usage stats: {}", e)))
 }
@@ -331,7 +343,7 @@ pub async fn get_plugin_execution_history(
 ) -> Result<Vec<PluginExecutionHistory>, StoryWeaverError> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
-    get_plugin_execution_history(
+    database::operations::plugin::get_plugin_execution_history(
         &pool,
         plugin_id,
         user_id.as_deref(),
@@ -367,7 +379,7 @@ pub async fn get_plugin_templates(
         None
     };
     
-    get_plugin_templates(&pool, category_enum)
+    database::operations::plugin::get_plugin_templates(&pool, category_enum)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin templates: {}", e)))
 }
@@ -396,7 +408,7 @@ pub async fn get_plugins(
         None
     };
     
-    get_plugins(&pool, category_enum, limit.unwrap_or(20), offset.unwrap_or(0))
+    database::operations::plugin::get_plugins(&pool, category_enum, limit.unwrap_or(20), offset.unwrap_or(0))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plugins: {}", e)))
 }
@@ -414,29 +426,40 @@ pub async fn record_plugin_execution(
 ) -> Result<(), StoryWeaverError> {
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
+    let variables_map = std::collections::HashMap::new(); // Empty variables for now
+    
     let request = PluginExecutionRequest {
         plugin_id,
-        input_data: input_data.clone(),
-        variables: Value::Null,
-        user_id: user_id.clone(),
+        variables: variables_map,
+        document_id: None,
+        selected_text: None,
+        cursor_position: None,
     };
     
     let result = PluginExecutionResult {
-        id: 0,
-        plugin_id,
-        input_data,
-        output_data,
-        variables: Value::Null,
-        execution_time_ms,
         success,
+        result_text: Some(output_data.to_string()),
         error_message,
-        user_id,
-        executed_at: chrono::Utc::now(),
+        credits_used: 1, // Default credit usage
+        execution_time_ms: execution_time_ms as i64,
+        stage_results: None,
     };
     
-    record_plugin_execution(&pool, &request, &result)
-        .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))
+    // Record execution in database
+    crate::database::operations::plugin::create_plugin_execution(
+        &pool,
+        plugin_id,
+        &input_data,
+        &output_data,
+        execution_time_ms as i64,
+        success,
+        error_message.as_deref(),
+        user_id.as_deref(),
+    )
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to record plugin execution: {}", e)))?;
+    
+    Ok(())
 }
 
 /// Apply plugin template
@@ -452,7 +475,10 @@ pub async fn apply_plugin_template(
     let template = get_plugin_template_by_id(&pool, template_id)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin template: {}", e)))?
-        .ok_or_else(|| StoryWeaverError::not_found("Plugin template not found".to_string()))?;
+        .ok_or_else(|| StoryWeaverError::NotFound { 
+            resource_type: "Plugin template".to_string(), 
+            id: template_id.to_string() 
+        })?;
     
     // Create plugin from template
     let plugin = Plugin {
@@ -460,7 +486,7 @@ pub async fn apply_plugin_template(
         name,
         description: template.description,
         prompt_template: template.template_data,
-        variables: variables.map(|v| v.to_string()),
+        variables: variables.map(|v| serde_json::to_string(&v).unwrap_or_default()).unwrap_or_default(),
         ai_model: "gpt-3.5-turbo".to_string(),
         temperature: 0.7,
         max_tokens: Some(1000),
@@ -507,16 +533,21 @@ pub async fn create_plugin_template(
     let template = PluginTemplate {
         id: 0, // Will be set by database
         name,
-        description: Some(description),
+        description,
         category: category_enum,
-        template_code,
-        variables_schema,
-        example_usage,
+        template_data: template_code,
+        is_official: false,
         created_at: chrono::Utc::now(),
-        updated_at: chrono::Utc::now(),
     };
     
-    create_plugin_template(&pool, &template.name, &template.description, template.category, &template.template_code, template.variables_schema)
-        .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin template: {}", e)))
+    crate::database::operations::plugin::create_plugin_template(
+        &pool,
+        &template.name,
+        &template.description,
+        template.category,
+        &template.template_data,
+        variables_schema
+    )
+    .await
+    .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin template: {}", e)))
 }

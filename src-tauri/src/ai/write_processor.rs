@@ -1,6 +1,6 @@
 //! Write Processor for handling AI-powered writing features
 
-use super::{AIProvider, AIContext, WritingFeature, RewriteStyle};
+use super::{AIProvider, AIContext};
 use crate::database::DbPool;
 use crate::database::operations::{document_ops, DocumentOps};
 use crate::error::StoryWeaverError;

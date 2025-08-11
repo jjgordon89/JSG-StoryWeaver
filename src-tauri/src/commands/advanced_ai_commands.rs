@@ -135,7 +135,7 @@ pub async fn generate_with_prose_mode(
             special_instructions: request.special_instructions,
         };
 
-        ai_manager
+
             .generate_with_advanced_features(advanced_request, request.story_bible)
             .await
     }
@@ -166,10 +166,10 @@ pub async fn generate_image(
                 _ => crate::ai::ImageResolution::Square1024,
             },
             enhance_prompt: request.enhance_prompt,
-            custom_prompt: request.custom_prompt,
+            // Remove custom_prompt field since it doesn't exist in VisualizeRequest struct
         };
 
-        ai_manager.generate_image(visualize_request).await
+        ai_manager.generate_image(visualize_request).await.map_err(StoryWeaverError::from)
     }
 
     generate(request, ai_state.inner().clone()).await.into()
@@ -195,10 +195,10 @@ pub async fn create_brainstorm_session(
             num_ideas: request.num_ideas as usize,
             creativity_level: request.creativity_level as i32,
             focus_areas: vec![request.focus_area],
-            constraints: request.constraints,
+            // Removed con;straints field since it doesn't exist in BrainstormRequest struct
         };
 
-        ai_manager
+        ai_manager.map_err(|e| StoryWeaverError::from(e))?
             .create_brainstorm_session(brainstorm_request)
             .await
     }
@@ -206,11 +206,16 @@ pub async fn create_brainstorm_session(
     create(request, ai_state.inner().clone()).await.into()
 }
 
+async fn create(request: BrainstormSessionRequest, clone: AdvancedAIState) -> Result<String, StoryWeaverError> {
+    let _ = request;
+    todo!()
+}
+
 #[tauri::command]
 pub async fn get_brainstorm_session(
     session_id: String,
     ai_state: State<'_, AdvancedAIState>,
-) -> CommandResponse<Option<BrainstormSession>> {
+) -> Option<BrainstormSession> {
     async fn get(
         session_id: String,
         ai_state: AdvancedAIState,

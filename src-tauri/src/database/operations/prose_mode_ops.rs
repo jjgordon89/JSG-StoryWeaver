@@ -79,10 +79,10 @@ impl super::ProseModeOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get prose mode: {}", e)))?;
 
         Ok(row.map(|r| ProseMode {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             name: r.name,
             description: r.description,
-            model_configuration_id: r.model_configuration_id.parse().unwrap_or(0),
+            model_configuration_id: r.model_configuration_id as i32,
             creativity_level: r.creativity_level.unwrap_or(5) as i32,
             temperature: r.temperature.unwrap_or(0.7) as f32,
             top_p: r.top_p.unwrap_or(0.9) as f32,
@@ -116,10 +116,10 @@ impl super::ProseModeOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get prose mode by name: {}", e)))?;
 
         Ok(row.map(|r| ProseMode {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             name: r.name,
             description: r.description,
-            model_configuration_id: r.model_configuration_id.parse().unwrap_or(0),
+            model_configuration_id: r.model_configuration_id as i32,
             creativity_level: r.creativity_level.unwrap_or(5) as i32,
             temperature: r.temperature.unwrap_or(0.7) as f32,
             top_p: r.top_p.unwrap_or(0.9) as f32,
@@ -152,10 +152,10 @@ impl super::ProseModeOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list prose modes: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| ProseMode {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             name: r.name,
             description: r.description,
-            model_configuration_id: r.model_configuration_id.parse().unwrap_or(0),
+            model_configuration_id: r.model_configuration_id as i32,
             creativity_level: r.creativity_level.unwrap_or(5) as i32,
             temperature: r.temperature.unwrap_or(0.7) as f32,
             top_p: r.top_p.unwrap_or(0.9) as f32,
@@ -188,10 +188,10 @@ impl super::ProseModeOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to list active prose modes: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| ProseMode {
-            id: r.id.map(|id| id as i32),
+            id: Some(r.id as i32),
             name: r.name,
             description: r.description,
-            model_configuration_id: r.model_configuration_id.parse().unwrap_or(0),
+            model_configuration_id: r.model_configuration_id as i32,
             creativity_level: r.creativity_level.unwrap_or(5) as i32,
             temperature: r.temperature.unwrap_or(0.7) as f32,
             top_p: r.top_p.unwrap_or(0.9) as f32,
