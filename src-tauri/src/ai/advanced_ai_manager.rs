@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
+use std::str::FromStr;
 
 use super::{
     prose_modes::{ProseModelManager, ProseMode},
@@ -9,6 +10,8 @@ use super::{
     brainstorm::{BrainstormEngine, BrainstormRequest, BrainstormSession},
     AIProvider, AIContext,
 };
+use crate::error::{Result, StoryWeaverError};
+use crate::database::models::ai::{BrainstormCategory, ImageResolution};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvancedGenerationRequest {
@@ -108,23 +111,17 @@ impl CreditTracker {
     }
 
     // Method for getting today's usage (no parameters)
-    pub fn get_daily_usage(&self) -> i32 {
+    pub async fn get_daily_usage(&self) -> Result<i32> {
         let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-        self.daily_usage.get(&today).copied().unwrap_or(0)
+        Ok(self.daily_usage.get(&today).copied().unwrap_or(0))
     }
 
-    pub fn get_monthly_limit(&self) -> Option<i32> {
+    pub async fn get_credit_status(&self) -> (Option<i32>, Option<i32>) {
         // Return a default monthly limit or None
-        Some(10000) // Default monthly limit
-    }
-
-    pub fn get_remaining_credits(&self) -> Option<i32> {
-        if let Some(limit) = self.get_monthly_limit() {
-            let total_usage: i32 = self.project_usage.values().sum();
-            Some((limit - total_usage).max(0))
-        } else {
-            None
-        }
+        let limit = Some(10000);
+        let total_usage: i32 = self.project_usage.values().sum();
+        let remaining = limit.map(|l| (l - total_usage).max(0));
+        (limit, remaining)
     }
 
     pub fn check_limit(&self, project_id: &str, additional_credits: i32) -> bool {
@@ -158,11 +155,11 @@ impl AdvancedAIManager {
         &mut self,
         request: AdvancedGenerationRequest,
         story_bible: Option<StoryBibleElements>,
-    ) -> Result<AdvancedGenerationResult, Box<dyn std::error::Error>> {
+    ) -> Result<AdvancedGenerationResult> {
         // Get prose mode settings
         let generation_settings = self.prose_manager
             .create_generation_settings(&request.prose_mode, request.ultra_creative)
-            .ok_or("Invalid prose mode")?;
+            .ok_or_else(|| StoryWeaverError::invalid_input("Invalid prose mode".to_string()))?;
 
         // Build saliency context if requested
         let saliency_context = if request.use_saliency_engine && story_bible.is_some() {
@@ -198,27 +195,13 @@ impl AdvancedAIManager {
             project_id: Some(request.project_id.clone()),
             document_id: request.document_id.clone(),
             preceding_text: Some(enhanced_context),
-            following_text: None,
-            selected_text: None,
-            story_context: None,
-            characters: None,
-            locations: None,
-            plot_threads: None,
-            user_preferences: Some(HashMap::new()),
-            writing_style: None,
-            tone: None,
-            creativity_level: None,
-            feature_type: None,
-            feature_options: None,
-            word_count_target: None,
-            genre: None,
-            key_details: None,
+            ..Default::default()
         };
 
         // Get appropriate AI provider based on prose mode
         let provider_name = self.get_provider_for_prose_mode(&request.prose_mode)?;
         let provider = self.ai_providers.get_mut(&provider_name)
-            .ok_or("AI provider not available")?;
+            .ok_or_else(|| StoryWeaverError::ResourceUnavailable { resource: "AI provider".to_string() })?;
 
         // Generate text
         let prompt = generation_settings.special_instructions.unwrap_or_default();
@@ -254,11 +237,11 @@ impl AdvancedAIManager {
     pub async fn generate_image(
         &mut self,
         request: VisualizeRequest,
-    ) -> Result<GeneratedImage, Box<dyn std::error::Error>> {
+    ) -> Result<GeneratedImage> {
         // Check credit limits
         let credits_needed = request.resolution.get_credits_cost();
         if !self.credit_tracker.check_limit(&request.project_id, credits_needed) {
-            return Err("Credit limit exceeded".into());
+            return Err(StoryWeaverError::invalid_input("Credit limit exceeded".to_string()));
         }
 
         // Generate image using visualize engine
@@ -283,7 +266,7 @@ impl AdvancedAIManager {
     pub async fn create_brainstorm_session(
         &mut self,
         request: BrainstormRequest,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String> {
         let session_id = self.brainstorm_engine.create_session(request.clone())?;
         
         // Generate initial ideas
@@ -296,11 +279,11 @@ impl AdvancedAIManager {
         Ok(session_id)
     }
 
-    pub fn add_style_example(&mut self, example: StyleExample) {
+    pub async fn add_style_example(&mut self, example: StyleExample) {
         self.style_examples.insert(example.id.clone(), example);
     }
 
-    pub fn analyze_style(&self, content: &str) -> StyleAnalysis {
+    pub async fn analyze_style(&self, content: &str) -> Result<StyleAnalysis> {
         let sentences: Vec<&str> = content.split('.').filter(|s| !s.trim().is_empty()).collect();
         let words: Vec<&str> = content.split_whitespace().collect();
         
@@ -350,7 +333,7 @@ impl AdvancedAIManager {
             0.0
         };
 
-        StyleAnalysis {
+        Ok(StyleAnalysis {
             sentence_length_avg,
             vocabulary_complexity,
             dialogue_ratio,
@@ -358,7 +341,7 @@ impl AdvancedAIManager {
             action_ratio,
             tone_indicators: self.extract_tone_indicators(content),
             common_phrases: self.extract_common_phrases(content),
-        }
+        })
     }
 
     fn extract_tone_indicators(&self, content: &str) -> Vec<String> {
@@ -417,7 +400,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         )
     }
 
-    fn parse_import_analysis(&self, analysis_text: &str) -> Result<crate::commands::advanced_ai_commands::SmartImportAnalysisResult, Box<dyn std::error::Error>> {
+    fn parse_import_analysis(&self, analysis_text: &str) -> Result<crate::commands::advanced_ai_commands::SmartImportAnalysisResult> {
         use crate::commands::advanced_ai_commands::*;
         
         let mut suggestions = Vec::new();
@@ -545,7 +528,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
             .collect()
     }
 
-    fn get_provider_for_prose_mode(&self, prose_mode: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn get_provider_for_prose_mode(&self, prose_mode: &str) -> Result<String> {
         match prose_mode {
             "Muse" => Ok("openai".to_string()), // Use GPT-4 for premium
             "Excellent" => Ok("claude".to_string()), // Use Claude for balanced
@@ -579,11 +562,11 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         (base_credits + idea_credits) * creativity_multiplier
     }
 
-    pub fn get_credit_usage(&self, project_id: &str) -> i32 {
-        self.credit_tracker.get_project_usage(project_id)
+    pub async fn get_credit_usage(&self, project_id: &str) -> Result<i32> {
+        Ok(self.credit_tracker.get_project_usage(project_id))
     }
 
-    pub fn get_prose_modes(&self) -> Vec<&ProseMode> {
+    pub fn get_prose_modes(&self) -> &[ProseMode] {
         self.prose_manager.list_prose_modes()
     }
 
@@ -591,37 +574,37 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         self.brainstorm_engine.get_session(session_id)
     }
 
-    pub async fn get_generated_images(&self, project_id: &str) -> Result<Vec<GeneratedImage>, Box<dyn std::error::Error>> {
+    pub async fn get_generated_images(&self, project_id: &str) -> Result<Vec<GeneratedImage>> {
         Ok(self.visualize_engine.list_project_images(project_id).into_iter().cloned().collect())
     }
 
-    pub async fn delete_generated_image(&mut self, image_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_generated_image(&mut self, image_id: &str) -> Result<()> {
         self.visualize_engine.delete_image(image_id)?;
         Ok(())
     }
 
-    pub fn rate_brainstorm_idea(&mut self, session_id: &str, idea_id: &str, rating: u32) -> Result<(), Box<dyn std::error::Error>> {
-        self.brainstorm_engine.rate_idea(session_id, idea_id, rating)
+    pub fn rate_brainstorm_idea(&mut self, session_id: &str, idea_id: &str, rating: u32) -> Result<()> {
+        self.brainstorm_engine.rate_idea(session_id, idea_id, rating as i32)
     }
 
-    pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, is_keeper: bool) -> Result<(), Box<dyn std::error::Error>> {
-        self.brainstorm_engine.mark_as_keeper(session_id, is_keeper)
+    pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, is_keeper: bool) -> Result<()> {
+        self.brainstorm_engine.mark_as_keeper(session_id, idea_id, is_keeper)
     }
 
-    pub async fn get_daily_usage(&self) -> i32 {
-        self.credit_tracker.get_daily_usage()
+    pub async fn get_daily_usage(&self) -> Result<i32> {
+        self.credit_tracker.get_daily_usage().await
     }
 
-    pub async fn get_credit_status(&self) -> (Option<i32>, Option<i32>) {
-        (self.credit_tracker.get_monthly_limit(), self.credit_tracker.get_remaining_credits())
+    pub async fn get_credit_status(&self) -> Result<(Option<i32>, Option<i32>)> {
+        Ok(self.credit_tracker.get_credit_status().await)
     }
 
     pub async fn build_saliency_context(
         &self,
         project_id: &str,
         text_context: &str,
-        story_bible: StoryBibleElements,
-    ) -> Result<SaliencyContext, Box<dyn std::error::Error>> {
+        story_bible: &StoryBibleElements,
+    ) -> Result<SaliencyContext> {
         self.saliency_engine.build_context(project_id, text_context, story_bible).await
     }
 
@@ -629,7 +612,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         &mut self,
         request: AdvancedGenerationRequest,
         story_bible: Option<StoryBibleElements>,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String> {
         let _ = request;
         // For now, return a placeholder stream ID
         // This would be implemented with actual streaming in the future
@@ -640,7 +623,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
     pub async fn get_stream_status(
         &self,
         stream_id: &str,
-    ) -> Result<std::collections::HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
+    ) -> Result<std::collections::HashMap<String, serde_json::Value>> {
         // Placeholder implementation for streaming status
         let mut status = std::collections::HashMap::new();
         status.insert("status".to_string(), serde_json::Value::String("completed".to_string()));
@@ -653,12 +636,12 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         project_id: &str,
         content: &str,
         content_type: &str,
-    ) -> Result<crate::commands::advanced_ai_commands::SmartImportAnalysisResult, Box<dyn std::error::Error>> {
+    ) -> Result<crate::commands::advanced_ai_commands::SmartImportAnalysisResult> {
         // Get AI provider for analysis
         let provider = self.ai_providers.get("openai")
             .or_else(|| self.ai_providers.get("claude"))
             .or_else(|| self.ai_providers.values().next())
-            .ok_or("No AI provider available")?;
+            .ok_or_else(|| StoryWeaverError::ResourceUnavailable { resource: "AI provider".to_string() })?;
 
         // Create analysis prompt
         let analysis_prompt = self.create_import_analysis_prompt(content, content_type);
@@ -666,23 +649,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         // Create AI context
         let ai_context = AIContext {
             project_id: Some(project_id.to_string()),
-            document_id: None,
-            preceding_text: Some(content.to_string()),
-            following_text: None,
-            selected_text: None,
-            story_context: None,
-            characters: None,
-            locations: None,
-            plot_threads: None,
-            user_preferences: Some(HashMap::new()),
-            writing_style: None,
-            tone: None,
-            creativity_level: None,
-            feature_type: None,
-            feature_options: None,
-            word_count_target: None,
-            genre: None,
-            key_details: None,
+            ..Default::default()
         };
 
         // Get AI analysis

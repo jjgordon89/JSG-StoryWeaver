@@ -546,33 +546,6 @@ impl IndexManager {
         Ok(())
     }
     
-    /// Clean up unused indexes to improve performance
-    pub async fn cleanup_unused_indexes(&self) -> Result<()> {
-        info!("Cleaning up unused indexes");
-        
-        let unused_indexes: Vec<String> = self.index_usage_stats.values()
-            .filter(|stats| stats.usage_count == 0 && stats.effectiveness_score < 0.1)
-            .map(|stats| stats.index_name.clone())
-            .collect();
-        
-        for index_name in unused_indexes {
-            // Don't drop essential indexes or primary key indexes
-            if !index_name.contains("primary") && !index_name.starts_with("sqlite_") {
-                let sql = format!("DROP INDEX IF EXISTS {}", index_name);
-                
-                match sqlx::query(&sql).execute(&*self.pool).await {
-                    Ok(_) => {
-                        info!("Dropped unused index: {}", index_name);
-                    }
-                    Err(e) => {
-                        warn!("Failed to drop index {}: {}", index_name, e);
-                    }
-                }
-            }
-        }
-        
-        Ok(())
-    }
     
     /// Create a custom index on specified table and columns
     pub async fn create_custom_index(

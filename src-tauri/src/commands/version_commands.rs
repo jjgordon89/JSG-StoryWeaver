@@ -83,7 +83,7 @@ pub async fn restore_document_version(version_id: String) -> CommandResponse<()>
 pub async fn delete_document_version(version_id: String) -> CommandResponse<()> {
     async fn delete(version_id: String) -> Result<()> {
         let pool = get_pool()?;
-        DocumentVersionOps::delete_version(&pool, &version_id).await
+        DocumentVersionOps::delete(&pool, &version_id).await
     }
     
     delete(version_id).await.into()

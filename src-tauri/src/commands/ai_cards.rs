@@ -1,6 +1,6 @@
 //! AI Response Card management commands
 
-use crate::database::{get_pool, operations::AICardOps};
+use crate::database::{get_pool, operations::ai_card_ops::AICardOps};
 use crate::error::Result;
 use crate::commands::CommandResponse;
 use crate::models::ai_card::{AIResponseCard, CreateAICardRequest, UpdateAICardRequest};

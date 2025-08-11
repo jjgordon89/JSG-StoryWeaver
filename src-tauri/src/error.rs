@@ -421,6 +421,12 @@ impl From<anyhow::Error> for StoryWeaverError {
     }
 }
 
+impl From<Box<dyn std::error::Error>> for StoryWeaverError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        Self::internal(err.to_string())
+    }
+}
+
 /// Result type alias for StoryWeaver operations
 pub type Result<T> = std::result::Result<T, StoryWeaverError>;
 

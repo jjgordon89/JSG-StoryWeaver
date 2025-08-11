@@ -1,86 +1,14 @@
 //! Database operations for plugin system
 
-use crate::database::models::*;
-use chrono::{DateTime, Utc};
+use crate::database::models::plugin::{
+    Plugin, PluginCategory, PluginDailyStats, PluginExecutionHistory, PluginExecutionRequest,
+    PluginExecutionResult, PluginMarketplaceEntry, PluginRating, PluginSearchResult,
+    PluginSortOrder, PluginTemplate, PluginVisibility,
+};
+use chrono::{NaiveDateTime, Utc};
 use serde_json::Value;
-use sqlx::{Row, SqlitePool};
+use sqlx::{FromRow, Row, SqlitePool};
 use uuid::Uuid;
-
-/// Create a new plugin
-pub async fn create_plugin(
-    pool: &SqlitePool,
-    name: &str,
-    description: &str,
-    prompt_template: &str,
-    variables: &str,
-    ai_model: &str,
-    temperature: f32,
-    max_tokens: Option<i32>,
-    stop_sequences: Option<String>,
-    category: PluginCategory,
-    tags: &str,
-    is_multi_stage: bool,
-    stage_count: i32,
-    creator_id: Option<String>,
-    is_public: bool,
-    version: &str,
-) -> Result<Plugin, sqlx::Error> {
-    let now = Utc::now();
-    let category_str = category.to_string();
-
-    let result = sqlx::query!(
-        r#"
-        INSERT INTO plugins (
-            name, description, prompt_template, variables, ai_model, temperature,
-            max_tokens, stop_sequences, category, tags, is_multi_stage, stage_count,
-            creator_id, is_public, version, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
-        name,
-        description,
-        prompt_template,
-        variables,
-        ai_model,
-        temperature,
-        max_tokens,
-        stop_sequences,
-        category_str,
-        tags,
-        is_multi_stage,
-        stage_count,
-        creator_id,
-        is_public,
-        version,
-        now,
-        now
-    )
-    .execute(pool)
-    .await?;
-
-    let id = result.last_insert_rowid() as i32;
-
-    Ok(Plugin {
-        id,
-        name: name.to_string(),
-        description: description.to_string(),
-        prompt_template: prompt_template.to_string(),
-        variables: variables.to_string(),
-        ai_model: ai_model.to_string(),
-        temperature,
-        max_tokens,
-        stop_sequences,
-        category,
-        tags: tags.to_string(),
-        is_multi_stage,
-        stage_count,
-        creator_id,
-        is_public,
-        version: version.to_string(),
-        created_at: now,
-        updated_at: now,
-    })
-}
 
 /// Create a new plugin from Plugin struct
 pub async fn create_plugin_from_struct(
@@ -114,33 +42,17 @@ pub async fn create_plugin_from_struct(
         plugin.creator_id,
         plugin.is_public,
         plugin.version,
-        now,
-        now
+        now.naive_utc(),
+        now.naive_utc()
     )
     .execute(pool)
     .await?;
 
-    let id = result.last_insert_rowid() as i32;
+    let id = result.last_insert_rowid();
 
     Ok(Plugin {
         id,
-        name: plugin.name,
-        description: plugin.description,
-        prompt_template: plugin.prompt_template,
-        variables: plugin.variables,
-        ai_model: plugin.ai_model,
-        temperature: plugin.temperature,
-        max_tokens: plugin.max_tokens,
-        stop_sequences: plugin.stop_sequences,
-        category: plugin.category,
-        tags: plugin.tags,
-        is_multi_stage: plugin.is_multi_stage,
-        stage_count: plugin.stage_count,
-        creator_id: plugin.creator_id,
-        is_public: plugin.is_public,
-        version: plugin.version,
-        created_at: now,
-        updated_at: now,
+        ..plugin
     })
 }
 
@@ -149,7 +61,7 @@ pub async fn get_plugin_by_id(
     pool: &SqlitePool,
     plugin_id: &str,
 ) -> Result<Option<Plugin>, sqlx::Error> {
-    let result = sqlx::query!(
+    sqlx::query(
         r#"
         SELECT id, name, description, prompt_template, variables, ai_model,
                temperature, max_tokens, stop_sequences, category, tags,
@@ -158,35 +70,36 @@ pub async fn get_plugin_by_id(
         FROM plugins
         WHERE id = ?
         "#,
-        plugin_id
     )
+    .bind(plugin_id)
     .fetch_optional(pool)
-    .await?;
-
-    if let Some(row) = result {
-        Ok(Some(Plugin {
-            id: row.id as i32,
-            name: row.name,
-            description: row.description.unwrap_or_else(|| String::new()),
-            prompt_template: row.prompt_template.unwrap_or_else(|| String::new()),
-            variables: row.variables.unwrap_or_else(|| String::new()),
-            ai_model: row.ai_model.unwrap_or_else(|| String::new()),
-            temperature: row.temperature.unwrap_or(0.7) as f32,
-            max_tokens: row.max_tokens.map(|v| v as i32),
-            stop_sequences: row.stop_sequences,
-            category: row.category.and_then(|s| s.parse().ok()).unwrap_or(crate::database::models::plugin::PluginCategory::Other),
-            tags: row.tags.unwrap_or_else(|| String::new()),
-            is_multi_stage: row.is_multi_stage.unwrap_or(false),
-            stage_count: row.stage_count.unwrap_or(1) as i32,
-            creator_id: row.creator_id,
-            is_public: row.is_public.unwrap_or(false),
-            version: row.version.unwrap_or_default(),
-            created_at: row.created_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
-            updated_at: row.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
-        }))
-    } else {
-        Ok(None)
-    }
+    .await?
+    .map(|row| {
+        Ok(Plugin {
+            id: row.get("id"),
+            name: row.get("name"),
+            description: row.get("description"),
+            prompt_template: row.get("prompt_template"),
+            variables: row.get("variables"),
+            ai_model: row.get("ai_model"),
+            temperature: row.get("temperature"),
+            max_tokens: row.get("max_tokens"),
+            stop_sequences: row.get("stop_sequences"),
+            category: row
+                .get::<'_, String, _>("category")
+                .parse()
+                .unwrap_or_default(),
+            tags: row.get("tags"),
+            is_multi_stage: row.get("is_multi_stage"),
+            stage_count: row.get("stage_count"),
+            creator_id: row.get("creator_id"),
+            is_public: row.get("is_public"),
+            version: row.get("version"),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        })
+    })
+    .transpose()
 }
 
 /// Search plugins
@@ -198,104 +111,99 @@ pub async fn search_plugins(
     limit: i32,
     offset: i32,
 ) -> Result<Vec<PluginSearchResult>, sqlx::Error> {
-    let mut sql = String::from(
+    let mut sql = sqlx::QueryBuilder::new(
         r#"
-        SELECT id, name, description, version, author, category, visibility,
-               download_count, rating_average, rating_count, created_at, updated_at
-        FROM plugins
-        WHERE is_active = 1 AND visibility IN ('public', 'unlisted')
-        "#
+        SELECT p.*,
+               m.id as marketplace_id,
+               m.creator_name,
+               m.visibility,
+               m.download_count,
+               m.rating_average,
+               m.rating_count,
+               m.featured,
+               m.published_at
+        FROM plugins p
+        LEFT JOIN plugin_marketplace_entries m ON p.id = m.plugin_id
+        WHERE 1=1
+        "#,
     );
 
-    let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Sqlite> + Send + Sync>> = Vec::new();
-    let mut param_index = 1;
-
     if let Some(q) = query {
-        sql.push_str(&format!(" AND (name LIKE ?{} OR description LIKE ?{})", param_index, param_index + 1));
         let search_term = format!("%{}%", q);
-        params.push(Box::new(search_term.clone()));
-        params.push(Box::new(search_term));
-        param_index += 2;
+        sql.push(" AND (p.name LIKE ")
+            .push_bind(search_term.clone())
+            .push(" OR p.description LIKE ")
+            .push_bind(search_term)
+            .push(")");
     }
 
     if let Some(cat) = category {
-        sql.push_str(&format!(" AND category = ?{}", param_index));
-        params.push(Box::new(cat.to_string()));
-        param_index += 1;
+        sql.push(" AND p.category = ").push_bind(cat.to_string());
     }
 
-    // Add sorting
     match sort_by {
-        PluginSortOrder::Name => sql.push_str(" ORDER BY name ASC"),
-        PluginSortOrder::Downloads => sql.push_str(" ORDER BY download_count DESC"),
-        PluginSortOrder::Rating => sql.push_str(" ORDER BY rating_average DESC"),
-        PluginSortOrder::Recent => sql.push_str(" ORDER BY created_at DESC"),
-        PluginSortOrder::Relevance => sql.push_str(" ORDER BY rating_average DESC"), // Default to rating for relevance
-    }
+        PluginSortOrder::Name => sql.push(" ORDER BY p.name ASC"),
+        PluginSortOrder::Downloads => sql.push(" ORDER BY download_count DESC"),
+        PluginSortOrder::Rating => sql.push(" ORDER BY rating_average DESC"),
+        PluginSortOrder::Recent => sql.push(" ORDER BY p.created_at DESC"),
+        PluginSortOrder::Relevance => sql.push(" ORDER BY rating_average DESC"), // Default to rating for relevance
+    };
 
-    sql.push_str(&format!(" LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
-    params.push(Box::new(limit));
-    params.push(Box::new(offset));
+    sql.push(" LIMIT ").push_bind(limit);
+    sql.push(" OFFSET ").push_bind(offset);
 
-    // For simplicity, we'll use a basic query here
-    // In a real implementation, you'd want to use sqlx's query builder or a more sophisticated approach
-    let results = sqlx::query(
-        r#"
-        SELECT id, name, description, version, author, category, visibility,
-               download_count, rating_average, rating_count, created_at, updated_at
-        FROM plugins
-        WHERE is_active = 1 AND visibility IN ('public', 'unlisted')
-        ORDER BY created_at DESC
-        LIMIT ? OFFSET ?
-        "#
-    )
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(pool)
-    .await?;
+    let results = sql.build().fetch_all(pool).await?;
 
-    let mut plugins = Vec::new();
-    for row in results {
-        let plugin = Plugin {
-            id: row.get("id"),
-            name: row.get("name"),
-            description: row.get("description"),
-            prompt_template: row.get("prompt_template"),
-            variables: row.get("variables"),
-            ai_model: row.get("ai_model"),
-            temperature: row.get("temperature"),
-            max_tokens: row.get("max_tokens"),
-            stop_sequences: row.get("stop_sequences"),
-            category: row.get::<String, _>("category").parse().unwrap_or(PluginCategory::Other),
-            tags: row.get("tags"),
-            is_multi_stage: row.get("is_multi_stage"),
-            stage_count: row.get("stage_count"),
-            creator_id: row.get("creator_id"),
-            is_public: row.get("is_public"),
-            version: row.get("version"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-        };
-        
-        let marketplace_entry = PluginMarketplaceEntry {
-            id: 0, // Default value
-            plugin_id: plugin.id,
-            creator_name: plugin.creator_id.clone().unwrap_or_else(|| "Unknown".to_string()),
-            visibility: if plugin.is_public { PluginVisibility::Published } else { PluginVisibility::Private },
-            download_count: 0,
-            rating_average: 0.0,
-            rating_count: 0,
-            featured: false,
-            published_at: plugin.created_at,
-            updated_at: plugin.updated_at,
-        };
-        
-        plugins.push(PluginSearchResult {
-            plugin,
-            marketplace_entry,
-            relevance_score: 1.0, // Default relevance
-        });
-    }
+    let plugins = results
+        .into_iter()
+        .map(|row| {
+            let plugin = Plugin {
+                id: row.get("id"),
+                name: row.get("name"),
+                description: row.get("description"),
+                version: row.get("version"),
+                creator_id: row.get("creator_id"),
+                category: row
+                    .get::<'_, String, _>("category")
+                    .parse()
+                    .unwrap_or(PluginCategory::Other),
+                is_public: row.get("is_public"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                prompt_template: row.get("prompt_template"),
+                variables: row.get("variables"),
+                ai_model: row.get("ai_model"),
+                temperature: row.get("temperature"),
+                max_tokens: row.get("max_tokens"),
+                stop_sequences: row.get("stop_sequences"),
+                tags: row.get("tags"),
+                is_multi_stage: row.get("is_multi_stage"),
+                stage_count: row.get("stage_count"),
+            };
+
+            let marketplace_entry = PluginMarketplaceEntry {
+                id: row.get("marketplace_id"),
+                plugin_id: plugin.id as i32,
+                creator_name: row.get("creator_name"),
+                visibility: row
+                    .get::<'_, String, _>("visibility")
+                    .parse()
+                    .unwrap_or(PluginVisibility::Private),
+                download_count: row.get("download_count"),
+                rating_average: row.get("rating_average"),
+                rating_count: row.get("rating_count"),
+                featured: row.get("featured"),
+                published_at: row.get("published_at"),
+                updated_at: plugin.updated_at,
+            };
+
+            PluginSearchResult {
+                plugin,
+                marketplace_entry,
+                relevance_score: 1.0, // Default relevance
+            }
+        })
+        .collect();
 
     Ok(plugins)
 }
@@ -303,12 +211,10 @@ pub async fn search_plugins(
 /// Update plugin download count
 pub async fn increment_plugin_downloads(
     pool: &SqlitePool,
-    plugin_id: &str,
+    plugin_id: i32,
 ) -> Result<(), sqlx::Error> {
-    let now = Utc::now();
     sqlx::query!(
-        "UPDATE plugins SET download_count = download_count + 1, updated_at = ? WHERE id = ?",
-        now,
+        "UPDATE plugin_marketplace_entries SET download_count = download_count + 1 WHERE plugin_id = ?",
         plugin_id
     )
     .execute(pool)
@@ -327,8 +233,7 @@ pub async fn get_plugin_execution_history(
 ) -> Result<Vec<PluginExecutionHistory>, sqlx::Error> {
     match (plugin_id, user_identifier) {
         (Some(pid), Some(uid)) => {
-            sqlx::query_as!(
-                PluginExecutionHistory,
+            sqlx::query_as(
                 r#"
                 SELECT id, plugin_id, user_identifier, execution_request, execution_result,
                        credits_used, execution_time_ms, success, error_message, created_at
@@ -337,17 +242,16 @@ pub async fn get_plugin_execution_history(
                 ORDER BY created_at DESC
                 LIMIT ? OFFSET ?
                 "#,
-                pid,
-                uid,
-                limit,
-                offset
             )
+            .bind(pid)
+            .bind(uid)
+            .bind(limit)
+            .bind(offset)
             .fetch_all(pool)
             .await
-        },
+        }
         (Some(pid), None) => {
-            sqlx::query_as!(
-                PluginExecutionHistory,
+            sqlx::query_as(
                 r#"
                 SELECT id, plugin_id, user_identifier, execution_request, execution_result,
                        credits_used, execution_time_ms, success, error_message, created_at
@@ -356,16 +260,15 @@ pub async fn get_plugin_execution_history(
                 ORDER BY created_at DESC
                 LIMIT ? OFFSET ?
                 "#,
-                pid,
-                limit,
-                offset
             )
+            .bind(pid)
+            .bind(limit)
+            .bind(offset)
             .fetch_all(pool)
             .await
-        },
+        }
         (None, Some(uid)) => {
-            sqlx::query_as!(
-                PluginExecutionHistory,
+            sqlx::query_as(
                 r#"
                 SELECT id, plugin_id, user_identifier, execution_request, execution_result,
                        credits_used, execution_time_ms, success, error_message, created_at
@@ -374,16 +277,15 @@ pub async fn get_plugin_execution_history(
                 ORDER BY created_at DESC
                 LIMIT ? OFFSET ?
                 "#,
-                uid,
-                limit,
-                offset
             )
+            .bind(uid)
+            .bind(limit)
+            .bind(offset)
             .fetch_all(pool)
             .await
-        },
+        }
         (None, None) => {
-            sqlx::query_as!(
-                PluginExecutionHistory,
+            sqlx::query_as(
                 r#"
                 SELECT id, plugin_id, user_identifier, execution_request, execution_result,
                        credits_used, execution_time_ms, success, error_message, created_at
@@ -391,9 +293,9 @@ pub async fn get_plugin_execution_history(
                 ORDER BY created_at DESC
                 LIMIT ? OFFSET ?
                 "#,
-                limit,
-                offset
             )
+            .bind(limit)
+            .bind(offset)
             .fetch_all(pool)
             .await
         }
@@ -409,30 +311,35 @@ pub async fn create_plugin_rating(
     review: Option<&str>,
 ) -> Result<PluginRating, sqlx::Error> {
     let now = Utc::now();
+    let naive_now = now.naive_utc();
 
     // Insert or update rating
-    sqlx::query!(
+    let result = sqlx::query!(
         r#"
-        INSERT OR REPLACE INTO plugin_ratings (
-            plugin_id, user_identifier, rating, review, created_at, updated_at
-        )
+        INSERT INTO plugin_ratings (plugin_id, user_identifier, rating, review, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(plugin_id, user_identifier) DO UPDATE SET
+            rating = excluded.rating,
+            review = excluded.review,
+            updated_at = excluded.updated_at
         "#,
         plugin_id,
         user_identifier,
         rating,
         review,
-        now,
-        now
+        naive_now,
+        naive_now,
     )
     .execute(pool)
     .await?;
+
+    let id = result.last_insert_rowid() as i32;
 
     // Update plugin's average rating
     update_plugin_rating_average(pool, plugin_id).await?;
 
     Ok(PluginRating {
-        id: 0, // Will be set by database
+        id,
         plugin_id,
         user_identifier: user_identifier.to_string(),
         rating,
@@ -457,15 +364,13 @@ async fn update_plugin_rating_average(
     .fetch_one(pool)
     .await?;
 
-    let avg_rating = result.avg_rating.unwrap_or(0);
-    let count = result.count;
-    let now = Utc::now();
+    let avg_rating: f32 = result.avg_rating.unwrap_or(0.0) as f32;
+    let count: i32 = result.count.unwrap_or(0) as i32;
 
     sqlx::query!(
-        "UPDATE plugins SET rating_average = ?, rating_count = ?, updated_at = ? WHERE id = ?",
+        "UPDATE plugin_marketplace_entries SET rating_average = ?, rating_count = ? WHERE plugin_id = ?",
         avg_rating,
         count,
-        now,
         plugin_id
     )
     .execute(pool)
@@ -480,24 +385,33 @@ pub async fn get_plugin_ratings(
     plugin_id: i32,
     limit: i32,
     offset: i32,
-) -> Result<Vec<crate::database::models::plugin::PluginRating>, sqlx::Error> {
-    let ratings = sqlx::query_as!(
-        crate::database::models::plugin::PluginRating,
+) -> Result<Vec<PluginRating>, sqlx::Error> {
+    sqlx::query(
         r#"
-        SELECT id, plugin_id, user_identifier, rating, review_text as review, created_at
+        SELECT id, plugin_id, user_identifier, rating, review, created_at
         FROM plugin_ratings
         WHERE plugin_id = ?
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
         "#,
-        plugin_id,
-        limit,
-        offset
     )
+    .bind(plugin_id)
+    .bind(limit)
+    .bind(offset)
     .fetch_all(pool)
-    .await?;
-
-    Ok(ratings)
+    .await?
+    .into_iter()
+    .map(|row| {
+        Ok(PluginRating {
+            id: row.get("id"),
+            plugin_id: row.get("plugin_id"),
+            user_identifier: row.get("user_identifier"),
+            rating: row.get("rating"),
+            review: row.get("review"),
+            created_at: row.get("created_at"),
+        })
+    })
+    .collect()
 }
 
 /// Record plugin execution
@@ -505,44 +419,45 @@ pub async fn record_plugin_execution(
     pool: &SqlitePool,
     request: PluginExecutionRequest,
     result: PluginExecutionResult,
-) -> Result<(), sqlx::Error> {
+) -> Result<PluginExecutionResult, sqlx::Error> {
     let execution_id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
-    let input_variables_json = serde_json::to_string(&request.variables).unwrap_or_default();
-    let output_result_json = serde_json::to_string(&result.result_text).unwrap_or_default();
-    
+    let request_json = serde_json::to_string(&request).unwrap_or_default();
+    let result_json = serde_json::to_string(&result).unwrap_or_default();
+
     sqlx::query!(
         r#"
         INSERT INTO plugin_execution_history (
-            id, plugin_id, user_identifier, input_variables, output_result,
-            execution_time_ms, success, error_message, executed_at
+            id, plugin_id, user_identifier, execution_request, execution_result,
+            credits_used, execution_time_ms, success, error_message, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
         execution_id,
         request.plugin_id,
         "unknown_user", // user_identifier not available in current struct
-        input_variables_json,
-        output_result_json,
+        request_json,
+        result_json,
+        result.credits_used,
         result.execution_time_ms,
         result.success,
         result.error_message,
-        now
+        now.naive_utc()
     )
     .execute(pool)
     .await?;
 
     // Update usage stats
-    update_plugin_usage_stats(pool, &request.plugin_id, result.success).await?;
+    update_plugin_usage_stats(pool, request.plugin_id, result.success).await?;
 
-    Ok(())
+    Ok(result)
 }
 
 /// Update plugin usage statistics
 pub async fn update_plugin_usage_stats(
     pool: &SqlitePool,
-    plugin_id: &i32,
+    plugin_id: i32,
     success: bool,
 ) -> Result<(), sqlx::Error> {
     let now = Utc::now();
@@ -550,175 +465,124 @@ pub async fn update_plugin_usage_stats(
     let successful_increment = if success { 1 } else { 0 };
     let failed_increment = if success { 0 } else { 1 };
 
-    // Try to update existing stats for today
-    let updated = sqlx::query!(
+    sqlx::query!(
         r#"
-        UPDATE plugin_usage_stats
-        SET total_executions = total_executions + 1,
-            successful_executions = successful_executions + ?,
-            failed_executions = failed_executions + ?,
-            updated_at = ?
-        WHERE plugin_id = ? AND date = ?
+        INSERT INTO plugin_daily_stats (plugin_id, date, total_executions, successful_executions, failed_executions, created_at, updated_at)
+        VALUES (?, ?, 1, ?, ?, ?, ?)
+        ON CONFLICT(plugin_id, date) DO UPDATE SET
+            total_executions = total_executions + 1,
+            successful_executions = successful_executions + excluded.successful_executions,
+            failed_executions = failed_executions + excluded.failed_executions,
+            updated_at = excluded.updated_at
         "#,
+        plugin_id,
+        today,
         successful_increment,
         failed_increment,
-        now,
-        plugin_id,
-        today
+        now.naive_utc(),
+        now.naive_utc()
     )
     .execute(pool)
     .await?;
-
-    // If no existing record, create new one
-    if updated.rows_affected() == 0 {
-        let successful_executions = if success { 1 } else { 0 };
-        let failed_executions = if success { 0 } else { 1 };
-        sqlx::query!(
-            r#"
-            INSERT INTO plugin_usage_stats (
-                plugin_id, date, total_executions, successful_executions,
-                failed_executions, created_at, updated_at
-            )
-            VALUES (?, ?, 1, ?, ?, ?, ?)
-            "#,
-            plugin_id,
-            today,
-            successful_executions,
-            failed_executions,
-            now,
-            now
-        )
-        .execute(pool)
-        .await?;
-    }
 
     Ok(())
 }
 
 /// Get plugin usage statistics
-pub async fn get_plugin_usage_stats(
+pub async fn get_plugin_daily_stats(
     pool: &SqlitePool,
     plugin_id: i32,
     days: i32,
-) -> Result<Vec<crate::database::models::plugin::PluginDailyStats>, sqlx::Error> {
+) -> Result<Vec<PluginDailyStats>, sqlx::Error> {
     let start_date = Utc::now().date_naive() - chrono::Duration::days(days as i64);
 
-    let rows = sqlx::query!(
+    sqlx::query_as(
         r#"
         SELECT id, plugin_id, date, total_executions, successful_executions,
                failed_executions, created_at, updated_at
-        FROM plugin_usage_stats
+        FROM plugin_daily_stats
         WHERE plugin_id = ? AND date >= ?
         ORDER BY date DESC
         "#,
-        plugin_id,
-        start_date
     )
+    .bind(plugin_id)
+    .bind(start_date)
     .fetch_all(pool)
-    .await?;
-
-    let stats = rows.into_iter().map(|row| {
-        crate::database::models::plugin::PluginDailyStats {
-            id: row.id as i32,
-            plugin_id: row.plugin_id as i32,
-            date: row.date,
-            total_executions: row.total_executions as i32,
-            successful_executions: row.successful_executions as i32,
-            failed_executions: row.failed_executions as i32,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        }
-    }).collect();
-
-    Ok(stats)
+    .await
 }
-
 
 /// Get plugin templates
 pub async fn get_plugin_templates(
     pool: &SqlitePool,
     category: Option<PluginCategory>,
 ) -> Result<Vec<PluginTemplate>, sqlx::Error> {
-    let templates = if let Some(cat) = category {
-        sqlx::query(
-            r#"
-            SELECT id, name, description, category, template_data, is_official, created_at
-            FROM plugin_templates
-            WHERE category = ?
-            ORDER BY name ASC
-            "#
-        )
-        .bind(cat.to_string())
-        .fetch_all(pool)
-        .await?
-        .into_iter()
-        .map(|row| {
-            Ok(PluginTemplate {
-                id: row.get::<i32, _>("id"),
-                name: row.get::<String, _>("name"),
-                description: row.get::<String, _>("description"),
-                category: row.get::<String, _>("category").parse().unwrap_or(PluginCategory::Other),
-                template_data: row.get::<String, _>("template_data"),
-                is_official: row.get::<bool, _>("is_official"),
-                created_at: row.get::<DateTime<Utc>, _>("created_at"),
-            })
-        })
-        .collect::<Result<Vec<_>, sqlx::Error>>()?
-    } else {
-        sqlx::query(
-            r#"
-            SELECT id, name, description, category, template_data, is_official, created_at
-            FROM plugin_templates
-            ORDER BY name ASC
-            "#
-        )
-        .fetch_all(pool)
-        .await?
-        .into_iter()
-        .map(|row| {
-            Ok(PluginTemplate {
-                id: row.get::<i32, _>("id"),
-                name: row.get::<String, _>("name"),
-                description: row.get::<String, _>("description"),
-                category: row.get::<String, _>("category").parse().unwrap_or(PluginCategory::Other),
-                template_data: row.get::<String, _>("template_data"),
-                is_official: row.get::<bool, _>("is_official"),
-                created_at: row.get::<DateTime<Utc>, _>("created_at"),
-            })
-        })
-        .collect::<Result<Vec<_>, sqlx::Error>>()?
-    };
+    let mut query = sqlx::QueryBuilder::new(
+        r#"
+        SELECT id, name, description, category, template_data, is_official, created_at
+        FROM plugin_templates
+        "#,
+    );
 
-    Ok(templates)
+    if let Some(cat) = category {
+        query.push(" WHERE category = ");
+        query.push_bind(cat.to_string());
+    }
+
+    query.push(" ORDER BY name ASC");
+
+    query
+        .build()
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(|row| {
+            Ok(PluginTemplate {
+                id: row.get("id"),
+                name: row.get("name"),
+                description: row.get("description"),
+                category: row
+                    .get::<'_, String, _>("category")
+                    .parse()
+                    .unwrap_or_default(),
+                template_data: row.get("template_data"),
+                is_official: row.get("is_official"),
+                created_at: row.get("created_at"),
+            })
+        })
+        .collect()
 }
+
 
 /// Get plugin template by ID
 pub async fn get_plugin_template_by_id(
     pool: &SqlitePool,
     template_id: i32,
 ) -> Result<Option<PluginTemplate>, sqlx::Error> {
-    let row = sqlx::query(
+    sqlx::query(
         r#"
         SELECT id, name, description, category, template_data, is_official, created_at
         FROM plugin_templates
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(template_id)
     .fetch_optional(pool)
-    .await?;
-
-    let template = row.map(|r| PluginTemplate {
-        id: r.get::<i32, _>("id"),
-        name: r.get::<String, _>("name"),
-        description: r.get::<String, _>("description"),
-        category: r.get::<String, _>("category").parse().unwrap_or(PluginCategory::Other),
-        template_data: r.get::<String, _>("template_data"),
-        is_official: r.get::<bool, _>("is_official"),
-        created_at: r.get::<DateTime<Utc>, _>("created_at"),
-    });
-
-    Ok(template)
+    .await?
+    .map(|row| {
+        Ok(PluginTemplate {
+            id: row.get("id"),
+            name: row.get("name"),
+            description: row.get("description"),
+            category: row
+                .get::<'_, String, _>("category")
+                .parse()
+                .unwrap_or_default(),
+            template_data: row.get("template_data"),
+            is_official: row.get("is_official"),
+            created_at: row.get("created_at"),
+        })
+    })
+    .transpose()
 }
 
 /// Create plugin template
@@ -730,7 +594,6 @@ pub async fn create_plugin_template(
     template_code: &str,
     example_variables: Option<Value>,
 ) -> Result<PluginTemplate, sqlx::Error> {
-    let id = 0; // Will be set by database auto-increment
     let now = Utc::now();
     let category_str = category.to_string();
 
@@ -747,7 +610,7 @@ pub async fn create_plugin_template(
         category_str,
         template_code,
         false,
-        now
+        now.naive_utc()
     )
     .execute(pool)
     .await?;
@@ -778,57 +641,57 @@ pub async fn update_plugin(
     metadata: Option<Value>,
 ) -> Result<(), sqlx::Error> {
     let now = Utc::now();
+    let now = Utc::now();
+    let mut transaction = pool.begin().await?;
     
-    // Build dynamic update query
-    let mut updates = Vec::new();
-    let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Sqlite> + Send + Sync>> = Vec::new();
+    if name.is_some() || description.is_some() || version.is_some() || code.is_some() || category.is_some() {
+        let mut update_plugin = sqlx::QueryBuilder::new("UPDATE plugins SET ");
+        let mut separated = update_plugin.separated(", ");
     
-    if let Some(n) = name {
-        updates.push("name = ?");
-        params.push(Box::new(n.to_string()));
-    }
-    if let Some(d) = description {
-        updates.push("description = ?");
-        params.push(Box::new(d.to_string()));
-    }
-    if let Some(v) = version {
-        updates.push("version = ?");
-        params.push(Box::new(v.to_string()));
-    }
-    if let Some(c) = code {
-        updates.push("code = ?");
-        params.push(Box::new(c.to_string()));
-    }
-    if let Some(cat) = category {
-        updates.push("category = ?");
-        params.push(Box::new(cat.to_string()));
-    }
-    if let Some(vis) = visibility {
-        updates.push("visibility = ?");
-        params.push(Box::new(vis.to_string()));
-    }
-    if let Some(meta) = metadata {
-        updates.push("metadata = ?");
-        params.push(Box::new(meta.to_string()));
-    }
+        if let Some(n) = name {
+            separated.push("name = ");
+            separated.push_bind_unseparated(n);
+        }
+        if let Some(d) = description {
+            separated.push("description = ");
+            separated.push_bind_unseparated(d);
+        }
+        if let Some(v) = version {
+            separated.push("version = ");
+            separated.push_bind_unseparated(v);
+        }
+        if let Some(cat) = category {
+            separated.push("category = ");
+            separated.push_bind_unseparated(cat.to_string());
+        }
     
-    if !updates.is_empty() {
-        updates.push("updated_at = ?");
-        params.push(Box::new(now));
+        separated.push("updated_at = ");
+        separated.push_bind_unseparated(now.naive_utc());
+        update_plugin.push(" WHERE id = ");
+        update_plugin.push_bind(plugin_id);
+    
+        update_plugin.build().execute(&mut *transaction).await?;
+    }
+
+    if visibility.is_some() {
+        let mut update_marketplace = sqlx::QueryBuilder::new("UPDATE plugin_marketplace_entries SET ");
+        let mut separated = update_marketplace.separated(", ");
+
+        if let Some(vis) = visibility {
+            separated.push("visibility = ");
+            separated.push_bind_unseparated(vis.to_string());
+        }
         
-        let sql = format!("UPDATE plugins SET {} WHERE id = ?", updates.join(", "));
-        params.push(Box::new(plugin_id.to_string()));
-        
-        // For simplicity, we'll use a basic update here
-        sqlx::query!(
-            "UPDATE plugins SET updated_at = ? WHERE id = ?",
-            now,
-            plugin_id
-        )
-        .execute(pool)
-        .await?;
+        separated.push("updated_at = ");
+        separated.push_bind_unseparated(now.naive_utc());
+        update_marketplace.push(" WHERE plugin_id = ");
+        update_marketplace.push_bind(plugin_id);
+
+        update_marketplace.build().execute(&mut *transaction).await?;
     }
-    
+
+    transaction.commit().await?;
+
     Ok(())
 }
 
@@ -837,16 +700,10 @@ pub async fn delete_plugin(
     pool: &SqlitePool,
     plugin_id: &str,
 ) -> Result<(), sqlx::Error> {
-    // Soft delete by setting is_active to false
-    let now = Utc::now();
-    sqlx::query!(
-        "UPDATE plugins SET is_active = 0, updated_at = ? WHERE id = ?",
-        now,
-        plugin_id
-    )
-    .execute(pool)
-    .await?;
-
+    // This should be a real delete, not a soft delete.
+    sqlx::query!("DELETE FROM plugins WHERE id = ?", plugin_id)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
@@ -857,7 +714,7 @@ pub async fn get_plugins(
     limit: i32,
     offset: i32,
 ) -> Result<Vec<Plugin>, sqlx::Error> {
-    let mut sql = String::from(
+    let mut query = sqlx::QueryBuilder::new(
         r#"
         SELECT id, name, description, prompt_template, variables, ai_model,
                temperature, max_tokens, stop_sequences, category, tags,
@@ -865,54 +722,23 @@ pub async fn get_plugins(
                created_at, updated_at
         FROM plugins
         WHERE 1=1
-        "#
+        "#,
     );
 
-    let mut params: Vec<Box<dyn sqlx::Encode<'_, sqlx::Sqlite> + Send + Sync>> = Vec::new();
-    let mut param_index = 1;
-
     if let Some(cat) = category {
-        sql.push_str(&format!(" AND category = ?{}", param_index));
-        params.push(Box::new(cat.to_string()));
-        param_index += 1;
+        query.push(" AND category = ");
+        query.push_bind(cat.to_string());
     }
 
-    sql.push_str(&format!(" ORDER BY created_at DESC LIMIT ?{} OFFSET ?{}", param_index, param_index + 1));
-    params.push(Box::new(limit));
-    params.push(Box::new(offset));
+    query.push(" ORDER BY created_at DESC LIMIT ");
+    query.push_bind(limit);
+    query.push(" OFFSET ");
+    query.push_bind(offset);
 
-    let mut query = sqlx::query(&sql);
-    for param in params {
-        query = query.bind(param);
-    }
-
-    let results = query.fetch_all(pool).await?;
-
-    let mut plugins = Vec::new();
-    for row in results {
-        plugins.push(Plugin {
-            id: row.get::<i32, _>("id"),
-            name: row.get::<String, _>("name"),
-            description: row.get::<Option<String>, _>("description").unwrap_or_else(|| String::new()),
-            prompt_template: row.get::<Option<String>, _>("prompt_template").unwrap_or_else(|| String::new()),
-            variables: row.get::<Option<String>, _>("variables").unwrap_or_else(|| String::new()),
-            ai_model: row.get::<Option<String>, _>("ai_model").unwrap_or_else(|| String::new()),
-            temperature: row.get::<Option<f64>, _>("temperature").unwrap_or(0.7) as f32,
-            max_tokens: row.get::<Option<i32>, _>("max_tokens"),
-            stop_sequences: row.get::<Option<String>, _>("stop_sequences"),
-            category: row.get::<Option<String>, _>("category").and_then(|s| s.parse().ok()).unwrap_or(crate::database::models::plugin::PluginCategory::Other),
-            tags: row.get::<Option<String>, _>("tags").unwrap_or_else(|| String::new()),
-            is_multi_stage: row.get::<Option<bool>, _>("is_multi_stage").unwrap_or(false),
-            stage_count: row.get::<Option<i32>, _>("stage_count").unwrap_or(1),
-            creator_id: row.get::<Option<String>, _>("creator_id"),
-            is_public: row.get::<Option<bool>, _>("is_public").unwrap_or(false),
-            version: row.get::<Option<String>, _>("version").unwrap_or_else(|| "1.0.0".to_string()),
-            created_at: row.get::<DateTime<Utc>, _>("created_at"),
-            updated_at: row.get::<DateTime<Utc>, _>("updated_at"),
-        });
-    }
-
-    Ok(plugins)
+    query.build().fetch_all(pool).await?
+        .into_iter()
+        .map(|row| Ok(Plugin::from_row(&row)?))
+        .collect()
 }
 
 /// Get user's plugins
@@ -920,7 +746,7 @@ pub async fn get_user_plugins(
     pool: &SqlitePool,
     creator_id: &str,
 ) -> Result<Vec<Plugin>, sqlx::Error> {
-    let results = sqlx::query!(
+    sqlx::query(
         r#"
         SELECT id, name, description, prompt_template, variables, ai_model,
                temperature, max_tokens, stop_sequences, category, tags,
@@ -930,34 +756,11 @@ pub async fn get_user_plugins(
         WHERE creator_id = ?
         ORDER BY created_at DESC
         "#,
-        creator_id
     )
+    .bind(creator_id)
     .fetch_all(pool)
-    .await?;
-
-    let mut plugins = Vec::new();
-    for row in results {
-        plugins.push(Plugin {
-            id: row.id as i32,
-            name: row.name,
-            description: row.description.unwrap_or_else(|| String::new()),
-            prompt_template: row.prompt_template.unwrap_or_else(|| String::new()),
-            variables: row.variables.unwrap_or_else(|| String::new()),
-            ai_model: row.ai_model.unwrap_or_else(|| String::new()),
-            temperature: row.temperature.unwrap_or(0.7) as f32,
-            max_tokens: row.max_tokens.map(|v| v as i32),
-            stop_sequences: row.stop_sequences,
-            category: row.category.and_then(|s| s.parse().ok()).unwrap_or(crate::database::models::plugin::PluginCategory::General),
-            tags: row.tags.unwrap_or_else(|| String::new()),
-            is_multi_stage: row.is_multi_stage.unwrap_or(false),
-            stage_count: row.stage_count.unwrap_or(1) as i32,
-            creator_id: row.creator_id,
-            is_public: row.is_public.unwrap_or(false),
-            version: row.version.unwrap_or_else(|| String::new()),
-            created_at: row.created_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
-            updated_at: row.updated_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
-        });
-    }
-
-    Ok(plugins)
+    .await?
+    .into_iter()
+    .map(|row| Ok(Plugin::from_row(&row)?))
+    .collect()
 }

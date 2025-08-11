@@ -3,21 +3,24 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::str::FromStr;
 
 /// Comment type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, sqlx::Type)]
+#[sqlx(type_name = "text")]
 pub enum CommentType {
-    #[serde(rename = "general")]
+    #[default]
+    #[sqlx(rename = "general")]
     General,
-    #[serde(rename = "suggestion")]
+    #[sqlx(rename = "suggestion")]
     Suggestion,
-    #[serde(rename = "question")]
+    #[sqlx(rename = "question")]
     Question,
-    #[serde(rename = "issue")]
+    #[sqlx(rename = "issue")]
     Issue,
-    #[serde(rename = "praise")]
+    #[sqlx(rename = "praise")]
     Praise,
-    #[serde(rename = "criticism")]
+    #[sqlx(rename = "criticism")]
     Criticism,
 }
 
@@ -34,10 +37,27 @@ impl ToString for CommentType {
     }
 }
 
+impl FromStr for CommentType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "general" => Ok(CommentType::General),
+            "suggestion" => Ok(CommentType::Suggestion),
+            "question" => Ok(CommentType::Question),
+            "issue" => Ok(CommentType::Issue),
+            "praise" => Ok(CommentType::Praise),
+            "criticism" => Ok(CommentType::Criticism),
+            _ => Err(format!("Invalid comment type: {}", s)),
+        }
+    }
+}
+
 /// Share type enumeration for document sharing permissions
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
 #[sqlx(type_name = "text")]
 pub enum ShareType {
+    #[default]
     #[sqlx(rename = "read_only")]
     ReadOnly,
     #[sqlx(rename = "comment")]
@@ -56,6 +76,19 @@ impl ToString for ShareType {
     }
 }
 
+impl FromStr for ShareType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "read_only" => Ok(ShareType::ReadOnly),
+            "comment" => Ok(ShareType::Comment),
+            "edit" => Ok(ShareType::Edit),
+            _ => Err(format!("Invalid share type: {}", s)),
+        }
+    }
+}
+
 /// Shared document model for document sharing functionality
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct SharedDocument {
@@ -63,10 +96,9 @@ pub struct SharedDocument {
     pub document_id: String,
     pub project_id: String,
     pub share_token: String,
-    pub share_type: String,
+    pub share_type: ShareType,
     pub password_hash: Option<String>,
     pub expires_at: Option<DateTime<Utc>>,
-    pub max_uses: Option<i32>,
     pub current_uses: i32,
     pub is_active: bool,
     pub created_by: Option<String>,
@@ -80,10 +112,9 @@ pub struct CollaborationSession {
     pub id: i32,
     pub document_id: String,
     pub session_token: String,
-    pub session_name: Option<String>,
     pub is_active: bool,
-    pub allow_anonymous: bool,
     pub max_participants: i32,
+    pub current_participants: i32,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
@@ -95,12 +126,12 @@ pub struct Comment {
     pub document_id: String,
     pub parent_comment_id: Option<i32>,
     pub author_name: String,
-    pub author_identifier: String,
+    pub author_identifier: Option<String>,
     pub content: String,
     pub position_start: Option<i32>,
     pub position_end: Option<i32>,
     pub selected_text: Option<String>,
-    pub comment_type: String,
+    pub comment_type: CommentType,
     pub status: String,
     pub is_resolved: bool,
     pub resolved_by: Option<String>,
@@ -115,7 +146,7 @@ pub struct CommentRequest {
     pub document_id: String,
     pub parent_comment_id: Option<i32>,
     pub author_name: String,
-    pub author_identifier: String,
+    pub author_identifier: Option<String>,
     pub content: String,
     pub position_start: Option<i32>,
     pub position_end: Option<i32>,
@@ -131,8 +162,6 @@ pub struct ShareSettings {
     pub max_participants: Option<i32>,
     pub expires_at: Option<DateTime<Utc>>,
     pub password: Option<String>,
-    pub expires_in_hours: Option<i32>,
-    pub max_uses: Option<i32>,
 }
 
 /// Share link response model
@@ -178,9 +207,10 @@ pub struct CollaborationNotification {
 }
 
 /// Notification type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
 #[sqlx(type_name = "text")]
 pub enum NotificationType {
+    #[default]
     #[sqlx(rename = "new_comment")]
     NewComment,
     #[sqlx(rename = "comment_reply")]
@@ -201,6 +231,21 @@ impl ToString for NotificationType {
             NotificationType::CommentResolved => "comment_resolved".to_string(),
             NotificationType::ParticipantJoined => "participant_joined".to_string(),
             NotificationType::DocumentUpdated => "document_updated".to_string(),
+        }
+    }
+}
+
+impl FromStr for NotificationType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "new_comment" => Ok(NotificationType::NewComment),
+            "comment_reply" => Ok(NotificationType::CommentReply),
+            "comment_resolved" => Ok(NotificationType::CommentResolved),
+            "participant_joined" => Ok(NotificationType::ParticipantJoined),
+            "document_updated" => Ok(NotificationType::DocumentUpdated),
+            _ => Err(format!("Invalid notification type: {}", s)),
         }
     }
 }

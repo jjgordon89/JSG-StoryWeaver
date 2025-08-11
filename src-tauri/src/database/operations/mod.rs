@@ -38,13 +38,13 @@ pub mod streaming_session_ops;
 pub mod collaboration;
 pub mod plugin;
 pub mod canvas;
+pub mod ai;
 
 // Re-export for convenience
 pub use folder_ops::*;
 pub use series_ops::*;
 pub use document_link_ops::*;
 pub use document_version_ops::*;
-pub use deleted_item_ops::*;
 pub use app_settings_ops::*;
 pub use project_ops::*;
 pub use document_ops::*;
@@ -63,7 +63,6 @@ pub use scene_ops::*;
 pub use series_consistency_ops::*;
 pub use style_example_ops::*;
 pub use ai_history_ops::*;
-pub use ai_card_ops::*;
 pub use character_template_ops::*;
 pub use worldbuilding_template_ops::*;
 

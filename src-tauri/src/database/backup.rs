@@ -16,9 +16,9 @@ impl BackupManager {
     ) -> Result<PathBuf> {
         // Get app data directory
         let app_data_dir = app_handle
-            .path()
+            .path_resolver()
             .app_data_dir()
-            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
+            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
         
         // Create backups directory if it doesn't exist
         let backups_dir = app_data_dir.join("backups");
@@ -76,7 +76,7 @@ impl BackupManager {
         .bind(Utc::now())
         .bind(backup_name.is_none()) // If no name provided, it's an auto backup
         .bind(backup_name)
-        .execute(&*pool)
+        .execute(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record backup: {}", e)))?;
         
@@ -90,9 +90,9 @@ impl BackupManager {
     ) -> Result<()> {
         // Get app data directory
         let app_data_dir = app_handle
-            .path()
+            .path_resolver()
             .app_data_dir()
-            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
+            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
         
         // Backup source path
         let backups_dir = app_data_dir.join("backups");
@@ -114,13 +114,9 @@ impl BackupManager {
             .map_err(|e| StoryWeaverError::database(format!("Failed to create pre-restore backup: {}", e)))?;
         
         // Close the database connection
-        // This is important to ensure the database file is not locked
-        unsafe {
-            if let Some(pool) = crate::database::DB_POOL.take() {
-                pool.close().await;
-            }
-        }
-        
+        let pool = crate::database::get_pool()?;
+        pool.close().await;
+
         // Copy the backup file to the database location
         fs::copy(&backup_path, &db_path)
             .await
@@ -129,7 +125,7 @@ impl BackupManager {
         // Also copy the WAL and SHM files if they exist
         let backup_wal_path = backup_path.with_extension("db-wal");
         let backup_shm_path = backup_path.with_extension("db-shm");
-        let db_wal_path = db_path.with_extension("db-wal");
+        let db_wal_path = db_path.with_extension("db-shm");
         let db_shm_path = db_path.with_extension("db-shm");
         
         if Path::new(&backup_wal_path).exists() {
@@ -156,17 +152,17 @@ impl BackupManager {
         
         let backups = sqlx::query_as!(
             BackupRecord,
-            r#"SELECT id, filename, created_at as "created_at: DateTime<Utc>", is_auto as "is_auto: bool", comment FROM backups ORDER BY created_at DESC"#
+            r#"SELECT id, filename, created_at, is_auto, comment FROM backups ORDER BY created_at DESC"#
         )
-        .fetch_all(&*pool)
+        .fetch_all(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get backups: {}", e)))?;
         
         // Get app data directory
         let app_data_dir = app_handle
-            .path()
+            .path_resolver()
             .app_data_dir()
-            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
+            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
         
         let backups_dir = app_data_dir.join("backups");
         
@@ -207,16 +203,16 @@ impl BackupManager {
             "SELECT filename FROM backups WHERE id = ?",
             backup_id
         )
-        .fetch_optional(&*pool)
+        .fetch_optional(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get backup: {}", e)))?
         .ok_or_else(|| StoryWeaverError::database(format!("Backup not found: {}", backup_id)))?;
         
         // Get app data directory
         let app_data_dir = app_handle
-            .path()
+            .path_resolver()
             .app_data_dir()
-            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
+            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
         
         let backups_dir = app_data_dir.join("backups");
         let backup_path = backups_dir.join(&backup.filename);
@@ -247,7 +243,7 @@ impl BackupManager {
         // Delete the backup record
         sqlx::query("DELETE FROM backups WHERE id = ?")
             .bind(backup_id)
-            .execute(&*pool)
+            .execute(pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete backup record: {}", e)))?;
         
@@ -260,18 +256,18 @@ impl BackupManager {
         let pool = crate::database::get_pool()?;
         
         // Get the last auto backup time
-        let last_auto_backup = sqlx::query_scalar::<_, Option<DateTime<Utc>>>(
-            "SELECT MAX(created_at) as 'created_at: DateTime<Utc>' FROM backups WHERE is_auto = 1"
+        let last_auto_backup: Option<DateTime<Utc>> = sqlx::query_scalar(
+            "SELECT MAX(created_at) FROM backups WHERE is_auto = 1"
         )
-        .fetch_one(&*pool)
+        .fetch_one(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get last auto backup: {}", e)))?;
         
         // Get the auto backup interval from settings
-        let auto_backup_interval = sqlx::query_scalar::<_, Option<String>>(
+        let auto_backup_interval: String = sqlx::query_scalar(
             "SELECT value FROM settings WHERE key = 'auto_backup_interval'"
         )
-        .fetch_one(&*pool)
+        .fetch_one(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get auto backup interval: {}", e)))?
         .unwrap_or_else(|| "daily".to_string());
@@ -303,14 +299,14 @@ impl BackupManager {
         let pool = crate::database::get_pool()?;
         
         // Get the max number of auto backups to keep
-        let max_auto_backups = sqlx::query_scalar::<_, Option<String>>(
+        let max_auto_backups: i64 = sqlx::query_scalar(
             "SELECT value FROM settings WHERE key = 'max_auto_backups'"
         )
-        .fetch_one(&*pool)
+        .fetch_one(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get max auto backups: {}", e)))?
         .unwrap_or_else(|| "10".to_string())
-        .parse::<i64>()
+        .parse()
         .unwrap_or(10);
         
         // Get auto backups to delete
@@ -324,7 +320,7 @@ impl BackupManager {
             "#,
             max_auto_backups
         )
-        .fetch_all(&*pool)
+        .fetch_all(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get old backups: {}", e)))?;
         

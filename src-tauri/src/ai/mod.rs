@@ -19,6 +19,8 @@ pub use ai_history::{AIInteraction, AIHistoryManager, AIInteractionBuilder};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::error::{Result, StoryWeaverError};
+use crate::database::models::{Character, Location, PlotThread};
 
 /// AI Context with more detailed information for better generation
 #[derive(Debug, Default, Clone)]
@@ -52,31 +54,6 @@ pub struct AIContext {
     pub word_count_target: Option<usize>,
     pub genre: Option<String>,
     pub key_details: Option<Vec<String>>, // Important details to include
-}
-
-/// Character information for context
-#[derive(Debug, Clone)]
-pub struct Character {
-    pub name: String,
-    pub description: Option<String>,
-    pub role: Option<String>,
-    pub relevance: Option<u8>, // 1-10 scale of relevance to current context
-}
-
-/// Location information for context
-#[derive(Debug, Clone)]
-pub struct Location {
-    pub name: String,
-    pub description: Option<String>,
-    pub relevance: Option<u8>, // 1-10 scale of relevance to current context
-}
-
-/// Plot thread information for context
-#[derive(Debug, Clone)]
-pub struct PlotThread {
-    pub name: String,
-    pub description: Option<String>,
-    pub relevance: Option<u8>, // 1-10 scale of relevance to current context
 }
 
 /// Streaming text response from AI providers
@@ -134,37 +111,37 @@ pub enum WritingFeature {
 #[async_trait]
 pub trait AIProvider: Send + Sync {
     // Basic text generation
-    async fn generate_text(&self, prompt: &str, context: &AIContext) -> anyhow::Result<String>;
-    async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String>;
+    async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> Result<TextStream>;
     
     // Rewrite functionality
-    async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<String>;
-    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<TextStream>;
+    async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> Result<String>;
+    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> Result<TextStream>;
     
     // Expand functionality - add more detail to text
-    async fn expand_text(&self, text: &str, context: &AIContext) -> anyhow::Result<String>;
-    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    async fn expand_text(&self, text: &str, context: &AIContext) -> Result<String>;
+    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> Result<TextStream>;
     
     // Describe functionality - generate vivid descriptions
-    async fn describe_scene(&self, description: &str, context: &AIContext) -> anyhow::Result<String>;
-    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    async fn describe_scene(&self, description: &str, context: &AIContext) -> Result<String>;
+    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> Result<TextStream>;
     
     // Brainstorm functionality - generate ideas
-    async fn brainstorm(&self, topic: &str, context: &AIContext) -> anyhow::Result<Vec<String>>;
+    async fn brainstorm(&self, topic: &str, context: &AIContext) -> Result<Vec<String>>;
     
     // Related words functionality - thesaurus and contextual alternatives
-    async fn related_words(&self, word: &str, context: &AIContext) -> anyhow::Result<Vec<String>>;
+    async fn related_words(&self, word: &str, context: &AIContext) -> Result<Vec<String>>;
     
     // Quick tools
-    async fn quick_edit(&self, text: &str, instruction: &str) -> anyhow::Result<String>;
-    async fn quick_chat(&self, message: &str, context: &AIContext) -> anyhow::Result<String>;
-    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> anyhow::Result<TextStream>;
+    async fn quick_edit(&self, text: &str, instruction: &str) -> Result<String>;
+    async fn quick_chat(&self, message: &str, context: &AIContext) -> Result<String>;
+    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> Result<TextStream>;
     
     // Image generation for Visualize feature
-    async fn generate_image(&self, prompt: &str) -> anyhow::Result<String>; // Returns URL or base64 image
+    async fn generate_image(&self, prompt: &str) -> Result<String>; // Returns URL or base64 image
     
     // Embeddings for semantic search and context relevance
-    async fn generate_embedding(&self, text: &str) -> anyhow::Result<Vec<f32>>;
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>>;
     
     // Provider information
     fn supports_streaming(&self) -> bool;
@@ -230,108 +207,108 @@ impl AIProviderManager {
 
 #[async_trait]
 impl AIProvider for AIProviderManager {
-    async fn generate_text(&self, prompt: &str, context: &AIContext) -> anyhow::Result<String> {
+    async fn generate_text(&self, prompt: &str, context: &AIContext) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.generate_text(prompt, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+    async fn generate_text_stream(&self, prompt: &str, context: &AIContext) -> Result<TextStream> {
         match self.get_default_provider() {
             Some(provider) => provider.generate_text_stream(prompt, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<String> {
+    async fn rewrite_text(&self, text: &str, style: &RewriteStyle) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.rewrite_text(text, style).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> anyhow::Result<TextStream> {
+    async fn rewrite_text_stream(&self, text: &str, style: &RewriteStyle) -> Result<TextStream> {
         match self.get_default_provider() {
             Some(provider) => provider.rewrite_text_stream(text, style).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn expand_text(&self, text: &str, context: &AIContext) -> anyhow::Result<String> {
+    async fn expand_text(&self, text: &str, context: &AIContext) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.expand_text(text, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+    async fn expand_text_stream(&self, text: &str, context: &AIContext) -> Result<TextStream> {
         match self.get_default_provider() {
             Some(provider) => provider.expand_text_stream(text, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn describe_scene(&self, description: &str, context: &AIContext) -> anyhow::Result<String> {
+    async fn describe_scene(&self, description: &str, context: &AIContext) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.describe_scene(description, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+    async fn describe_scene_stream(&self, description: &str, context: &AIContext) -> Result<TextStream> {
         match self.get_default_provider() {
             Some(provider) => provider.describe_scene_stream(description, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn brainstorm(&self, topic: &str, context: &AIContext) -> anyhow::Result<Vec<String>> {
+    async fn brainstorm(&self, topic: &str, context: &AIContext) -> Result<Vec<String>> {
         match self.get_default_provider() {
             Some(provider) => provider.brainstorm(topic, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn related_words(&self, word: &str, context: &AIContext) -> anyhow::Result<Vec<String>> {
+    async fn related_words(&self, word: &str, context: &AIContext) -> Result<Vec<String>> {
         match self.get_default_provider() {
             Some(provider) => provider.related_words(word, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn quick_edit(&self, text: &str, instruction: &str) -> anyhow::Result<String> {
+    async fn quick_edit(&self, text: &str, instruction: &str) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.quick_edit(text, instruction).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn quick_chat(&self, message: &str, context: &AIContext) -> anyhow::Result<String> {
+    async fn quick_chat(&self, message: &str, context: &AIContext) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.quick_chat(message, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> anyhow::Result<TextStream> {
+    async fn quick_chat_stream(&self, message: &str, context: &AIContext) -> Result<TextStream> {
         match self.get_default_provider() {
             Some(provider) => provider.quick_chat_stream(message, context).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn generate_image(&self, prompt: &str) -> anyhow::Result<String> {
+    async fn generate_image(&self, prompt: &str) -> Result<String> {
         match self.get_default_provider() {
             Some(provider) => provider.generate_image(prompt).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 
-    async fn generate_embedding(&self, text: &str) -> anyhow::Result<Vec<f32>> {
+    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
         match self.get_default_provider() {
             Some(provider) => provider.generate_embedding(text).await,
-            None => Err(anyhow::anyhow!("No default AI provider configured")),
+            None => Err(StoryWeaverError::NotSupported { operation: "No default AI provider configured".to_string() }),
         }
     }
 

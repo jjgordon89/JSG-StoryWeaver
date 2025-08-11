@@ -1,10 +1,15 @@
 //! Database operations for collaboration features
 
-use crate::database::models::*;
+use crate::database::models::collaboration::{
+    CollaborationNotification, CollaborationSession, Comment, CommentRequest, CommentThread,
+    CommentType, NotificationType, ShareSettings, ShareType, SharedDocument,
+};
+use crate::database::models::Document;
 use chrono::{DateTime, Utc};
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
 use uuid::Uuid;
+use std::str::FromStr;
 
 /// Create a new shared document link
 pub async fn create_shared_document(
@@ -16,26 +21,22 @@ pub async fn create_shared_document(
     created_by: Option<&str>,
 ) -> Result<SharedDocument, sqlx::Error> {
     let share_token = Uuid::new_v4().to_string();
-    let expires_at = settings.expires_at;
-
     let now = Utc::now();
     let share_type_str = share_type.to_string();
     let result = sqlx::query!(
         r#"
         INSERT INTO shared_documents (
             document_id, project_id, share_token, share_type,
-            expires_at, max_uses, current_uses, is_active, created_by, created_at, updated_at
+            expires_at, is_active, created_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING id
         "#,
         document_id,
         project_id,
         share_token,
         share_type_str,
-        expires_at,
-        settings.max_uses,
-        0, // current_uses starts at 0
+        settings.expires_at,
         true, // is_active
         created_by,
         now,
@@ -49,10 +50,9 @@ pub async fn create_shared_document(
         document_id: document_id.to_string(),
         project_id: project_id.to_string(),
         share_token,
-        share_type: share_type_str,
-        password_hash: settings.password.map(|p| format!("hashed_{}", p)), // Simple hash for now
+        share_type,
+        password_hash: settings.password,
         expires_at: settings.expires_at,
-        max_uses: settings.max_uses,
         current_uses: 0,
         is_active: true,
         created_by: created_by.map(|s| s.to_string()),
@@ -66,10 +66,10 @@ pub async fn get_shared_document_by_token(
     pool: &SqlitePool,
     token: &str,
 ) -> Result<Option<SharedDocument>, sqlx::Error> {
-    let result = sqlx::query!(
+    let row = sqlx::query!(
         r#"
         SELECT id, document_id, project_id, share_token, share_type, 
-               password_hash, expires_at, max_uses, current_uses, is_active, 
+               password_hash, expires_at, current_uses, is_active, 
                created_by, created_at, updated_at
         FROM shared_documents
         WHERE share_token = ? AND is_active = 1
@@ -79,27 +79,20 @@ pub async fn get_shared_document_by_token(
     .fetch_optional(pool)
     .await?;
 
-    if let Some(row) = result {
+    if let Some(row) = row {
         Ok(Some(SharedDocument {
             id: row.id.map(|id| id as i32).unwrap_or(0),
             document_id: row.document_id.to_string(),
             project_id: row.project_id.to_string(),
             share_token: row.share_token,
-            share_type: row.share_type.unwrap_or_default(),
+            share_type: ShareType::from_str(&row.share_type.unwrap_or_default()).unwrap_or_default(),
             password_hash: row.password_hash,
-            expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-            max_uses: row.max_uses.map(|v| v as i32),
+            expires_at: row.expires_at,
             current_uses: row.current_uses.unwrap_or(0) as i32,
             is_active: row.is_active.unwrap_or(false),
             created_by: row.created_by,
-            created_at: DateTime::from_naive_utc_and_offset(
-                row.created_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
-                Utc
-            ),
-            updated_at: DateTime::from_naive_utc_and_offset(
-                row.updated_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
-                Utc
-            ),
+            created_at: row.created_at,
+            updated_at: row.updated_at,
         }))
     } else {
         Ok(None)
@@ -163,15 +156,15 @@ pub async fn create_comment(
 
     Ok(Comment {
         id: result.id as i32,
-        document_id: request.document_id.clone(),
+        document_id: request.document_id,
         parent_comment_id: request.parent_comment_id,
-        author_name: request.author_name.clone(),
-        author_identifier: request.author_identifier.clone(),
-        content: request.content.clone(),
+        author_name: request.author_name,
+        author_identifier: request.author_identifier,
+        content: request.content,
         position_start: request.position_start,
         position_end: request.position_end,
-        selected_text: request.selected_text.clone(),
-        comment_type: request.comment_type.to_string(),
+        selected_text: request.selected_text,
+        comment_type: request.comment_type,
         status: "open".to_string(),
         is_resolved: false,
         resolved_by: None,
@@ -186,10 +179,11 @@ pub async fn get_document_comments(
     pool: &SqlitePool,
     document_id: &str,
 ) -> Result<Vec<Comment>, sqlx::Error> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as!(
+        Comment,
         r#"
         SELECT id, document_id, parent_comment_id, author_name, author_identifier,
-               content, position_start, position_end, selected_text, comment_type,
+               content, position_start, position_end, selected_text, comment_type as "comment_type: _",
                status, is_resolved, resolved_by, resolved_at, created_at, updated_at
         FROM document_comments
         WHERE document_id = ?
@@ -200,32 +194,7 @@ pub async fn get_document_comments(
     .fetch_all(pool)
     .await?;
 
-    let comments = rows.into_iter().map(|row| Comment {
-        id: row.id.unwrap_or(0) as i32,
-        document_id: row.document_id.to_string(),
-        parent_comment_id: row.parent_comment_id.map(|id| id as i32),
-        author_name: row.author_name,
-        author_identifier: row.author_identifier,
-        content: row.content,
-        position_start: row.position_start.map(|p| p as i32),
-        position_end: row.position_end.map(|p| p as i32),
-        selected_text: row.selected_text,
-        comment_type: row.comment_type.unwrap_or_default(),
-        status: row.status.unwrap_or_default(),
-        is_resolved: row.is_resolved.unwrap_or(false),
-        resolved_by: row.resolved_by,
-        resolved_at: row.resolved_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-        created_at: DateTime::from_naive_utc_and_offset(
-            row.created_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
-            Utc
-        ),
-        updated_at: DateTime::from_naive_utc_and_offset(
-            row.updated_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()), 
-            Utc
-        ),
-    }).collect();
-
-    Ok(comments)
+    Ok(rows)
 }
 
 /// Resolve a comment
@@ -298,10 +267,9 @@ pub async fn create_collaboration_session(
         id: result.id as i32,
         document_id: document_id.to_string(),
         session_token,
-        session_name: None,
         is_active: true,
-        allow_anonymous: false,
         max_participants,
+        current_participants: 0,
         created_at: now,
         expires_at,
     })
@@ -312,51 +280,18 @@ pub async fn get_collaboration_session_by_token(
     pool: &SqlitePool,
     token: &str,
 ) -> Result<Option<CollaborationSession>, sqlx::Error> {
-    let row = sqlx::query!(
+    sqlx::query_as(
         r#"
-        SELECT id, document_id, session_token, session_name, is_active,
-               allow_anonymous, max_participants, created_at, expires_at
+        SELECT id, document_id, session_token, is_active,
+               max_participants, current_participants, created_at, expires_at
         FROM collaboration_sessions
         WHERE session_token = ? AND is_active = 1
         "#,
-        token
     )
+    .bind(token)
     .fetch_optional(pool)
-    .await?;
-
-    if let Some(row) = row {
-        Ok(Some(CollaborationSession {
-            id: row.id.unwrap_or(0) as i32,
-            document_id: row.document_id.to_string(),
-            session_token: row.session_token,
-            session_name: row.session_name,
-            is_active: row.is_active.unwrap_or(false),
-            allow_anonymous: row.allow_anonymous.unwrap_or(false),
-            max_participants: row.max_participants.unwrap_or(0) as i32,
-            created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
-            expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-        }))
-    } else {
-        Ok(None)
-    }
+    .await
 }
-
-/// Update collaboration session participant count
-// Note: current_participants column removed from model
-// pub async fn update_session_participants(
-//     pool: &SqlitePool,
-//     session_id: i32,
-//     participant_count: i32,
-// ) -> Result<(), sqlx::Error> {
-//     sqlx::query!(
-//         "UPDATE collaboration_sessions SET current_participants = ? WHERE id = ?",
-//         participant_count,
-//         session_id
-//     )
-//     .execute(pool)
-//     .await?;
-//     Ok(())
-// }
 
 /// Get comment threads (organized by parent-child relationships)
 pub async fn get_comment_threads(
@@ -451,24 +386,18 @@ pub async fn duplicate_document_for_sharing(
     .await?;
     
     let original = Document {
-        id: row.id.unwrap_or_default(),
-        project_id: row.project_id.to_string(),
-        title: row.title,
-        content: row.content,
-        document_type: serde_json::from_str(&row.document_type).unwrap(),
-        order_index: row.order_index as i32,
-        word_count: row.word_count as i32,
-        parent_id: row.parent_id.map(|id| id.to_string()),
-        created_at: DateTime::from_naive_utc_and_offset(
-            row.created_at, 
-            Utc
-        ),
-        updated_at: DateTime::from_naive_utc_and_offset(
-            row.updated_at, 
-            Utc
-        ),
-        metadata: row.metadata,
-        folder_id: row.folder_id,
+            id: row.id.unwrap_or_default(),
+            project_id: row.project_id.to_string(),
+            title: row.title,
+            content: row.content,
+            document_type: DocumentType::from_str(&row.document_type).unwrap(),
+            order_index: row.order_index as i32,
+            word_count: row.word_count as i32,
+            parent_id: row.parent_id,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            metadata: row.metadata,
+            folder_id: row.folder_id,
     };
 
     // Create new document with copied content
@@ -550,10 +479,11 @@ pub async fn get_project_shared_documents(
     pool: &SqlitePool,
     project_id: &str,
 ) -> Result<Vec<SharedDocument>, sqlx::Error> {
-    let rows = sqlx::query!(
+    let rows = sqlx::query_as!(
+        SharedDocument,
         r#"
-        SELECT id, document_id, project_id, share_token, share_type, 
-               password_hash, expires_at, max_uses, current_uses, is_active, 
+        SELECT id, document_id, project_id, share_token, share_type as "share_type: _", 
+               password_hash, expires_at, current_uses, is_active, 
                created_by, created_at, updated_at
         FROM shared_documents
         WHERE project_id = ?
@@ -564,23 +494,7 @@ pub async fn get_project_shared_documents(
     .fetch_all(pool)
     .await?;
     
-    let results = rows.into_iter().map(|row| SharedDocument {
-        id: row.id.map(|id| id as i32).unwrap_or(0),
-        document_id: row.document_id.to_string(),
-        project_id: row.project_id.to_string(),
-        share_token: row.share_token,
-        share_type: row.share_type.unwrap_or_default(),
-        password_hash: row.password_hash,
-        expires_at: row.expires_at.map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
-        max_uses: row.max_uses.map(|v| v as i32),
-        current_uses: row.current_uses.unwrap_or(0) as i32,
-        is_active: row.is_active.unwrap_or(false),
-        created_by: row.created_by,
-        created_at: DateTime::from_naive_utc_and_offset(row.created_at.unwrap(), Utc),
-        updated_at: DateTime::from_naive_utc_and_offset(row.updated_at.unwrap(), Utc),
-    }).collect();
-
-    Ok(results)
+    Ok(rows)
 }
 
 /// Create a new collaboration notification
@@ -630,9 +544,10 @@ pub async fn get_notifications_for_user(
 ) -> Result<Vec<CollaborationNotification>, sqlx::Error> {
     let limit = limit.unwrap_or(50);
     
-    let results = sqlx::query!(
+    let results = sqlx::query_as!(
+        CollaborationNotification,
         r#"
-        SELECT id, document_id, notification_type, message, recipient_token, is_read, created_at
+        SELECT id, document_id, notification_type as "notification_type: _", message, recipient_token, is_read, created_at
         FROM collaboration_notifications
         WHERE recipient_token = ?
         ORDER BY created_at DESC
@@ -644,31 +559,7 @@ pub async fn get_notifications_for_user(
     .fetch_all(pool)
     .await?;
 
-    let notifications = results
-        .into_iter()
-        .map(|row| {
-            let notification_type = match row.notification_type.as_str() {
-                "new_comment" => NotificationType::NewComment,
-                "comment_reply" => NotificationType::CommentReply,
-                "comment_resolved" => NotificationType::CommentResolved,
-                "participant_joined" => NotificationType::ParticipantJoined,
-                "document_updated" => NotificationType::DocumentUpdated,
-                _ => NotificationType::NewComment, // Default fallback
-            };
-            
-            CollaborationNotification {
-                id: row.id.unwrap_or(0) as i32,
-                document_id: row.document_id.to_string(),
-                notification_type,
-                message: row.message,
-                recipient_token: row.recipient_token,
-                is_read: row.is_read,
-                created_at: DateTime::from_naive_utc_and_offset(row.created_at, Utc),
-            }
-        })
-        .collect();
-
-    Ok(notifications)
+    Ok(results)
 }
 
 /// Mark notification as read

@@ -2,25 +2,26 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sqlx::FromRow;
 use std::collections::HashMap;
 
 /// Plugin model for custom AI tools
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, Default)]
 pub struct Plugin {
-    pub id: i32,
+    pub id: i64,
     pub name: String,
     pub description: String,
     pub prompt_template: String,
     pub variables: String, // JSON string of PluginVariable array
     pub ai_model: String,
-    pub temperature: f32,
-    pub max_tokens: Option<i32>,
+    pub temperature: Option<f64>,
+    pub max_tokens: Option<i64>,
     pub stop_sequences: Option<String>, // JSON array of strings
     pub category: PluginCategory,
-    pub tags: String, // JSON array of strings
+    pub tags: Option<String>, // JSON array of strings
     pub is_multi_stage: bool,
-    pub stage_count: i32,
+    pub stage_count: Option<i32>,
     pub creator_id: Option<String>,
     pub is_public: bool,
     pub version: String,
@@ -58,7 +59,7 @@ pub enum PluginVariableType {
 }
 
 /// Plugin category enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default, PartialEq)]
 #[sqlx(type_name = "text")]
 pub enum PluginCategory {
     #[sqlx(rename = "writing")]
@@ -123,8 +124,8 @@ impl std::str::FromStr for PluginCategory {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginExecutionRequest {
     pub plugin_id: i32,
-    pub variables: HashMap<String, String>,
-    pub document_id: Option<String>,
+    pub variables: Value,
+    pub document_id: Option<i32>,
     pub selected_text: Option<String>,
     pub cursor_position: Option<i32>,
 }
@@ -228,13 +229,29 @@ pub struct PluginSearchResult {
 }
 
 /// Plugin sort order enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum PluginSortOrder {
+    #[default]
     Relevance,
     Rating,
     Downloads,
     Recent,
     Name,
+}
+
+impl std::str::FromStr for PluginSortOrder {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "relevance" => Ok(PluginSortOrder::Relevance),
+            "rating" => Ok(PluginSortOrder::Rating),
+            "downloads" => Ok(PluginSortOrder::Downloads),
+            "recent" => Ok(PluginSortOrder::Recent),
+            "name" => Ok(PluginSortOrder::Name),
+            _ => Err(format!("Invalid sort order: {}", s)),
+        }
+    }
 }
 
 /// Plugin template for common writing tasks
@@ -252,7 +269,7 @@ pub struct PluginTemplate {
 /// Plugin execution history for debugging and analytics
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct PluginExecutionHistory {
-    pub id: i32,
+    pub id: String,
     pub plugin_id: i32,
     pub user_identifier: String,
     pub execution_request: String, // JSON string of request

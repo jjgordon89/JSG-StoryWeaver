@@ -257,7 +257,7 @@ fn generate_recommendations(stats: &DatabaseOptimizationStats) -> Vec<String> {
     }
     
     // Memory recommendations
-    if stats.memory_usage_mb > 512 {
+    if stats.memory_usage_mb > 512.0 {
         recommendations.push("Consider reducing memory cache size or clearing old data".to_string());
     }
     
@@ -292,8 +292,8 @@ fn calculate_performance_score(stats: &DatabaseOptimizationStats) -> f64 {
     }
     
     // Penalize for high memory usage
-    if stats.memory_usage_mb > 256 {
-        score -= ((stats.memory_usage_mb - 256) as f64) * 0.1;
+    if stats.memory_usage_mb > 256.0 {
+        score -= (stats.memory_usage_mb - 256.0) * 0.1;
     }
     
     // Penalize for slow queries
@@ -312,13 +312,16 @@ mod tests {
     #[test]
     fn test_performance_score_calculation() {
         let stats = DatabaseOptimizationStats {
+            total_tables: 10,
             total_indexes: 15,
+            active_indexes: 15,
             unused_indexes: 0,
-            memory_usage_mb: 128,
+            memory_usage_mb: 128.0,
             cache_hit_rate: 0.95,
             avg_query_time_ms: 25.0,
             total_queries: 1000,
             slow_queries: 5,
+            average_effectiveness_score: 0.9,
         };
         
         let score = calculate_performance_score(&stats);
@@ -328,13 +331,16 @@ mod tests {
     #[test]
     fn test_recommendations_generation() {
         let stats = DatabaseOptimizationStats {
+            total_tables: 10,
             total_indexes: 5,
+            active_indexes: 5,
             unused_indexes: 10,
-            memory_usage_mb: 600,
+            memory_usage_mb: 600.0,
             cache_hit_rate: 0.6,
             avg_query_time_ms: 150.0,
             total_queries: 1000,
             slow_queries: 100,
+            average_effectiveness_score: 0.5,
         };
         
         let recommendations = generate_recommendations(&stats);

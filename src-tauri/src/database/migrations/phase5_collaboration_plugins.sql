@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS plugins (
 );
 
 -- Plugin marketplace entries
-CREATE TABLE IF NOT EXISTS plugin_marketplace (
+CREATE TABLE IF NOT EXISTS plugin_marketplace_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plugin_id INTEGER NOT NULL,
     creator_name TEXT NOT NULL,
@@ -102,28 +102,29 @@ CREATE TABLE IF NOT EXISTS plugin_ratings (
     plugin_id INTEGER NOT NULL,
     user_identifier TEXT NOT NULL, -- Anonymous identifier
     rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    review_text TEXT,
+    review TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (plugin_id) REFERENCES plugins(id) ON DELETE CASCADE,
     UNIQUE(plugin_id, user_identifier)
 );
 
--- Plugin usage statistics
-CREATE TABLE IF NOT EXISTS plugin_usage_stats (
+-- Plugin daily statistics (aggregated by date)
+CREATE TABLE IF NOT EXISTS plugin_daily_stats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plugin_id INTEGER NOT NULL,
-    user_identifier TEXT NOT NULL,
-    execution_count INTEGER NOT NULL DEFAULT 0,
-    total_credits_used INTEGER NOT NULL DEFAULT 0,
-    last_used DATETIME,
+    date DATE NOT NULL,
+    total_executions INTEGER NOT NULL DEFAULT 0,
+    successful_executions INTEGER NOT NULL DEFAULT 0,
+    failed_executions INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (plugin_id) REFERENCES plugins(id) ON DELETE CASCADE,
-    UNIQUE(plugin_id, user_identifier)
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(plugin_id, date)
 );
 
 -- Plugin execution history
 CREATE TABLE IF NOT EXISTS plugin_execution_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     plugin_id INTEGER NOT NULL,
     user_identifier TEXT NOT NULL,
     execution_request TEXT NOT NULL, -- JSON string
@@ -228,8 +229,8 @@ CREATE INDEX IF NOT EXISTS idx_document_comments_document ON document_comments(d
 CREATE INDEX IF NOT EXISTS idx_document_comments_parent ON document_comments(parent_comment_id);
 CREATE INDEX IF NOT EXISTS idx_plugins_category ON plugins(category);
 CREATE INDEX IF NOT EXISTS idx_plugins_public ON plugins(is_public);
-CREATE INDEX IF NOT EXISTS idx_plugin_marketplace_visibility ON plugin_marketplace(visibility);
-CREATE INDEX IF NOT EXISTS idx_plugin_marketplace_featured ON plugin_marketplace(featured);
+CREATE INDEX IF NOT EXISTS idx_plugin_marketplace_visibility ON plugin_marketplace_entries(visibility);
+CREATE INDEX IF NOT EXISTS idx_plugin_marketplace_featured ON plugin_marketplace_entries(featured);
 CREATE INDEX IF NOT EXISTS idx_plugin_ratings_plugin ON plugin_ratings(plugin_id);
 CREATE INDEX IF NOT EXISTS idx_plugin_usage_stats_plugin ON plugin_usage_stats(plugin_id);
 CREATE INDEX IF NOT EXISTS idx_canvas_project ON canvas(project_id);

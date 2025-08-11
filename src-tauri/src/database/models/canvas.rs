@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use std::str::FromStr;
 
 /// Canvas model for visual story planning
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -77,7 +78,7 @@ impl std::fmt::Display for CanvasType {
     }
 }
 
-impl std::str::FromStr for CanvasType {
+impl FromStr for CanvasType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -95,7 +96,7 @@ impl std::str::FromStr for CanvasType {
 }
 
 /// Canvas element type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
 #[sqlx(type_name = "text")]
 pub enum CanvasElementType {
     #[sqlx(rename = "plot_point")]
@@ -118,6 +119,7 @@ pub enum CanvasElementType {
     Theme,
     #[sqlx(rename = "conflict")]
     Conflict,
+    #[default]
     #[sqlx(rename = "text_box")]
     TextBox,
     #[sqlx(rename = "sticky_note")]
@@ -144,7 +146,7 @@ impl std::fmt::Display for CanvasElementType {
     }
 }
 
-impl std::str::FromStr for CanvasElementType {
+impl FromStr for CanvasElementType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -167,7 +169,7 @@ impl std::str::FromStr for CanvasElementType {
 }
 
 /// Outline template type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
 #[sqlx(type_name = "text")]
 pub enum OutlineTemplateType {
     #[sqlx(rename = "heros_journey")]
@@ -186,6 +188,7 @@ pub enum OutlineTemplateType {
     Snowflake,
     #[sqlx(rename = "seven_point")]
     SevenPoint,
+    #[default]
     #[sqlx(rename = "custom")]
     Custom,
 }
@@ -207,9 +210,9 @@ impl std::fmt::Display for OutlineTemplateType {
     }
 }
 
-impl std::str::FromStr for OutlineTemplateType {
+impl FromStr for OutlineTemplateType {
     type Err = String;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "heros_journey" => Ok(OutlineTemplateType::HerosJourney),
@@ -217,6 +220,9 @@ impl std::str::FromStr for OutlineTemplateType {
             "story_circle" => Ok(OutlineTemplateType::StoryCircle),
             "romance_outline" => Ok(OutlineTemplateType::RomanceOutline),
             "three_act" => Ok(OutlineTemplateType::ThreeAct),
+            "save_the_cat" => Ok(OutlineTemplateType::SaveTheCat),
+            "snowflake" => Ok(OutlineTemplateType::Snowflake),
+            "seven_point" => Ok(OutlineTemplateType::SevenPoint),
             "custom" => Ok(OutlineTemplateType::Custom),
             _ => Err(format!("Invalid outline template type: {}", s)),
         }
@@ -295,17 +301,17 @@ pub struct CanvasExportRequest {
 }
 
 /// Export format enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum ExportFormat {
     StoryBible,
     Outline,
+    #[default]
     Json,
     Markdown,
     Image,
     PNG,
     SVG,
     PDF,
-    JSON,
 }
 
 impl std::fmt::Display for ExportFormat {
@@ -319,7 +325,6 @@ impl std::fmt::Display for ExportFormat {
             ExportFormat::PNG => write!(f, "png"),
             ExportFormat::SVG => write!(f, "svg"),
             ExportFormat::PDF => write!(f, "pdf"),
-            ExportFormat::JSON => write!(f, "json"),
         }
     }
 }
@@ -329,7 +334,7 @@ impl std::fmt::Display for ExportFormat {
 pub struct CanvasExportResult {
     pub canvas_id: String,
     pub format: ExportFormat,
-    pub data: serde_json::Value,
+    pub data: String,
     pub file_size: i64,
     pub exported_at: DateTime<Utc>,
 }
@@ -348,30 +353,35 @@ pub struct CanvasSnapshot {
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CanvasCollaborationSession {
     pub id: i64,
-    pub canvas_id: i64,
+    pub canvas_id: i32,
     pub session_token: String,
     pub host_user: String,
     pub participants: String, // JSON array of participants
     pub is_active: bool,
+    pub max_participants: i32,
+    pub current_participants: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
 /// Canvas operation for real-time synchronization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct CanvasOperation {
-    pub canvas_id: String,
+    pub id: String,
+    pub canvas_id: i32,
     pub operation_type: CanvasOperationType,
     pub element_id: Option<i32>,
     pub data: String, // JSON string of operation data
     pub user_token: String,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: i64,
 }
 
 /// Canvas operation type enumeration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, Default)]
+#[sqlx(type_name = "TEXT")]
 pub enum CanvasOperationType {
+    #[default]
     CreateElement,
     UpdateElement,
     DeleteElement,

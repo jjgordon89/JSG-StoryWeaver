@@ -102,7 +102,7 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
             title: row.title,
             document_type: row.document_type,
             word_count: row.word_count as i32,
-            updated_at: row.updated_at.map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)).unwrap_or_else(|| Utc::now()),
+            updated_at: DateTime::<Utc>::from_naive_utc_and_offset(row.updated_at, Utc),
         })
         .collect();
         

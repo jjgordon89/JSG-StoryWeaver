@@ -7,16 +7,17 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 // Import our new models
-mod folder;
-mod series;
-mod document_link;
-mod document_version;
-mod deleted_item;
-mod app_settings;
-mod performance_metric;
+pub mod folder;
+pub mod series;
+pub mod document_link;
+pub mod document_version;
+pub mod deleted_item;
+pub mod app_settings;
+pub mod performance_metric;
 pub mod collaboration;
 pub mod plugin;
 pub mod canvas;
+pub mod ai;
 
 // Re-export all models
 pub use folder::*;
@@ -29,6 +30,7 @@ pub use performance_metric::*;
 pub use collaboration::*;
 pub use plugin::*;
 pub use canvas::*;
+pub use ai::*;
 
 /// Project model - represents a writing project
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
