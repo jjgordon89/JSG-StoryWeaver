@@ -6,6 +6,8 @@ pub mod ai_processor;
 use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+use std::fmt;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{Duration, Instant};
@@ -30,6 +32,33 @@ pub enum TaskStatus {
     Cancelled,
 }
 
+impl FromStr for TaskStatus {
+    type Err = StoryWeaverError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "queued" => Ok(TaskStatus::Queued),
+            "running" => Ok(TaskStatus::Running),
+            "completed" => Ok(TaskStatus::Completed),
+            "failed" => Ok(TaskStatus::Failed),
+            "cancelled" => Ok(TaskStatus::Cancelled),
+            _ => Err(StoryWeaverError::invalid_input(format!("Invalid task status: {}", s))),
+        }
+    }
+}
+
+impl fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TaskStatus::Queued => write!(f, "queued"),
+            TaskStatus::Running => write!(f, "running"),
+            TaskStatus::Completed => write!(f, "completed"),
+            TaskStatus::Failed => write!(f, "failed"),
+            TaskStatus::Cancelled => write!(f, "cancelled"),
+        }
+    }
+}
+
 /// Task type
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskType {
@@ -40,6 +69,20 @@ pub enum TaskType {
     Import,
     Backup,
     Other(String),
+}
+
+impl fmt::Display for TaskType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TaskType::AIGeneration => write!(f, "ai_generation"),
+            TaskType::DatabaseOperation => write!(f, "database_operation"),
+            TaskType::FileOperation => write!(f, "file_operation"),
+            TaskType::Export => write!(f, "export"),
+            TaskType::Import => write!(f, "import"),
+            TaskType::Backup => write!(f, "backup"),
+            TaskType::Other(s) => write!(f, "{}", s),
+        }
+    }
 }
 
 /// Task data structure

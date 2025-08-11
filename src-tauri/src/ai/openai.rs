@@ -1,9 +1,9 @@
 //! OpenAI Provider implementation for StoryWeaver
 
 use super::{AIProvider, AIContext, TextStream, RewriteStyle};
+use crate::error::{Result, StoryWeaverError};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -186,17 +186,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -208,7 +209,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(choice) = completion.choices.first() {
             Ok(choice.message.content.clone())
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
 
@@ -244,12 +247,13 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Create a new TextStream
@@ -260,7 +264,7 @@ impl AIProvider for OpenAIProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::network(format!("Error reading stream chunk: {}", e)))?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // OpenAI sends "data: " prefixed SSE events
@@ -340,7 +344,7 @@ impl AIProvider for OpenAIProvider {
             model: self.model.clone(),
             messages: vec![system_message, user_message],
             temperature: 0.7,
-            max_tokens: Some(text.len() as u32 / 2), // Limit token usage based on input
+            max_tokens: Some(2000), // Limit token usage based on input
             stream: false,
         };
         
@@ -351,17 +355,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -373,7 +378,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(choice) = completion.choices.first() {
             Ok(choice.message.content.clone())
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
 
@@ -400,17 +407,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let embedding_response: EmbeddingResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &embedding_response.usage {
@@ -422,7 +430,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(data) = embedding_response.data.first() {
             Ok(data.embedding.clone())
         } else {
-            Err(anyhow::anyhow!("No embedding data returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No embedding data returned".to_string(),
+            })
         }
     }
 
@@ -501,12 +511,13 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Create a new TextStream
@@ -517,7 +528,7 @@ impl AIProvider for OpenAIProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::network(format!("Error reading stream chunk: {}", e)))?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // OpenAI sends "data: " prefixed SSE events
@@ -621,17 +632,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -643,7 +655,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(choice) = completion.choices.first() {
             Ok(choice.message.content.clone())
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
     
@@ -709,12 +723,13 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Create a new TextStream
@@ -725,7 +740,7 @@ impl AIProvider for OpenAIProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::network(format!("Error reading stream chunk: {}", e)))?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // OpenAI sends "data: " prefixed SSE events
@@ -859,17 +874,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -881,7 +897,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(choice) = completion.choices.first() {
             Ok(choice.message.content.clone())
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
     
@@ -977,12 +995,13 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Create a new TextStream
@@ -993,7 +1012,7 @@ impl AIProvider for OpenAIProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::network(format!("Error reading stream chunk: {}", e)))?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // OpenAI sends "data: " prefixed SSE events
@@ -1094,17 +1113,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -1145,7 +1165,9 @@ impl AIProvider for OpenAIProvider {
             
             Ok(ideas)
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
     
@@ -1205,17 +1227,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -1236,7 +1259,9 @@ impl AIProvider for OpenAIProvider {
             
             Ok(words)
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
     
@@ -1278,17 +1303,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -1300,7 +1326,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(choice) = completion.choices.first() {
             Ok(choice.message.content.clone())
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
     
@@ -1352,17 +1380,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let completion: ChatCompletionResponse = response.json().await
-            .context("Failed to parse OpenAI API response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -1374,7 +1403,9 @@ impl AIProvider for OpenAIProvider {
         if let Some(choice) = completion.choices.first() {
             Ok(choice.message.content.clone())
         } else {
-            Err(anyhow::anyhow!("No completion choices returned"))
+            Err(StoryWeaverError::AIGenerationError {
+                message: "No completion choices returned".to_string(),
+            })
         }
     }
     
@@ -1426,12 +1457,13 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to OpenAI API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("OpenAI API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Create a new TextStream
@@ -1442,7 +1474,7 @@ impl AIProvider for OpenAIProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::network(format!("Error reading stream chunk: {}", e)))?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // OpenAI sends "data: " prefixed SSE events
@@ -1511,17 +1543,18 @@ impl AIProvider for OpenAIProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to DALL-E API")?;
+            .map_err(|e| StoryWeaverError::network(format!("Failed to send request to DALL-E API: {}", e)))?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            return Err(anyhow::anyhow!("DALL-E API error: {}", error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
         }
         
         // Parse response
         let response_json: serde_json::Value = response.json().await
-            .context("Failed to parse DALL-E response")?;
+            .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse DALL-E response: {}", e)))?;
         
         // Update rate limiter with actual usage
         {
@@ -1542,6 +1575,8 @@ impl AIProvider for OpenAIProvider {
             }
         }
         
-        Err(anyhow::anyhow!("Failed to extract image URL from DALL-E response"))
+        Err(StoryWeaverError::AIGenerationError {
+            message: "Failed to extract image URL from DALL-E response".to_string(),
+        })
     }
 }

@@ -337,10 +337,7 @@ pub async fn apply_plugin_template(
     let template = plugin_ops::get_plugin_template_by_id(&pool, template_id)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get plugin template: {}", e)))?
-        .ok_or_else(|| StoryWeaverError::NotFound {
-            resource_type: "Plugin template".to_string(),
-            id: template_id.to_string(),
-        })?;
+        .ok_or_else(|| StoryWeaverError::not_found("Plugin template", template_id.to_string()))?;
 
     // Create plugin from template
     let plugin = Plugin {

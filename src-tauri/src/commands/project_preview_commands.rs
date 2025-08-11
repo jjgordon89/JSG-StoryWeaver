@@ -53,7 +53,7 @@ pub async fn get_project_preview(project_id: String) -> CommandResponse<Enhanced
         // Get project
         let project = ProjectOps::get_by_id(&pool, &project_id)
             .await?
-            .ok_or_else(|| crate::error::StoryWeaverError::ProjectNotFound { id: project_id.clone() })?;
+            .ok_or_else(|| crate::error::StoryWeaverError::project_not_found(project_id.clone()))?;
         
         // Get document count
         let document_count = sqlx::query_scalar::<_, i64>(

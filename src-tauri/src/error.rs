@@ -209,6 +209,69 @@ pub enum StoryWeaverError {
 }
 
 impl StoryWeaverError {
+    /// Factory for not found errors (generic)
+    pub fn not_found<S: Into<String>>(resource_type: S, id: S) -> Self {
+        Self::NotFound {
+            resource_type: resource_type.into(),
+            id: id.into()
+        }
+    }
+
+    /// Factory for project not found errors (strongly typed)
+    pub fn project_not_found<S: Into<String>>(id: S) -> Self {
+        Self::ProjectNotFound { id: id.into() }
+    }
+
+    /// Factory for folder not found errors
+    pub fn folder_not_found<S: Into<String>>(id: S) -> Self {
+        Self::FolderNotFound { id: id.into() }
+    }
+
+    /// Factory for series not found errors
+    pub fn series_not_found<S: Into<String>>(id: S) -> Self {
+        Self::SeriesNotFound { id: id.into() }
+    }
+
+    /// Factory for document not found errors
+    pub fn document_not_found<S: Into<String>>(id: S) -> Self {
+        Self::DocumentNotFound { id: id.into() }
+    }
+
+    /// Factory for document link not found errors
+    pub fn document_link_not_found<S: Into<String>>(id: S) -> Self {
+        Self::DocumentLinkNotFound { id: id.into() }
+    }
+
+    /// Factory for plugin not found errors
+    pub fn plugin_not_found<S: Into<String>>(name: S) -> Self {
+        Self::PluginNotFound { name: name.into() }
+    }
+
+    /// Factory for project already exists errors
+    pub fn project_already_exists<S: Into<String>>(name: S) -> Self {
+        Self::ProjectAlreadyExists { name: name.into() }
+    }
+
+    /// Factory for folder not empty errors
+    pub fn folder_not_empty<S: Into<String>>(id: S) -> Self {
+        Self::FolderNotEmpty { id: id.into() }
+    }
+
+    /// Factory for series not empty errors
+    pub fn series_not_empty<S: Into<String>>(id: S) -> Self {
+        Self::SeriesNotEmpty { id: id.into() }
+    }
+
+    /// Factory for version not found errors
+    pub fn version_not_found<S: Into<String>>(id: S) -> Self {
+        Self::VersionNotFound { id: id.into() }
+    }
+
+    /// Factory for deleted item not found errors
+    pub fn deleted_item_not_found<S: Into<String>>(id: S) -> Self {
+        Self::DeletedItemNotFound { id: id.into() }
+    }
+
     /// Create a database error
     pub fn database<S: Into<String>>(message: S) -> Self {
         Self::Database {
@@ -276,13 +339,6 @@ impl StoryWeaverError {
         }
     }
     
-    /// Create an authentication error
-    pub fn authentication<S: Into<String>>(message: S) -> Self {
-        Self::Authentication {
-            message: message.into(),
-        }
-    }
-    
     /// Create a system error
     pub fn system<S: Into<String>>(message: S) -> Self {
         Self::Internal {
@@ -294,6 +350,223 @@ impl StoryWeaverError {
     pub fn invalid_input<S: Into<String>>(message: S) -> Self {
         Self::InvalidInput {
             message: message.into(),
+        }
+    }
+    
+    /// Create a validation error with field
+    pub fn input_validation<S: Into<String>>(field: S, message: S) -> Self {
+        Self::InputValidation {
+            field: field.into(),
+            message: message.into(),
+        }
+    }
+    
+    /// Create a file not found error
+    pub fn file_not_found<S: Into<String>>(path: S) -> Self {
+        Self::FileNotFound {
+            path: path.into(),
+        }
+    }
+    
+    /// Create a file access denied error
+    pub fn file_access_denied<S: Into<String>>(path: S) -> Self {
+        Self::FileAccessDenied {
+            path: path.into(),
+        }
+    }
+    
+    /// Create a database connection error
+    pub fn database_connection<S: Into<String>>(message: S) -> Self {
+        Self::DatabaseConnection {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a migration error
+    pub fn migration<S: Into<String>>(message: S) -> Self {
+        Self::Migration {
+            message: message.into(),
+        }
+    }
+    
+    /// Create an AI request error
+    pub fn ai_request<S: Into<String>>(provider: S, status_code: u16, message: S) -> Self {
+        Self::AIRequest {
+            provider: provider.into(),
+            status_code,
+            message: message.into(),
+        }
+    }
+    
+    /// Create an AI rate limit error
+    pub fn ai_rate_limit<S: Into<String>>(provider: S, retry_after: u64) -> Self {
+        Self::AIRateLimit {
+            provider: provider.into(),
+            retry_after,
+        }
+    }
+    
+    /// Create an invalid API key error
+    pub fn invalid_api_key<S: Into<String>>(provider: S) -> Self {
+        Self::InvalidAPIKey {
+            provider: provider.into(),
+        }
+    }
+    
+    /// Create a token limit exceeded error
+    pub fn token_limit_exceeded(used: u32, limit: u32) -> Self {
+        Self::TokenLimitExceeded {
+            used,
+            limit,
+        }
+    }
+    
+    /// Create an AI content filtered error
+    pub fn ai_content_filtered<S: Into<String>>(reason: S) -> Self {
+        Self::AIContentFiltered {
+            reason: reason.into(),
+        }
+    }
+    
+    /// Create a vector database error
+    pub fn vector_database<S: Into<String>>(message: S) -> Self {
+        Self::VectorDatabase {
+            message: message.into(),
+        }
+    }
+    
+    /// Create an embedding generation error
+    pub fn embedding_generation<S: Into<String>>(message: S) -> Self {
+        Self::EmbeddingGeneration {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a similarity search error
+    pub fn similarity_search<S: Into<String>>(message: S) -> Self {
+        Self::SimilaritySearch {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a plugin execution error
+    pub fn plugin_execution<S: Into<String>>(name: S, message: S) -> Self {
+        Self::PluginExecution {
+            name: name.into(),
+            message: message.into(),
+        }
+    }
+    
+    /// Create a plugin security violation error
+    pub fn plugin_security<S: Into<String>>(name: S, violation: S) -> Self {
+        Self::PluginSecurity {
+            name: name.into(),
+            violation: violation.into(),
+        }
+    }
+    
+    /// Create a WASM runtime error
+    pub fn wasm_runtime<S: Into<String>>(message: S) -> Self {
+        Self::WasmRuntime {
+            message: message.into(),
+        }
+    }
+    
+    /// Create an authentication error
+    pub fn authentication<S: Into<String>>(message: S) -> Self {
+        Self::Authentication {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a keychain access error
+    pub fn keychain_access<S: Into<String>>(message: S) -> Self {
+        Self::KeychainAccess {
+            message: message.into(),
+        }
+    }
+    
+    /// Create an encryption error
+    pub fn encryption<S: Into<String>>(message: S) -> Self {
+        Self::Encryption {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a decryption error
+    pub fn decryption<S: Into<String>>(message: S) -> Self {
+        Self::Decryption {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a security error
+    pub fn security_error<S: Into<String>>(message: S) -> Self {
+        Self::SecurityError {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a privacy error
+    pub fn privacy_error<S: Into<String>>(message: S) -> Self {
+        Self::PrivacyError {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a network error
+    pub fn network<S: Into<String>>(message: S) -> Self {
+        Self::Network {
+            message: message.into(),
+        }
+    }
+    
+    /// Create a request timeout error
+    pub fn request_timeout<S: Into<String>>(url: S) -> Self {
+        Self::RequestTimeout {
+            url: url.into(),
+        }
+    }
+    
+    /// Create a connection failed error
+    pub fn connection_failed<S: Into<String>>(url: S, message: S) -> Self {
+        Self::ConnectionFailed {
+            url: url.into(),
+            message: message.into(),
+        }
+    }
+    
+    /// Create an event emit error
+    pub fn event_emit_error<S: Into<String>>(message: S) -> Self {
+        Self::EventEmitError(message.into())
+    }
+    
+    /// Create a configuration error
+    pub fn configuration<S: Into<String>>(key: S, message: S) -> Self {
+        Self::Configuration {
+            key: key.into(),
+            message: message.into(),
+        }
+    }
+    
+    /// Create a missing configuration error
+    pub fn missing_configuration<S: Into<String>>(key: S) -> Self {
+        Self::MissingConfiguration {
+            key: key.into(),
+        }
+    }
+    
+    /// Create an unsupported operation error
+    pub fn unsupported_operation<S: Into<String>>(operation: S) -> Self {
+        Self::UnsupportedOperation {
+            operation: operation.into(),
+        }
+    }
+    
+    /// Create a resource unavailable error
+    pub fn resource_unavailable<S: Into<String>>(resource: S) -> Self {
+        Self::ResourceUnavailable {
+            resource: resource.into(),
         }
     }
     
@@ -339,8 +612,34 @@ impl From<sqlx::Error> for StoryWeaverError {
     }
 }
 
+impl From<&sqlx::Error> for StoryWeaverError {
+    fn from(err: &sqlx::Error) -> Self {
+        Self::Database {
+            message: err.to_string(),
+        }
+    }
+}
+
 impl From<std::io::Error> for StoryWeaverError {
     fn from(err: std::io::Error) -> Self {
+        match err.kind() {
+            std::io::ErrorKind::NotFound => Self::FileNotFound {
+                path: "unknown".to_string(),
+            },
+            std::io::ErrorKind::PermissionDenied => Self::FileAccessDenied {
+                path: "unknown".to_string(),
+            },
+            _ => Self::FileOperation {
+                operation: "unknown".to_string(),
+                path: "unknown".to_string(),
+                message: err.to_string(),
+            },
+        }
+    }
+}
+
+impl From<&std::io::Error> for StoryWeaverError {
+    fn from(err: &std::io::Error) -> Self {
         match err.kind() {
             std::io::ErrorKind::NotFound => Self::FileNotFound {
                 path: "unknown".to_string(),
@@ -365,8 +664,35 @@ impl From<serde_json::Error> for StoryWeaverError {
     }
 }
 
+impl From<&serde_json::Error> for StoryWeaverError {
+    fn from(err: &serde_json::Error) -> Self {
+        Self::Serialization {
+            message: err.to_string(),
+        }
+    }
+}
+
 impl From<reqwest::Error> for StoryWeaverError {
     fn from(err: reqwest::Error) -> Self {
+        if err.is_timeout() {
+            Self::RequestTimeout {
+                url: err.url().map(|u| u.to_string()).unwrap_or_default(),
+            }
+        } else if err.is_connect() {
+            Self::ConnectionFailed {
+                url: err.url().map(|u| u.to_string()).unwrap_or_default(),
+                message: err.to_string(),
+            }
+        } else {
+            Self::Network {
+                message: err.to_string(),
+            }
+        }
+    }
+}
+
+impl From<&reqwest::Error> for StoryWeaverError {
+    fn from(err: &reqwest::Error) -> Self {
         if err.is_timeout() {
             Self::RequestTimeout {
                 url: err.url().map(|u| u.to_string()).unwrap_or_default(),
@@ -417,6 +743,29 @@ impl From<chrono::NaiveDateTime> for StoryWeaverError {
 
 impl From<anyhow::Error> for StoryWeaverError {
     fn from(err: anyhow::Error) -> Self {
+        // Check if the error is already a StoryWeaverError
+        if let Some(sw_err) = err.downcast_ref::<StoryWeaverError>() {
+            return sw_err.clone();
+        }
+        
+        // Check for common error types that might be wrapped in anyhow
+        if let Some(sqlx_err) = err.downcast_ref::<sqlx::Error>() {
+            return sqlx_err.clone().into();
+        }
+        
+        if let Some(io_err) = err.downcast_ref::<std::io::Error>() {
+            return io_err.clone().into();
+        }
+        
+        if let Some(json_err) = err.downcast_ref::<serde_json::Error>() {
+            return json_err.clone().into();
+        }
+        
+        if let Some(reqwest_err) = err.downcast_ref::<reqwest::Error>() {
+            return reqwest_err.clone().into();
+        }
+        
+        // Default to internal error
         Self::internal(format!("Anyhow error: {}", err))
     }
 }

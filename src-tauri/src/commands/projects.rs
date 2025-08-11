@@ -78,7 +78,7 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
         // Get existing project
         let mut project = ProjectOps::get_by_id(&pool, &request.id)
             .await?
-            .ok_or_else(|| crate::error::StoryWeaverError::ProjectNotFound { id: request.id.to_string() })?;
+            .ok_or_else(|| crate::error::StoryWeaverError::project_not_found(request.id.to_string()))?;
         
         // Update fields if provided
         if let Some(name) = request.name {
@@ -155,7 +155,7 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
         // Get project
         let project = ProjectOps::get_by_id(&pool, &project_id)
             .await?
-            .ok_or_else(|| crate::error::StoryWeaverError::ProjectNotFound { id: project_id.to_string() })?;
+            .ok_or_else(|| crate::error::StoryWeaverError::project_not_found(project_id.to_string()))?;
         
         // Get counts
         let document_count = sqlx::query_scalar::<_, i64>(

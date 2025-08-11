@@ -167,7 +167,7 @@ impl AdvancedAIManager {
                 &request.project_id,
                 &request.text_context,
                 &story_bible.unwrap(),
-            )?)
+            ).map_err(|e| StoryWeaverError::SaliencyEngineError(e.to_string()))?)
         } else {
             None
         };
@@ -605,7 +605,8 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         text_context: &str,
         story_bible: &StoryBibleElements,
     ) -> Result<SaliencyContext> {
-        self.saliency_engine.build_context(project_id, text_context, story_bible).await
+        self.saliency_engine.build_context(project_id, text_context, story_bible)
+            .map_err(|e| StoryWeaverError::SaliencyEngineError(e.to_string()))
     }
 
     pub async fn start_streaming_generation(

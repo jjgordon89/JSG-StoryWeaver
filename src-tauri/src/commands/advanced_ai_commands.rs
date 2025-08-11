@@ -11,8 +11,7 @@ use crate::ai::{
 };
 use crate::commands::CommandResponse;
 use crate::error::{Result, StoryWeaverError};
-use crate::ai::saliency_engine::StoryBible as SaliencyStoryBible;
-use crate::models::story_bible::StoryBibleElements;
+use crate::ai::saliency_engine::StoryBibleElements as SaliencyStoryBible;
 use crate::database::models::ai::{ImageResolution, BrainstormCategory};
 
 // State wrapper for the Advanced AI Manager
@@ -236,7 +235,7 @@ pub async fn add_style_example(
         is_active: request.is_active,
     };
 
-    ai_manager.add_style_example(style_example.clone()).await?;
+    ai_manager.add_style_example(style_example.clone()).await;
 
     Ok(style_example)
 }
@@ -247,7 +246,7 @@ pub async fn analyze_text_style(
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<StyleAnalysis> {
     let ai_manager = ai_state.lock().await;
-    ai_manager.analyze_style(&content).await?
+    ai_manager.analyze_style(&content).await
 }
 
 // Prose Modes Management
@@ -282,7 +281,7 @@ pub async fn get_credit_usage(
 
     let project_usage = ai_manager.get_credit_usage(&project_id).await?;
     let daily_usage = ai_manager.get_daily_usage().await?;
-    let (monthly_limit, remaining_credits) = ai_manager.get_credit_status().await;
+    let (monthly_limit, remaining_credits) = ai_manager.get_credit_status().await?;
 
     Ok(CreditUsageResponse {
         project_usage: project_usage,

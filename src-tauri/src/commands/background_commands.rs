@@ -2,9 +2,8 @@
 //! Provides commands for managing background tasks
 
 use crate::background::{Task, TaskPriority, TaskStatus, TaskType, BackgroundTaskManager};
-use crate::database::{get_pool, operations::background_task_ops};
+use crate::database::{get_pool, operations::BackgroundTaskOps};
 use crate::error::{Result, StoryWeaverError};
-use crate::commands::CommandResponse;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::str::FromStr;
@@ -21,7 +20,6 @@ pub async fn create_background_task(
     metadata: Option<serde_json::Value>,
     task_manager: State<'_, BackgroundTaskManager>,
 ) -> Result<String> {
-    // Convert task type string to enum
     let task_type_enum = match task_type.as_str() {
         "ai_generation" => TaskType::AIGeneration,
         "database_operation" => TaskType::DatabaseOperation,
@@ -32,7 +30,6 @@ pub async fn create_background_task(
         _ => TaskType::Other(task_type),
     };
     
-    // Convert priority to enum
     let priority_enum = match priority {
         0 => TaskPriority::Low,
         1 => TaskPriority::Normal,
@@ -41,7 +38,6 @@ pub async fn create_background_task(
         _ => TaskPriority::Normal,
     };
     
-    // Create task
     let task = Task::new(
         task_type_enum,
         description,
@@ -51,10 +47,8 @@ pub async fn create_background_task(
         document_id,
         metadata,
     );
-    
-    // Enqueue task
+
     let task_id = task_manager.enqueue_task(task).await?;
-    
     Ok(task_id)
 }
 
@@ -62,24 +56,27 @@ pub async fn create_background_task(
 #[tauri::command]
 pub async fn get_background_task(task_id: String) -> Result<TaskResponse> {
     let pool = get_pool()?;
-    let task = background_task_ops::get_task(&pool, &task_id).await?;
-    task.map(TaskResponse::from).ok_or(StoryWeaverError::NotFound { resource_type: "Task".to_string(), id: task_id })
+    let task = BackgroundTaskOps::get_task(&pool, &task_id).await?;
+    Ok(TaskResponse::from(task))
 }
 
 /// Get all tasks
 #[tauri::command]
 pub async fn get_all_background_tasks(
     status: Option<String>,
-    limit: Option<i32>,
-    offset: Option<i32>,
+    _limit: Option<i32>,
+    _offset: Option<i32>,
 ) -> Result<Vec<TaskResponse>> {
     let pool = get_pool()?;
-    let status_enum = status
-        .map(|s| TaskStatus::from_str(&s))
-        .transpose()
-        .map_err(|e| StoryWeaverError::invalid_input(e))?;
 
-    let tasks = background_task_ops::get_tasks(&pool, status_enum, limit, offset).await?;
+    let tasks = if let Some(s) = status {
+        let status_enum = TaskStatus::from_str(&s)
+            .map_err(|e| StoryWeaverError::invalid_input(e.to_string()))?;
+        BackgroundTaskOps::get_tasks_by_status(&pool, status_enum).await?
+    } else {
+        BackgroundTaskOps::get_all_tasks(&pool).await?
+    };
+
     Ok(tasks.into_iter().map(TaskResponse::from).collect())
 }
 
@@ -95,7 +92,7 @@ pub async fn cancel_background_task(
 #[tauri::command]
 pub async fn cleanup_old_background_tasks(days: i64) -> Result<usize> {
     let pool = get_pool()?;
-    background_task_ops::cleanup_old_tasks(&pool, days).await
+    BackgroundTaskOps::cleanup_old_tasks(&pool, days).await
 }
 
 /// Task response for frontend
@@ -117,11 +114,11 @@ pub struct TaskResponse {
     pub metadata: serde_json::Value,
 }
 
-impl From<BackgroundTask> for TaskResponse {
-    fn from(task: BackgroundTask) -> Self {
+impl From<Task> for TaskResponse {
+    fn from(task: Task) -> Self {
         Self {
             id: task.id,
-            task_type: task.task_type,
+            task_type: task.task_type.to_string(),
             description: task.description,
             status: task.status.to_string(),
             priority: task.priority as u8,
@@ -133,7 +130,7 @@ impl From<BackgroundTask> for TaskResponse {
             user_initiated: task.user_initiated,
             project_id: task.project_id,
             document_id: task.document_id,
-            metadata: serde_json::from_str(&task.metadata).unwrap_or_default(),
+            metadata: task.metadata,
         }
     }
 }

@@ -82,7 +82,7 @@ pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> 
         // Get existing series
         let mut series = SeriesOps::get_by_id(&pool, &request.id)
             .await?
-            .ok_or_else(|| crate::error::StoryWeaverError::SeriesNotFound { id: request.id.clone() })?;
+            .ok_or_else(|| crate::error::StoryWeaverError::series_not_found(request.id.clone()))?;
         
         // Update fields if provided
         if let Some(name) = request.name {

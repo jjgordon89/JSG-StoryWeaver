@@ -82,7 +82,7 @@ impl<T> From<Result<T>> for CommandResponse<T> {
 pub async fn health_check() -> CommandResponse<String> {
     match get_pool() {
         Ok(pool) => {
-            match sqlx::query("SELECT 1").execute(pool).await {
+            match sqlx::query("SELECT 1").execute(&*pool).await {
                 Ok(_) => CommandResponse::success("Database connection healthy".to_string()),
                 Err(e) => CommandResponse::error(format!("Database error: {}", e)),
             }
@@ -98,22 +98,22 @@ pub async fn get_database_stats() -> CommandResponse<DatabaseStats> {
         let pool = get_pool()?;
         
         let project_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM projects")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count projects: {}", e)))? as i32;
         
         let document_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM documents")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count documents: {}", e)))? as i32;
         
         let character_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM characters")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count characters: {}", e)))? as i32;
         
         let location_count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM locations")
-            .fetch_one(pool)
+            .fetch_one(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to count locations: {}", e)))? as i32;
         
@@ -142,7 +142,7 @@ pub struct DatabaseStats {
 pub async fn init_database() -> CommandResponse<String> {
     async fn init() -> Result<String> {
         let pool = get_pool()?;
-        crate::database::migrations::run_migrations(pool).await?;
+        crate::database::migrations::run_migrations(&*pool).await?;
         Ok("Database initialized successfully".to_string())
     }
     
@@ -151,6 +151,10 @@ pub async fn init_database() -> CommandResponse<String> {
 
 /// Test command for development
 #[tauri::command]
-pub async fn greet(name: &str) -> Result<String> {
-    Ok(format!("Hello, {}! You've been greeted from Rust!", name))
+pub async fn greet(name: &str) -> CommandResponse<String> {
+    async fn greet_inner(name: &str) -> Result<String> {
+        Ok(format!("Hello, {}! You've been greeted from Rust!", name))
+    }
+    
+    greet_inner(name).await.into()
 }
