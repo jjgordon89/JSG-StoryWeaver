@@ -66,6 +66,39 @@ pub struct AIGenerationSummary {
 #[tauri::command]
 pub async fn create_ai_history(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
     async fn create(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
+        // Input validation
+        crate::security::validation::validate_security_input(&request.project_id)?;
+        crate::security::validation::validate_security_input(&request.generation_type)?;
+        crate::security::validation::validate_content_length(&request.provider, 100)?;
+        crate::security::validation::validate_security_input(&request.provider)?;
+        crate::security::validation::validate_content_length(&request.model, 100)?;
+        crate::security::validation::validate_security_input(&request.model)?;
+        crate::security::validation::validate_content_length(&request.prompt, 50000)?;
+        crate::security::validation::validate_security_input(&request.prompt)?;
+        crate::security::validation::validate_content_length(&request.response, 100000)?;
+        crate::security::validation::validate_security_input(&request.response)?;
+        
+        if let Some(ref doc_id) = request.document_id {
+            crate::security::validation::validate_security_input(doc_id)?;
+        }
+        
+        if let Some(ref context) = request.context_used {
+            crate::security::validation::validate_content_length(context, 10000)?;
+            crate::security::validation::validate_security_input(context)?;
+        }
+        
+        if let Some(token_count) = request.token_count {
+            if token_count < 0 {
+                return Err(crate::error::StoryWeaverError::InvalidInput { message: "token_count cannot be negative".to_string() });
+            }
+        }
+        
+        if let Some(cost) = request.cost_estimate {
+            if cost < 0.0 {
+                return Err(crate::error::StoryWeaverError::InvalidInput { message: "cost_estimate cannot be negative".to_string() });
+            }
+        }
+        
         let pool = get_pool()?;
         
         let record = AIGenerationHistory {
@@ -103,6 +136,15 @@ pub async fn create_ai_history(request: CreateAIHistoryRequest) -> Result<AIGene
 #[tauri::command]
 pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
     async fn get_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
+        // Input validation
+        crate::security::validation::validate_security_input(&project_id)?;
+        
+        if let Some(limit_val) = limit {
+            if limit_val < 0 {
+                return Err(crate::error::StoryWeaverError::InvalidInput { message: "limit cannot be negative".to_string() });
+            }
+        }
+        
         let pool = get_pool()?;
         AIHistoryOps::get_by_project(&pool, &project_id, limit).await
     }
@@ -114,6 +156,9 @@ pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Ve
 #[tauri::command]
 pub async fn get_ai_usage_stats(project_id: String) -> Result<AIUsageStats> {
     async fn get_stats(project_id: String) -> Result<AIUsageStats> {
+        // Input validation
+        crate::security::validation::validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let history = AIHistoryOps::get_by_project(&pool, &project_id, None).await?;
         
@@ -203,6 +248,9 @@ pub async fn get_ai_usage_stats(project_id: String) -> Result<AIUsageStats> {
 #[tauri::command]
 pub async fn get_ai_history_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
     async fn get_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
+        // Input validation
+        crate::security::validation::validate_security_input(&document_id)?;
+        
         let pool = get_pool()?;
         
         let history = sqlx::query_as::<_, AIGenerationHistory>(
@@ -223,6 +271,9 @@ pub async fn get_ai_history_by_document(document_id: String) -> Result<Vec<AIGen
 #[tauri::command]
 pub async fn delete_ai_history(id: String) -> Result<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        crate::security::validation::validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         
         sqlx::query("DELETE FROM ai_generation_history WHERE id = ?")
@@ -241,6 +292,9 @@ pub async fn delete_ai_history(id: String) -> Result<()> {
 #[tauri::command]
 pub async fn clear_ai_history(project_id: String) -> Result<()> {
     async fn clear(project_id: String) -> Result<()> {
+        // Input validation
+        crate::security::validation::validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         
         sqlx::query("DELETE FROM ai_generation_history WHERE project_id = ?")
@@ -274,6 +328,17 @@ pub async fn calculate_cost_estimate(
     output_tokens: i32,
 ) -> Result<CostEstimate> {
     async fn calculate(provider: String, model: String, input_tokens: i32, output_tokens: i32) -> Result<CostEstimate> {
+        // Input validation
+        crate::security::validation::validate_security_input(&provider)?;
+        crate::security::validation::validate_security_input(&model)?;
+        
+        if input_tokens < 0 {
+            return Err(crate::error::StoryWeaverError::InvalidInput { message: "input_tokens cannot be negative".to_string() });
+        }
+        
+        if output_tokens < 0 {
+            return Err(crate::error::StoryWeaverError::InvalidInput { message: "output_tokens cannot be negative".to_string() });
+        }
         // Cost calculation based on provider and model
         // These are approximate rates as of 2024 - should be updated regularly
         let estimated_cost = match provider.to_lowercase().as_str() {
@@ -351,6 +416,9 @@ pub async fn calculate_cost_estimate(
 #[tauri::command]
 pub async fn export_ai_history(project_id: String) -> Result<String> {
     async fn export(project_id: String) -> Result<String> {
+        // Input validation
+        crate::security::validation::validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let history = AIHistoryOps::get_by_project(&pool, &project_id, None).await?;
         

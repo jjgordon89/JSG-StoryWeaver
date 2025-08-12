@@ -178,7 +178,7 @@ pub fn run() {
             commands::ai_writing::rewrite_text,
             commands::ai_writing::expand_text,
             commands::ai_writing::describe_scene,
-            commands::ai_writing::brainstorm,
+            commands::ai_writing::brainstorm_ideas,
             commands::ai_writing::visualize_scene,
             commands::ai_writing::quick_edit,
             commands::ai_writing::quick_chat,

@@ -20,6 +20,30 @@ pub async fn create_background_task(
     metadata: Option<serde_json::Value>,
     task_manager: State<'_, BackgroundTaskManager>,
 ) -> Result<String> {
+    // Input validation
+    crate::security::validation::validate_security_input(&task_type)?;
+    crate::security::validation::validate_content_length(&description, 1000)?;
+    crate::security::validation::validate_security_input(&description)?;
+    
+    if description.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Description cannot be empty".to_string(),
+        });
+    }
+    
+    if priority > 3 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Priority must be between 0 and 3".to_string(),
+        });
+    }
+    
+    if let Some(ref proj_id) = project_id {
+        crate::security::validation::validate_security_input(proj_id)?;
+    }
+    
+    if let Some(ref doc_id) = document_id {
+        crate::security::validation::validate_security_input(doc_id)?;
+    }
     let task_type_enum = match task_type.as_str() {
         "ai_generation" => TaskType::AIGeneration,
         "database_operation" => TaskType::DatabaseOperation,
@@ -55,6 +79,8 @@ pub async fn create_background_task(
 /// Get a task by ID
 #[tauri::command]
 pub async fn get_background_task(task_id: String) -> Result<TaskResponse> {
+    // Input validation
+    crate::security::validation::validate_security_input(&task_id)?;
     let pool = get_pool()?;
     let task = BackgroundTaskOps::get_task(&pool, &task_id).await?;
     Ok(TaskResponse::from(task))
@@ -67,6 +93,26 @@ pub async fn get_all_background_tasks(
     _limit: Option<i32>,
     _offset: Option<i32>,
 ) -> Result<Vec<TaskResponse>> {
+    // Input validation
+    if let Some(ref status_val) = status {
+        crate::security::validation::validate_security_input(status_val)?;
+    }
+    
+    if let Some(limit) = _limit {
+        if limit < 0 {
+            return Err(StoryWeaverError::ValidationError {
+                message: "Limit cannot be negative".to_string(),
+            });
+        }
+    }
+    
+    if let Some(offset) = _offset {
+        if offset < 0 {
+            return Err(StoryWeaverError::ValidationError {
+                message: "Offset cannot be negative".to_string(),
+            });
+        }
+    }
     let pool = get_pool()?;
 
     let tasks = if let Some(s) = status {
@@ -86,11 +132,25 @@ pub async fn cancel_background_task(
     task_id: String,
     task_manager: State<'_, BackgroundTaskManager>,
 ) -> Result<()> {
+    // Input validation
+    crate::security::validation::validate_security_input(&task_id)?;
     task_manager.cancel_task(&task_id).await
 }
 
 #[tauri::command]
 pub async fn cleanup_old_background_tasks(days: i64) -> Result<usize> {
+    // Input validation
+    if days < 0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Days cannot be negative".to_string(),
+        });
+    }
+    
+    if days > 3650 { // Max 10 years
+        return Err(StoryWeaverError::ValidationError {
+            message: "Days cannot exceed 3650 (10 years)".to_string(),
+        });
+    }
     let pool = get_pool()?;
     BackgroundTaskOps::cleanup_old_tasks(&pool, days).await
 }

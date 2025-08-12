@@ -25,6 +25,50 @@ pub async fn create_plugin(
     max_tokens: Option<i32>,
     tags: Option<Vec<String>>,
 ) -> Result<Plugin> {
+    // Input validation
+    if name.trim().is_empty() {
+        return Err(StoryWeaverError::validation("Plugin name cannot be empty".to_string()));
+    }
+    if name.len() > 255 {
+        return Err(StoryWeaverError::validation("Plugin name too long (max 255 characters)".to_string()));
+    }
+    crate::security::validate_security_input(&name)?;
+    if description.trim().is_empty() {
+        return Err(StoryWeaverError::validation("Plugin description cannot be empty".to_string()));
+    }
+    if description.len() > 2000 {
+        return Err(StoryWeaverError::validation("Plugin description too long (max 2000 characters)".to_string()));
+    }
+    crate::security::validate_security_input(&description)?;
+    if version.trim().is_empty() {
+        return Err(StoryWeaverError::validation("Plugin version cannot be empty".to_string()));
+    }
+    if version.len() > 50 {
+        return Err(StoryWeaverError::validation("Plugin version too long (max 50 characters)".to_string()));
+    }
+    crate::security::validate_security_input(&version)?;
+    crate::security::validate_security_input(&creator_id)?;
+    if prompt_template.trim().is_empty() {
+        return Err(StoryWeaverError::validation("Prompt template cannot be empty".to_string()));
+    }
+    if prompt_template.len() > 10000 {
+        return Err(StoryWeaverError::validation("Prompt template too long (max 10000 characters)".to_string()));
+    }
+    crate::security::validate_security_input(&prompt_template)?;
+    if let Some(temp) = temperature {
+        if temp < 0.0 || temp > 2.0 {
+            return Err(StoryWeaverError::validation("Temperature must be between 0.0 and 2.0".to_string()));
+        }
+    }
+    if let Some(tokens) = max_tokens {
+        if tokens <= 0 || tokens > 100000 {
+            return Err(StoryWeaverError::validation("Max tokens must be between 1 and 100000".to_string()));
+        }
+    }
+    if let Some(ref model) = ai_model {
+        crate::security::validate_security_input(model)?;
+    }
+
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = PluginCategory::from_str(&category).map_err(|e| StoryWeaverError::invalid_input(e))?;
@@ -61,6 +105,11 @@ pub async fn create_plugin(
 /// Get plugin by ID
 #[tauri::command]
 pub async fn get_plugin(plugin_id: i32) -> Result<Option<Plugin>> {
+    // Input validation
+    if plugin_id <= 0 {
+        return Err(StoryWeaverError::validation("Invalid plugin_id".to_string()));
+    }
+
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
 
     plugin_ops::get_plugin_by_id(&pool, &plugin_id.to_string())
@@ -77,6 +126,24 @@ pub async fn search_plugins(
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<Vec<PluginSearchResult>> {
+    // Input validation
+    if let Some(ref q) = query {
+        if q.len() > 500 {
+            return Err(StoryWeaverError::validation("Search query too long (max 500 characters)".to_string()));
+        }
+        crate::security::validate_security_input(q)?;
+    }
+    if let Some(lim) = limit {
+        if lim <= 0 || lim > 100 {
+            return Err(StoryWeaverError::validation("Limit must be between 1 and 100".to_string()));
+        }
+    }
+    if let Some(off) = offset {
+        if off < 0 {
+            return Err(StoryWeaverError::validation("Offset cannot be negative".to_string()));
+        }
+    }
+
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     
     let category_enum = category

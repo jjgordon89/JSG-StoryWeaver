@@ -3,6 +3,9 @@
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::CharacterOps};
 use crate::error::Result;
+use crate::security::validation::{
+    validate_safe_name, validate_content_length, validate_security_input
+};
 use serde::{Deserialize, Serialize};
 
 /// Create character request
@@ -42,6 +45,48 @@ pub struct UpdateCharacterRequest {
 #[tauri::command]
 pub async fn create_character(request: CreateCharacterRequest) -> CommandResponse<Character> {
     async fn create(request: CreateCharacterRequest) -> Result<Character> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        validate_safe_name(&request.name)?;
+        
+        if let Some(ref description) = request.description {
+            validate_content_length(description, 5000)?;
+            validate_security_input(description)?;
+        }
+        
+        if let Some(age) = request.age {
+            if age < 0 || age > 1000 {
+                return Err(crate::error::StoryWeaverError::ValidationError {
+                    message: "Age must be between 0 and 1000".to_string(),
+                });
+            }
+        }
+        
+        if let Some(ref appearance) = request.appearance {
+            validate_content_length(appearance, 5000)?;
+            validate_security_input(appearance)?;
+        }
+        
+        if let Some(ref personality) = request.personality {
+            validate_content_length(personality, 5000)?;
+            validate_security_input(personality)?;
+        }
+        
+        if let Some(ref background) = request.background {
+            validate_content_length(background, 10000)?;
+            validate_security_input(background)?;
+        }
+        
+        if let Some(ref goals) = request.goals {
+            validate_content_length(goals, 5000)?;
+            validate_security_input(goals)?;
+        }
+        
+        if let Some(ref relationships) = request.relationships {
+            validate_content_length(relationships, 10000)?;
+            validate_security_input(relationships)?;
+        }
+        
         let pool = get_pool()?;
         
         let mut character = Character::new(
@@ -74,6 +119,9 @@ pub async fn create_character(request: CreateCharacterRequest) -> CommandRespons
 #[tauri::command]
 pub async fn get_characters(project_id: String) -> CommandResponse<Vec<Character>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Character>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         CharacterOps::get_by_project(&pool, &project_id).await
     }
@@ -85,6 +133,9 @@ pub async fn get_characters(project_id: String) -> CommandResponse<Vec<Character
 #[tauri::command]
 pub async fn get_character(id: String) -> CommandResponse<Option<Character>> {
     async fn get(id: String) -> Result<Option<Character>> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         
         let character = sqlx::query_as::<_, Character>("SELECT * FROM characters WHERE id = ?")
@@ -103,6 +154,56 @@ pub async fn get_character(id: String) -> CommandResponse<Option<Character>> {
 #[tauri::command]
 pub async fn update_character(request: UpdateCharacterRequest) -> CommandResponse<()> {
     async fn update(request: UpdateCharacterRequest) -> Result<()> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref name) = request.name {
+            validate_safe_name(name)?;
+        }
+        
+        if let Some(ref description) = request.description {
+            validate_content_length(description, 5000)?;
+            validate_security_input(description)?;
+        }
+        
+        if let Some(age) = request.age {
+            if age < 0 || age > 1000 {
+                return Err(crate::error::StoryWeaverError::ValidationError {
+                    message: "Age must be between 0 and 1000".to_string(),
+                });
+            }
+        }
+        
+        if let Some(ref appearance) = request.appearance {
+            validate_content_length(appearance, 5000)?;
+            validate_security_input(appearance)?;
+        }
+        
+        if let Some(ref personality) = request.personality {
+            validate_content_length(personality, 5000)?;
+            validate_security_input(personality)?;
+        }
+        
+        if let Some(ref background) = request.background {
+            validate_content_length(background, 10000)?;
+            validate_security_input(background)?;
+        }
+        
+        if let Some(ref goals) = request.goals {
+            validate_content_length(goals, 5000)?;
+            validate_security_input(goals)?;
+        }
+        
+        if let Some(ref relationships) = request.relationships {
+            validate_content_length(relationships, 10000)?;
+            validate_security_input(relationships)?;
+        }
+        
+        if let Some(ref metadata) = request.metadata {
+            validate_content_length(metadata, 5000)?;
+            validate_security_input(metadata)?;
+        }
+        
         let pool = get_pool()?;
         
         // Get existing character
@@ -158,6 +259,9 @@ pub async fn update_character(request: UpdateCharacterRequest) -> CommandRespons
 #[tauri::command]
 pub async fn delete_character(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         CharacterOps::delete(&pool, &id).await
     }
@@ -175,10 +279,13 @@ pub struct CharacterSummary {
     pub key_traits: Vec<String>,
 }
 
-/// Get character summaries for a project (lightweight version)
+/// Get character summaries for a project
 #[tauri::command]
 pub async fn get_character_summaries(project_id: String) -> CommandResponse<Vec<CharacterSummary>> {
     async fn get_summaries(project_id: String) -> Result<Vec<CharacterSummary>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let characters = CharacterOps::get_by_project(&pool, &project_id).await?;
         
@@ -250,6 +357,9 @@ pub struct CharacterRelationship {
 #[tauri::command]
 pub async fn get_character_relationships(project_id: String) -> CommandResponse<Vec<CharacterRelationship>> {
     async fn get_relationships(project_id: String) -> Result<Vec<CharacterRelationship>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let characters = CharacterOps::get_by_project(&pool, &project_id).await?;
         
@@ -311,6 +421,9 @@ pub struct CharacterStats {
 #[tauri::command]
 pub async fn get_character_stats(project_id: String) -> CommandResponse<CharacterStats> {
     async fn get_stats(project_id: String) -> Result<CharacterStats> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let characters = CharacterOps::get_by_project(&pool, &project_id).await?;
         
@@ -360,6 +473,9 @@ pub async fn get_character_stats(project_id: String) -> CommandResponse<Characte
 #[tauri::command]
 pub async fn get_characters_by_series(series_id: String) -> CommandResponse<Vec<Character>> {
     async fn get_by_series(series_id: String) -> Result<Vec<Character>> {
+        // Input validation
+        validate_security_input(&series_id)?;
+        
         let pool = get_pool()?;
         CharacterOps::get_by_series(&pool, &series_id).await
     }
@@ -371,6 +487,12 @@ pub async fn get_characters_by_series(series_id: String) -> CommandResponse<Vec<
 #[tauri::command]
 pub async fn get_visible_characters(project_id: String, series_id: Option<String>) -> CommandResponse<Vec<Character>> {
     async fn get_visible(project_id: String, series_id: Option<String>) -> Result<Vec<Character>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        if let Some(ref series_id) = series_id {
+            validate_security_input(series_id)?;
+        }
+        
         let pool = get_pool()?;
         CharacterOps::get_visible_by_project(&pool, &project_id, series_id.as_deref()).await
     }
@@ -382,6 +504,10 @@ pub async fn get_visible_characters(project_id: String, series_id: Option<String
 #[tauri::command]
 pub async fn share_character_to_series(character_id: String, series_id: String) -> CommandResponse<()> {
     async fn share_to_series(character_id: String, series_id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&character_id)?;
+        validate_security_input(&series_id)?;
+        
         let pool = get_pool()?;
         CharacterOps::share_to_series(&pool, &character_id, &series_id).await
     }
@@ -393,6 +519,9 @@ pub async fn share_character_to_series(character_id: String, series_id: String) 
 #[tauri::command]
 pub async fn unshare_character_from_series(character_id: String) -> CommandResponse<()> {
     async fn unshare_from_series(character_id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&character_id)?;
+        
         let pool = get_pool()?;
         CharacterOps::unshare_from_series(&pool, &character_id).await
     }

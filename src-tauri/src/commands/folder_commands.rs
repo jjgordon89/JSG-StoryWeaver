@@ -34,6 +34,18 @@ pub struct MoveItemsToFolderRequest {
 #[tauri::command]
 pub async fn create_folder(request: CreateFolderRequest) -> CommandResponse<Folder> {
     async fn create(request: CreateFolderRequest) -> Result<Folder> {
+        // Input validation
+        if request.name.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::validation("Folder name cannot be empty".to_string()));
+        }
+        if request.name.len() > 255 {
+            return Err(crate::error::StoryWeaverError::validation("Folder name too long (max 255 characters)".to_string()));
+        }
+        crate::security::validate_security_input(&request.name)?;
+        if let Some(ref parent_id) = request.parent_folder_id {
+            crate::security::validate_security_input(parent_id)?;
+        }
+
         let pool = get_pool()?;
         
         let folder = Folder {
@@ -54,6 +66,9 @@ pub async fn create_folder(request: CreateFolderRequest) -> CommandResponse<Fold
 #[tauri::command]
 pub async fn get_folder(id: String) -> CommandResponse<Option<Folder>> {
     async fn get(id: String) -> Result<Option<Folder>> {
+        // Input validation
+        crate::security::validate_security_input(&id)?;
+
         let pool = get_pool()?;
         FolderOps::get_by_id(&pool, &id).await
     }
@@ -72,10 +87,13 @@ pub async fn get_root_folders() -> CommandResponse<Vec<Folder>> {
     get_roots().await.into()
 }
 
-/// Get child folders for a parent folder
+/// Get child folders for a parent/// Get child folders
 #[tauri::command]
 pub async fn get_child_folders(parent_id: String) -> CommandResponse<Vec<Folder>> {
     async fn get_children(parent_id: String) -> Result<Vec<Folder>> {
+        // Input validation
+        crate::security::validate_security_input(&parent_id)?;
+
         let pool = get_pool()?;
         FolderOps::get_children(&pool, &parent_id).await
     }
@@ -98,6 +116,21 @@ pub async fn get_all_folders() -> CommandResponse<Vec<Folder>> {
 #[tauri::command]
 pub async fn update_folder(request: UpdateFolderRequest) -> CommandResponse<()> {
     async fn update(request: UpdateFolderRequest) -> Result<()> {
+        // Input validation
+        crate::security::validate_security_input(&request.id)?;
+        if let Some(ref name) = request.name {
+            if name.trim().is_empty() {
+                return Err(crate::error::StoryWeaverError::validation("Folder name cannot be empty".to_string()));
+            }
+            if name.len() > 255 {
+                return Err(crate::error::StoryWeaverError::validation("Folder name too long (max 255 characters)".to_string()));
+            }
+            crate::security::validate_security_input(name)?;
+        }
+        if let Some(ref parent_id) = request.parent_folder_id {
+            crate::security::validate_security_input(parent_id)?;
+        }
+
         let pool = get_pool()?;
         
         // Get existing folder
@@ -126,6 +159,11 @@ pub async fn update_folder(request: UpdateFolderRequest) -> CommandResponse<()> 
 #[tauri::command]
 pub async fn delete_folder(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        if !crate::security::is_safe_input(&id) {
+            return Err(crate::error::StoryWeaverError::validation("Invalid folder id".to_string()));
+        }
+
         let pool = get_pool()?;
         FolderOps::delete(&pool, &id).await
     }
@@ -133,10 +171,19 @@ pub async fn delete_folder(id: String) -> CommandResponse<()> {
     delete(id).await.into()
 }
 
-/// Move items to a folder
+/// Move items to folder
 #[tauri::command]
 pub async fn move_items_to_folder(request: MoveItemsToFolderRequest) -> CommandResponse<()> {
     async fn move_items(request: MoveItemsToFolderRequest) -> Result<()> {
+        // Input validation
+        crate::security::validate_security_input(&request.folder_id)?;
+        for project_id in &request.project_ids {
+            crate::security::validate_security_input(project_id)?;
+        }
+        for document_id in &request.document_ids {
+            crate::security::validate_security_input(document_id)?;
+        }
+
         let pool = get_pool()?;
         FolderOps::move_items_to_folder(
             &pool, 

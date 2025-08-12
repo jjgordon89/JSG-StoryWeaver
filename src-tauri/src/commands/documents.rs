@@ -3,6 +3,9 @@
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::DocumentOps};
 use crate::error::Result;
+use crate::security::validation::{
+    validate_document_name, validate_content_length, validate_security_input
+};
 use serde::{Deserialize, Serialize};
 
 /// Create document request
@@ -39,6 +42,27 @@ pub struct SearchDocumentsRequest {
 #[tauri::command]
 pub async fn create_document(request: CreateDocumentRequest) -> CommandResponse<Document> {
     async fn create(request: CreateDocumentRequest) -> Result<Document> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        validate_document_name(&request.title)?;
+        
+        if let Some(ref content) = request.content {
+            validate_content_length(content, 1_000_000)?; // 1MB limit for document content
+            validate_security_input(content)?;
+        }
+        
+        if let Some(order_index) = request.order_index {
+            if order_index < 0 || order_index > 10000 {
+                return Err(crate::error::StoryWeaverError::ValidationError {
+                    message: "Order index must be between 0 and 10,000".to_string()
+                });
+            }
+        }
+        
+        if let Some(ref parent_id) = request.parent_id {
+            validate_security_input(parent_id)?;
+        }
+        
         let pool = get_pool()?;
         
         let mut document = Document::new(
@@ -66,6 +90,9 @@ pub async fn create_document(request: CreateDocumentRequest) -> CommandResponse<
 #[tauri::command]
 pub async fn get_documents(project_id: String) -> CommandResponse<Vec<Document>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Document>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         DocumentOps::get_by_project(&pool, &project_id).await
     }
@@ -77,6 +104,9 @@ pub async fn get_documents(project_id: String) -> CommandResponse<Vec<Document>>
 #[tauri::command]
 pub async fn get_document(id: String) -> CommandResponse<Option<Document>> {
     async fn get(id: String) -> Result<Option<Document>> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         DocumentOps::get_by_id(&pool, &id).await
     }
@@ -88,6 +118,35 @@ pub async fn get_document(id: String) -> CommandResponse<Option<Document>> {
 #[tauri::command]
 pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<()> {
     async fn update(request: UpdateDocumentRequest) -> Result<()> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref title) = request.title {
+            validate_document_name(title)?;
+        }
+        
+        if let Some(ref content) = request.content {
+            validate_content_length(content, 1_000_000)?; // 1MB limit
+            validate_security_input(content)?;
+        }
+        
+        if let Some(order_index) = request.order_index {
+            if order_index < 0 || order_index > 10000 {
+                return Err(crate::error::StoryWeaverError::ValidationError {
+                    message: "Order index must be between 0 and 10,000".to_string()
+                });
+            }
+        }
+        
+        if let Some(ref parent_id) = request.parent_id {
+            validate_security_input(parent_id)?;
+        }
+        
+        if let Some(ref metadata) = request.metadata {
+            validate_content_length(metadata, 50000)?; // 50KB limit for metadata
+            validate_security_input(metadata)?;
+        }
+        
         let pool = get_pool()?;
         
         // Get existing document
@@ -125,6 +184,11 @@ pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<
 #[tauri::command]
 pub async fn save_document(id: String, content: String) -> CommandResponse<()> {
     async fn save(id: String, content: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        validate_content_length(&content, 1_000_000)?; // 1MB limit
+        validate_security_input(&content)?;
+        
         let pool = get_pool()?;
         
         // Get existing document
@@ -145,6 +209,9 @@ pub async fn save_document(id: String, content: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn delete_document(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         DocumentOps::delete(&pool, &id).await
     }
@@ -156,6 +223,17 @@ pub async fn delete_document(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_documents(request: SearchDocumentsRequest) -> CommandResponse<Vec<Document>> {
     async fn search(request: SearchDocumentsRequest) -> Result<Vec<Document>> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        validate_content_length(&request.query, 1000)?; // Limit search query length
+        validate_security_input(&request.query)?;
+        
+        if request.query.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Search query cannot be empty".to_string()
+            });
+        }
+        
         let pool = get_pool()?;
         DocumentOps::search(&pool, &request.project_id, &request.query).await
     }
@@ -174,6 +252,9 @@ pub struct DocumentTree {
 #[tauri::command]
 pub async fn get_document_tree(project_id: String) -> CommandResponse<Vec<DocumentTree>> {
     async fn get_tree(project_id: String) -> Result<Vec<DocumentTree>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let documents = DocumentOps::get_by_project(&pool, &project_id).await?;
         
@@ -251,6 +332,9 @@ pub struct DocumentStats {
 #[tauri::command]
 pub async fn get_document_stats(project_id: String) -> CommandResponse<DocumentStats> {
     async fn get_stats(project_id: String) -> Result<DocumentStats> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         
         // Get all documents for the project

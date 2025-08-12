@@ -119,6 +119,33 @@ pub async fn generate_with_prose_mode(
     request: ProseGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<AdvancedGenerationResult> {
+    // Input validation
+    crate::security::validation::validate_security_input(&request.project_id)?;
+    crate::security::validation::validate_security_input(&request.prose_mode)?;
+    crate::security::validation::validate_content_length(&request.text_context, 50000)?;
+    crate::security::validation::validate_security_input(&request.text_context)?;
+    crate::security::validation::validate_security_input(&request.generation_type)?;
+    
+    if let Some(ref doc_id) = request.document_id {
+        crate::security::validation::validate_security_input(doc_id)?;
+    }
+    
+    if let Some(max_words) = request.max_words {
+        if max_words < 0 {
+            return Err(StoryWeaverError::InvalidInput { message: "max_words cannot be negative".to_string() });
+        }
+    }
+    
+    for style_example in &request.style_examples {
+        crate::security::validation::validate_content_length(style_example, 10000)?;
+        crate::security::validation::validate_security_input(style_example)?;
+    }
+    
+    if let Some(ref instructions) = request.special_instructions {
+        crate::security::validation::validate_content_length(instructions, 5000)?;
+        crate::security::validation::validate_security_input(instructions)?;
+    }
+    
     let mut ai_manager = ai_state.lock().await;
 
     let advanced_request = AdvancedGenerationRequest {
@@ -147,6 +174,23 @@ pub async fn generate_image(
     request: ImageGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<GeneratedImage> {
+    // Input validation
+    crate::security::validation::validate_security_input(&request.project_id)?;
+    crate::security::validation::validate_content_length(&request.text_content, 10000)?;
+    crate::security::validation::validate_security_input(&request.text_content)?;
+    crate::security::validation::validate_content_length(&request.style_preference, 500)?;
+    crate::security::validation::validate_security_input(&request.style_preference)?;
+    crate::security::validation::validate_security_input(&request.resolution)?;
+    
+    if let Some(ref doc_id) = request.document_id {
+        crate::security::validation::validate_security_input(doc_id)?;
+    }
+    
+    if let Some(ref custom_prompt) = request.custom_prompt {
+        crate::security::validation::validate_content_length(custom_prompt, 5000)?;
+        crate::security::validation::validate_security_input(custom_prompt)?;
+    }
+    
     let mut ai_manager = ai_state.lock().await;
 
     let visualize_request = VisualizeRequest {
@@ -166,6 +210,27 @@ pub async fn create_brainstorm_session(
     request: BrainstormSessionRequest,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<String> {
+    // Input validation
+    crate::security::validation::validate_security_input(&request.project_id)?;
+    crate::security::validation::validate_security_input(&request.category)?;
+    crate::security::validation::validate_content_length(&request.focus_area, 500)?;
+    crate::security::validation::validate_security_input(&request.focus_area)?;
+    crate::security::validation::validate_content_length(&request.context, 10000)?;
+    crate::security::validation::validate_security_input(&request.context)?;
+    
+    if request.num_ideas == 0 || request.num_ideas > 100 {
+        return Err(StoryWeaverError::InvalidInput { message: "num_ideas must be between 1 and 100".to_string() });
+    }
+    
+    if request.creativity_level > 10 {
+        return Err(StoryWeaverError::InvalidInput { message: "creativity_level must be between 0 and 10".to_string() });
+    }
+    
+    for constraint in &request.constraints {
+        crate::security::validation::validate_content_length(constraint, 1000)?;
+        crate::security::validation::validate_security_input(constraint)?;
+    }
+    
     let mut ai_manager = ai_state.lock().await;
 
     let brainstorm_request = BrainstormRequest {
@@ -188,8 +253,11 @@ pub async fn get_brainstorm_session(
     session_id: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<Option<BrainstormSession>> {
-    let ai_manager = ai_state.lock().await;
-    Ok(ai_manager.get_brainstorm_session(&session_id).cloned())
+    // Input validation
+    crate::security::validation::validate_security_input(&session_id)?;
+    
+    let manager = ai_state.lock().await;
+    Ok(manager.get_brainstorm_session(&session_id))
 }
 
 #[tauri::command]
@@ -199,9 +267,16 @@ pub async fn rate_brainstorm_idea(
     rating: u32,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<()> {
-    let mut ai_manager = ai_state.lock().await;
-    ai_manager.rate_brainstorm_idea(&session_id, &idea_id, rating)?;
-    Ok(())
+    // Input validation
+    crate::security::validation::validate_security_input(&session_id)?;
+    crate::security::validation::validate_security_input(&idea_id)?;
+    
+    if rating > 10 {
+        return Err(StoryWeaverError::InvalidInput { message: "rating must be between 0 and 10".to_string() });
+    }
+    
+    let mut manager = ai_state.lock().await;
+    manager.rate_brainstorm_idea(&session_id, &idea_id, rating)
 }
 
 #[tauri::command]
@@ -211,9 +286,12 @@ pub async fn mark_idea_as_keeper(
     is_keeper: bool,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<()> {
-    let mut ai_manager = ai_state.lock().await;
-    ai_manager.mark_idea_as_keeper(&session_id, &idea_id, is_keeper)?;
-    Ok(())
+    // Input validation
+    crate::security::validation::validate_security_input(&session_id)?;
+    crate::security::validation::validate_security_input(&idea_id)?;
+    
+    let mut manager = ai_state.lock().await;
+    manager.mark_idea_as_keeper(&session_id, &idea_id, is_keeper)
 }
 
 // Style Examples Management
@@ -222,6 +300,21 @@ pub async fn add_style_example(
     request: StyleExampleRequest,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<StyleExample> {
+    // Input validation
+    crate::security::validation::validate_security_input(&request.project_id)?;
+    crate::security::validation::validate_content_length(&request.name, 200)?;
+    crate::security::validation::validate_security_input(&request.name)?;
+    crate::security::validation::validate_content_length(&request.content, 10000)?;
+    crate::security::validation::validate_security_input(&request.content)?;
+    
+    if request.name.trim().is_empty() {
+        return Err(StoryWeaverError::InvalidInput { message: "Style example name cannot be empty".to_string() });
+    }
+    
+    if request.content.trim().is_empty() {
+        return Err(StoryWeaverError::InvalidInput { message: "Style example content cannot be empty".to_string() });
+    }
+    
     let mut ai_manager = ai_state.lock().await;
 
     let analysis_result = ai_manager.analyze_style(&request.content).await?;
@@ -246,6 +339,14 @@ pub async fn analyze_text_style(
     content: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<StyleAnalysis> {
+    // Input validation
+    crate::security::validation::validate_content_length(&content, 50000)?;
+    crate::security::validation::validate_security_input(&content)?;
+    
+    if content.trim().is_empty() {
+        return Err(StoryWeaverError::InvalidInput { message: "Content cannot be empty".to_string() });
+    }
+    
     let ai_manager = ai_state.lock().await;
     ai_manager.analyze_style(&content).await
 }
@@ -264,6 +365,9 @@ pub async fn get_prose_mode_details(
     mode_name: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<Option<ProseMode>> {
+    // Input validation
+    crate::security::validation::validate_security_input(&mode_name)?;
+    
     let ai_manager = ai_state.lock().await;
     Ok(ai_manager
         .get_prose_modes()
@@ -278,6 +382,9 @@ pub async fn get_credit_usage(
     project_id: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<CreditUsageResponse> {
+    // Input validation
+    crate::security::validation::validate_security_input(&project_id)?;
+    
     let ai_manager = ai_state.lock().await;
 
     let project_usage = ai_manager.get_credit_usage(&project_id).await?;
@@ -298,6 +405,9 @@ pub async fn get_project_images(
     project_id: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<Vec<GeneratedImage>> {
+    // Input validation
+    crate::security::validation::validate_security_input(&project_id)?;
+    
     let ai_manager = ai_state.lock().await;
     ai_manager.get_generated_images(&project_id).await
 }
@@ -307,6 +417,9 @@ pub async fn delete_generated_image(
     image_id: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<()> {
+    // Input validation
+    crate::security::validation::validate_security_input(&image_id)?;
+    
     let mut ai_manager = ai_state.lock().await;
     ai_manager.delete_generated_image(&image_id).await
 }
@@ -319,6 +432,11 @@ pub async fn build_saliency_context(
     story_bible: SaliencyStoryBible,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<SaliencyContext> {
+    // Input validation
+    crate::security::validation::validate_security_input(&project_id)?;
+    crate::security::validation::validate_content_length(&text_context, 50000)?;
+    crate::security::validation::validate_security_input(&text_context)?;
+    
     let mut ai_manager = ai_state.lock().await;
     let story_bible_saliency = SaliencyStoryBible::from(story_bible);
 
@@ -335,6 +453,12 @@ pub async fn smart_import_content(
     content_type: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<SmartImportAnalysisResult> {
+    // Input validation
+    crate::security::validation::validate_security_input(&project_id)?;
+    crate::security::validation::validate_content_length(&content, 100000)?;
+    crate::security::validation::validate_security_input(&content)?;
+    crate::security::validation::validate_security_input(&content_type)?;
+    
     let ai_manager = ai_state.lock().await;
     ai_manager
         .analyze_content_for_import(&project_id, &content, &content_type)
@@ -347,6 +471,33 @@ pub async fn start_streaming_generation(
     request: ProseGenerationRequest,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<String> {
+    // Input validation (reuse the same validation as generate_with_prose_mode)
+    crate::security::validation::validate_security_input(&request.project_id)?;
+    crate::security::validation::validate_security_input(&request.prose_mode)?;
+    crate::security::validation::validate_content_length(&request.text_context, 50000)?;
+    crate::security::validation::validate_security_input(&request.text_context)?;
+    crate::security::validation::validate_security_input(&request.generation_type)?;
+    
+    if let Some(ref doc_id) = request.document_id {
+        crate::security::validation::validate_security_input(doc_id)?;
+    }
+    
+    if let Some(max_words) = request.max_words {
+        if max_words < 0 {
+            return Err(StoryWeaverError::InvalidInput { message: "max_words cannot be negative".to_string() });
+        }
+    }
+    
+    for style_example in &request.style_examples {
+        crate::security::validation::validate_content_length(style_example, 10000)?;
+        crate::security::validation::validate_security_input(style_example)?;
+    }
+    
+    if let Some(ref instructions) = request.special_instructions {
+        crate::security::validation::validate_content_length(instructions, 5000)?;
+        crate::security::validation::validate_security_input(instructions)?;
+    }
+    
     let mut ai_manager = ai_state.lock().await;
     let advanced_request = AdvancedGenerationRequest {
         project_id: request.project_id,
@@ -371,6 +522,9 @@ pub async fn get_stream_status(
     stream_id: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<HashMap<String, serde_json::Value>> {
+    // Input validation
+    crate::security::validation::validate_security_input(&stream_id)?;
+    
     let ai_manager = ai_state.lock().await;
     ai_manager.get_stream_status(&stream_id).await
 }

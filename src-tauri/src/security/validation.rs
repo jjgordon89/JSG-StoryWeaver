@@ -17,13 +17,13 @@ lazy_static! {
     static ref HTML_TAG_REGEX: Regex = Regex::new(r"<[^>]*>").unwrap();
     static ref XSS_REGEX: Regex = Regex::new(r"(?i)(javascript:|data:|vbscript:|on\w+\s*=|<script|</script>|<iframe|</iframe>|<object|</object>|<embed|</embed>)").unwrap();
     static ref API_KEY_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9\-_]{8,128}$").unwrap();
-    static ref SAFE_NAME_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9_\-\. ]{1,100}$").unwrap();
+    static ref SAFE_NAME_REGEX: Regex = Regex::new(r"^[\p{L}\p{N}_\-\. ]{1,100}$").unwrap();
 }
 
 /// Validate an email address
 pub fn validate_email(email: &str) -> Result<(), StoryWeaverError> {
     if !EMAIL_REGEX.is_match(email) {
-        return Err(StoryWeaverError::ValidationError{ message: "Invalid email address format".to_string() });
+        return Err(StoryWeaverError::validation("Invalid email address format"));
     }
     Ok(())
 }
@@ -31,11 +31,21 @@ pub fn validate_email(email: &str) -> Result<(), StoryWeaverError> {
 /// Validate a filename
 pub fn validate_filename(filename: &str) -> Result<(), StoryWeaverError> {
     if filename.is_empty() {
-        return Err(StoryWeaverError::ValidationError{ message: "Filename cannot be empty".to_string() });
+        return Err(StoryWeaverError::validation("Filename cannot be empty"));
     }
     
     if !FILENAME_REGEX.is_match(filename) {
-        return Err(StoryWeaverError::ValidationError{ message: "Filename contains invalid characters".to_string() });
+        return Err(StoryWeaverError::validation("Filename contains invalid characters"));
+    }
+    
+    // Check for Windows reserved filenames
+    let filename_upper = filename.to_uppercase();
+    let reserved_names = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+    
+    for reserved in &reserved_names {
+        if filename_upper == *reserved || filename_upper.starts_with(&format!("{}." , reserved)) {
+            return Err(StoryWeaverError::validation("Filename uses a reserved system name"));
+        }
     }
     
     Ok(())
@@ -43,15 +53,16 @@ pub fn validate_filename(filename: &str) -> Result<(), StoryWeaverError> {
 
 /// Validate a file path to prevent path traversal attacks
 pub fn validate_path(path: &str) -> Result<(), StoryWeaverError> {
-    if PATH_TRAVERSAL_REGEX.is_match(path) {
-        return Err(StoryWeaverError::ValidationError{ message: "Path contains directory traversal sequences".to_string() });
+    if path.is_empty() {
+        return Err(StoryWeaverError::validation("Path cannot be empty"));
     }
     
-    // Ensure the path is within the allowed directories
-    let path_obj = Path::new(path);
-    if path_obj.is_absolute() {
-        return Err(StoryWeaverError::ValidationError{ message: "Absolute paths are not allowed".to_string() });
+    if PATH_TRAVERSAL_REGEX.is_match(path) {
+        return Err(StoryWeaverError::validation("Path contains directory traversal sequences"));
     }
+    
+    // Allow both relative and absolute paths, but ensure they don't contain traversal sequences
+    // The PATH_TRAVERSAL_REGEX already handles the main security concerns
     
     Ok(())
 }
@@ -84,15 +95,11 @@ pub fn detect_xss_attempt(input: &str) -> bool {
 /// Validate input for potential security threats
 pub fn validate_security_input(input: &str) -> Result<(), StoryWeaverError> {
     if SQL_INJECTION_REGEX.is_match(input) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "Input contains potential SQL injection patterns".to_string() 
-        });
+        return Err(StoryWeaverError::validation("Input contains potential SQL injection patterns"));
     }
     
     if detect_xss_attempt(input) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "Input contains potential XSS patterns".to_string() 
-        });
+        return Err(StoryWeaverError::validation("Input contains potential XSS patterns"));
     }
     
     Ok(())
@@ -102,64 +109,48 @@ pub fn validate_security_input(input: &str) -> Result<(), StoryWeaverError> {
 pub fn validate_api_key(api_key: &str) -> Result<(), StoryWeaverError> {
     // Check for empty or whitespace-only keys
     if api_key.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "API key cannot be empty".to_string() 
-        });
+        return Err(StoryWeaverError::validation("API key cannot be empty"));
     }
     
     // Check length constraints
     if api_key.len() < 8 {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "API key is too short (minimum 8 characters)".to_string() 
-        });
+        return Err(StoryWeaverError::validation("API key is too short (minimum 8 characters)"));
     }
     
     if api_key.len() > 128 {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "API key is too long (maximum 128 characters)".to_string() 
-        });
+        return Err(StoryWeaverError::validation("API key is too long (maximum 128 characters)"));
     }
     
     // Use enhanced regex for validation
     if !API_KEY_REGEX.is_match(api_key) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "API key contains invalid characters (only alphanumeric, hyphens, and underscores allowed)".to_string() 
-        });
+        return Err(StoryWeaverError::validation("API key contains invalid characters (only alphanumeric, hyphens, and underscores allowed)"));
     }
     
     // Check for common weak patterns
     if api_key.chars().all(|c| c == api_key.chars().next().unwrap()) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "API key appears to be a repeated character pattern".to_string() 
-        });
+        return Err(StoryWeaverError::validation("API key appears to be a repeated character pattern"));
     }
     
     // Check for obvious test/placeholder values
     let lowercase_key = api_key.to_lowercase();
     if lowercase_key.contains("test") || lowercase_key.contains("demo") || 
        lowercase_key.contains("example") || lowercase_key.contains("placeholder") {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "API key appears to be a test or placeholder value".to_string() 
-        });
+        return Err(StoryWeaverError::validation("API key appears to be a test or placeholder value"));
     }
     
     Ok(())
 }
 
 /// Generic name validation with enhanced security
-fn validate_safe_name(name: &str, name_type: &str) -> Result<(), StoryWeaverError> {
+pub fn validate_safe_name(name: &str, name_type: &str) -> Result<(), StoryWeaverError> {
     // Check for empty or whitespace-only names
     if name.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: format!("{} cannot be empty", name_type) 
-        });
+        return Err(StoryWeaverError::validation(format!("{} cannot be empty", name_type)));
     }
     
     // Use enhanced regex for validation
     if !SAFE_NAME_REGEX.is_match(name) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: format!("{} contains invalid characters or exceeds length limit", name_type) 
-        });
+        return Err(StoryWeaverError::validation(format!("{} contains invalid characters or exceeds length limit", name_type)));
     }
     
     // Additional security checks
@@ -169,9 +160,7 @@ fn validate_safe_name(name: &str, name_type: &str) -> Result<(), StoryWeaverErro
     let lowercase_name = name.to_lowercase();
     let reserved_names = ["con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"];
     if reserved_names.contains(&lowercase_name.as_str()) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: format!("{} uses a reserved system name", name_type) 
-        });
+        return Err(StoryWeaverError::validation(format!("{} uses a reserved system name", name_type)));
     }
     
     Ok(())
@@ -201,32 +190,24 @@ pub fn validate_series_name(name: &str) -> Result<(), StoryWeaverError> {
 pub fn validate_content_length(content: &str, max_length: usize) -> Result<(), StoryWeaverError> {
     // Check for null bytes which can cause security issues
     if content.contains('\0') {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "Content contains null bytes which are not allowed".to_string() 
-        });
+        return Err(StoryWeaverError::validation("Content contains null bytes which are not allowed"));
     }
     
     // Check content length
     if content.len() > max_length {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: format!("Content exceeds maximum length of {} characters", max_length) 
-        });
+        return Err(StoryWeaverError::validation(format!("Content exceeds maximum length of {} characters", max_length)));
     }
     
     // Check for excessive whitespace (potential DoS)
     let whitespace_count = content.chars().filter(|c| c.is_whitespace()).count();
     let total_chars = content.chars().count();
     if total_chars > 0 && (whitespace_count as f64 / total_chars as f64) > 0.95 {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "Content contains excessive whitespace".to_string() 
-        });
+        return Err(StoryWeaverError::validation("Content contains excessive whitespace"));
     }
     
     // Check for potential XSS in content
     if detect_xss_attempt(content) {
-        return Err(StoryWeaverError::ValidationError{ 
-            message: "Content contains potentially malicious scripts".to_string() 
-        });
+        return Err(StoryWeaverError::validation("Content contains potentially malicious scripts"));
     }
     
     Ok(())

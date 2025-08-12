@@ -3,6 +3,7 @@
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::LocationOps};
 use crate::error::Result;
+use crate::security::validation::*;
 use serde::{Deserialize, Serialize};
 
 /// Create location request
@@ -40,6 +41,40 @@ pub struct UpdateLocationRequest {
 #[tauri::command]
 pub async fn create_location(request: CreateLocationRequest) -> CommandResponse<Location> {
     async fn create(request: CreateLocationRequest) -> Result<Location> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        validate_safe_name(&request.name)?;
+        
+        if let Some(ref description) = request.description {
+            validate_content_length(description, 10000)?;
+            validate_security_input(description)?;
+        }
+        
+        if let Some(ref location_type) = request.location_type {
+            validate_content_length(location_type, 100)?;
+            validate_security_input(location_type)?;
+        }
+        
+        if let Some(ref geography) = request.geography {
+            validate_content_length(geography, 5000)?;
+            validate_security_input(geography)?;
+        }
+        
+        if let Some(ref climate) = request.climate {
+            validate_content_length(climate, 5000)?;
+            validate_security_input(climate)?;
+        }
+        
+        if let Some(ref culture) = request.culture {
+            validate_content_length(culture, 10000)?;
+            validate_security_input(culture)?;
+        }
+        
+        if let Some(ref history) = request.history {
+            validate_content_length(history, 10000)?;
+            validate_security_input(history)?;
+        }
+        
         let pool = get_pool()?;
         
         let mut location = Location::new(
@@ -82,6 +117,9 @@ pub async fn create_location(request: CreateLocationRequest) -> CommandResponse<
 #[tauri::command]
 pub async fn get_locations(project_id: String) -> CommandResponse<Vec<Location>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Location>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         LocationOps::get_by_project(&pool, &project_id).await
     }
@@ -93,6 +131,9 @@ pub async fn get_locations(project_id: String) -> CommandResponse<Vec<Location>>
 #[tauri::command]
 pub async fn get_location(id: String) -> CommandResponse<Option<Location>> {
     async fn get(id: String) -> Result<Option<Location>> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         
         let location = sqlx::query_as::<_, Location>("SELECT * FROM locations WHERE id = ?")
@@ -111,6 +152,48 @@ pub async fn get_location(id: String) -> CommandResponse<Option<Location>> {
 #[tauri::command]
 pub async fn update_location(request: UpdateLocationRequest) -> CommandResponse<()> {
     async fn update(request: UpdateLocationRequest) -> Result<()> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref name) = request.name {
+            validate_safe_name(name)?;
+        }
+        
+        if let Some(ref description) = request.description {
+            validate_content_length(description, 10000)?;
+            validate_security_input(description)?;
+        }
+        
+        if let Some(ref location_type) = request.location_type {
+            validate_content_length(location_type, 100)?;
+            validate_security_input(location_type)?;
+        }
+        
+        if let Some(ref geography) = request.geography {
+            validate_content_length(geography, 5000)?;
+            validate_security_input(geography)?;
+        }
+        
+        if let Some(ref climate) = request.climate {
+            validate_content_length(climate, 5000)?;
+            validate_security_input(climate)?;
+        }
+        
+        if let Some(ref culture) = request.culture {
+            validate_content_length(culture, 10000)?;
+            validate_security_input(culture)?;
+        }
+        
+        if let Some(ref history) = request.history {
+            validate_content_length(history, 10000)?;
+            validate_security_input(history)?;
+        }
+        
+        if let Some(ref metadata) = request.metadata {
+            validate_content_length(metadata, 5000)?;
+            validate_security_input(metadata)?;
+        }
+        
         let pool = get_pool()?;
         
         // Get existing location
@@ -171,6 +254,9 @@ pub async fn update_location(request: UpdateLocationRequest) -> CommandResponse<
 #[tauri::command]
 pub async fn delete_location(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         LocationOps::delete(&pool, &id).await
     }
@@ -193,6 +279,9 @@ pub struct LocationSummary {
 #[tauri::command]
 pub async fn get_location_summaries(project_id: String) -> CommandResponse<Vec<LocationSummary>> {
     async fn get_summaries(project_id: String) -> Result<Vec<LocationSummary>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let locations = LocationOps::get_by_project(&pool, &project_id).await?;
         
@@ -285,6 +374,9 @@ pub struct LocationHierarchy {
 #[tauri::command]
 pub async fn get_location_hierarchy(location_id: String) -> CommandResponse<LocationHierarchy> {
     async fn get_hierarchy(location_id: String) -> Result<LocationHierarchy> {
+        // Input validation
+        validate_security_input(&location_id)?;
+        
         let pool = get_pool()?;
         
         // Get the main location
@@ -378,6 +470,9 @@ pub struct LocationStats {
 #[tauri::command]
 pub async fn get_location_stats(project_id: String) -> CommandResponse<LocationStats> {
     async fn get_stats(project_id: String) -> Result<LocationStats> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         let locations = LocationOps::get_by_project(&pool, &project_id).await?;
         

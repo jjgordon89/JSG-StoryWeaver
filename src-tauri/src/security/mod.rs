@@ -13,6 +13,9 @@ pub mod validation;
 pub mod audit;
 pub mod privacy;
 
+#[cfg(test)]
+mod tests;
+
 pub use api_keys::*;
 pub use encryption::*;
 pub use validation::*;

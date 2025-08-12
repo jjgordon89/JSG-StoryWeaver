@@ -10,6 +10,106 @@ use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 use chrono;
 
+/// Validate WriteSettings input
+fn validate_write_settings(settings: &WriteSettings) -> Result<()> {
+    // Validate creativity level (1-10)
+    if settings.creativity_level == 0 || settings.creativity_level > 10 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Creativity level must be between 1 and 10".to_string(),
+        });
+    }
+    
+    // Validate tone
+    crate::security::validation::validate_content_length(&settings.tone, 100)?;
+    crate::security::validation::validate_security_input(&settings.tone)?;
+    
+    if settings.tone.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Tone cannot be empty".to_string(),
+        });
+    }
+    
+    // Validate key details
+    crate::security::validation::validate_content_length(&settings.key_details, 5000)?;
+    crate::security::validation::validate_security_input(&settings.key_details)?;
+    
+    Ok(())
+}
+
+/// Validate RewriteSettings input
+fn validate_rewrite_settings(settings: &RewriteSettings) -> Result<()> {
+    // Validate creativity level (1-10)
+    if settings.creativity_level == 0 || settings.creativity_level > 10 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Creativity level must be between 1 and 10".to_string(),
+        });
+    }
+    
+    // Validate style
+    let valid_styles = ["rephrase", "shorter", "longer", "more_formal", "more_casual", "more_descriptive", "simpler"];
+    if !valid_styles.contains(&settings.style.as_str()) {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Invalid rewrite style".to_string(),
+        });
+    }
+    
+    Ok(())
+}
+
+/// Validate ExpandSettings input
+fn validate_expand_settings(settings: &ExpandSettings) -> Result<()> {
+    // Validate creativity level (1-10)
+    if settings.creativity_level == 0 || settings.creativity_level > 10 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Creativity level must be between 1 and 10".to_string(),
+        });
+    }
+    
+    // Validate focus
+    let valid_focuses = ["sensory_details", "dialogue", "action", "emotion", "setting"];
+    if !valid_focuses.contains(&settings.focus.as_str()) {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Invalid expand focus".to_string(),
+        });
+    }
+    
+    // Validate length multiplier
+    if settings.length_multiplier < 1.0 || settings.length_multiplier > 5.0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Length multiplier must be between 1.0 and 5.0".to_string(),
+        });
+    }
+    
+    Ok(())
+}
+
+/// Validate BrainstormSettings input
+fn validate_brainstorm_settings(settings: &BrainstormSettings) -> Result<()> {
+    // Validate creativity level (1-10)
+    if settings.creativity_level == 0 || settings.creativity_level > 10 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Creativity level must be between 1 and 10".to_string(),
+        });
+    }
+    
+    // Validate category
+    let valid_categories = ["characters", "plot_points", "settings", "conflicts", "themes"];
+    if !valid_categories.contains(&settings.category.as_str()) {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Invalid brainstorm category".to_string(),
+        });
+    }
+    
+    // Validate count
+    if settings.count == 0 || settings.count > 20 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Brainstorm count must be between 1 and 20".to_string(),
+        });
+    }
+    
+    Ok(())
+}
+
 // Placeholder structs for WriteProcessor and its dependencies
 pub struct ContextBuilder;
 impl ContextBuilder {
@@ -174,6 +274,16 @@ pub async fn auto_write(
     cursor_position: usize,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
+    // Input validation
+    if document_id <= 0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Document ID must be a positive integer".to_string(),
+        });
+    }
+    
+    // Validate WriteSettings
+    validate_write_settings(&settings)?;
+    
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     processor.auto_write(document_id, cursor_position, settings).await
 }
@@ -185,6 +295,26 @@ pub async fn guided_write(
     user_prompt: String,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
+    // Input validation
+    if document_id <= 0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Document ID must be a positive integer".to_string(),
+        });
+    }
+    
+    // Validate user prompt
+    crate::security::validation::validate_content_length(&user_prompt, 10000)?;
+    crate::security::validation::validate_security_input(&user_prompt)?;
+    
+    if user_prompt.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "User prompt cannot be empty".to_string(),
+        });
+    }
+    
+    // Validate WriteSettings
+    validate_write_settings(&settings)?;
+    
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     processor.guided_write(document_id, &user_prompt, settings).await
 }
@@ -198,6 +328,15 @@ pub async fn auto_write_stream(
     cursor_position: usize,
     settings: WriteSettings,
 ) -> Result<StreamStartResponse> {
+    // Input validation
+    if document_id <= 0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Document ID must be a positive integer".to_string(),
+        });
+    }
+    
+    // Validate WriteSettings
+    validate_write_settings(&settings)?;
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     let stream_id = format!("auto_write_{}_{}", document_id, chrono::Utc::now().timestamp_millis());
     let stream_id_clone = stream_id.clone();
@@ -256,6 +395,25 @@ pub async fn guided_write_stream(
     user_prompt: String,
     settings: WriteSettings,
 ) -> Result<StreamStartResponse> {
+    // Input validation
+    if document_id <= 0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Document ID must be a positive integer".to_string(),
+        });
+    }
+    
+    // Validate user prompt
+    crate::security::validation::validate_content_length(&user_prompt, 10000)?;
+    crate::security::validation::validate_security_input(&user_prompt)?;
+    
+    if user_prompt.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "User prompt cannot be empty".to_string(),
+        });
+    }
+    
+    // Validate WriteSettings
+    validate_write_settings(&settings)?;
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     let stream_id = format!("guided_write_{}_{}", document_id, chrono::Utc::now().timestamp_millis());
     let stream_id_clone = stream_id.clone();
@@ -335,6 +493,19 @@ pub async fn rewrite_text(
     text: String,
     settings: RewriteSettings,
 ) -> Result<String> {
+    // Input validation
+    if text.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Text to rewrite cannot be empty".to_string(),
+        });
+    }
+    
+    // Validate text content
+    crate::security::validation::validate_content_length(&text, 50000)?;
+    crate::security::validation::validate_security_input(&text)?;
+    
+    // Validate RewriteSettings
+    validate_rewrite_settings(&settings)?;
     match state.get_default_provider() {
         Some(provider) => {
             let rewrite_style = match settings.style.as_str() {
@@ -360,6 +531,19 @@ pub async fn expand_text(
     text: String,
     settings: ExpandSettings,
 ) -> Result<String> {
+    // Input validation
+    if text.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Text to expand cannot be empty".to_string(),
+        });
+    }
+    
+    // Validate text content
+    crate::security::validation::validate_content_length(&text, 50000)?;
+    crate::security::validation::validate_security_input(&text)?;
+    
+    // Validate ExpandSettings
+    validate_expand_settings(&settings)?;
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -384,6 +568,21 @@ pub async fn describe_scene(
     text: String,
     focus: Option<String>,
 ) -> Result<String> {
+    // Input validation
+    if text.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Scene text cannot be empty".to_string(),
+        });
+    }
+    
+    crate::security::validation::validate_content_length(&text, 10000)?;
+    crate::security::validation::validate_security_input(&text)?;
+    
+    if let Some(ref focus_val) = focus {
+        crate::security::validation::validate_content_length(focus_val, 100)?;
+        crate::security::validation::validate_security_input(focus_val)?;
+    }
+    
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -403,11 +602,24 @@ pub async fn describe_scene(
 }
 
 #[tauri::command]
-pub async fn brainstorm(
+pub async fn brainstorm_ideas(
     state: State<'_, Arc<AIProviderManager>>,
     prompt: String,
     settings: BrainstormSettings,
 ) -> Result<Vec<String>> {
+    // Input validation
+    if prompt.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Brainstorm prompt cannot be empty".to_string(),
+        });
+    }
+    
+    // Validate prompt content
+    crate::security::validation::validate_content_length(&prompt, 5000)?;
+    crate::security::validation::validate_security_input(&prompt)?;
+    
+    // Validate BrainstormSettings
+    validate_brainstorm_settings(&settings)?;
     match state.get_default_provider() {
         Some(provider) => {
             let mut context = crate::ai::AIContext::default();
@@ -430,6 +642,16 @@ pub async fn visualize_scene(
     state: State<'_, Arc<AIProviderManager>>,
     description: String,
 ) -> Result<String> {
+    // Input validation
+    if description.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Scene description cannot be empty".to_string(),
+        });
+    }
+    
+    crate::security::validation::validate_content_length(&description, 5000)?;
+    crate::security::validation::validate_security_input(&description)?;
+    
     match state.get_default_provider() {
         Some(provider) => {
             provider.generate_image(&description).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
@@ -444,6 +666,24 @@ pub async fn quick_edit(
     text: String,
     instruction: String,
 ) -> Result<String> {
+    // Input validation
+    if text.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Text to edit cannot be empty".to_string(),
+        });
+    }
+    
+    if instruction.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Edit instruction cannot be empty".to_string(),
+        });
+    }
+    
+    crate::security::validation::validate_content_length(&text, 10000)?;
+    crate::security::validation::validate_security_input(&text)?;
+    crate::security::validation::validate_content_length(&instruction, 1000)?;
+    crate::security::validation::validate_security_input(&instruction)?;
+    
     match state.get_default_provider() {
         Some(provider) => {
             provider.quick_edit(&text, &instruction).await.map_err(|e| StoryWeaverError::ai(e.to_string()))
@@ -458,6 +698,21 @@ pub async fn quick_chat(
     message: String,
     context: Option<String>,
 ) -> Result<String> {
+    // Input validation
+    if message.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Chat message cannot be empty".to_string(),
+        });
+    }
+    
+    crate::security::validation::validate_content_length(&message, 5000)?;
+    crate::security::validation::validate_security_input(&message)?;
+    
+    if let Some(ref ctx) = context {
+        crate::security::validation::validate_content_length(ctx, 10000)?;
+        crate::security::validation::validate_security_input(ctx)?;
+    }
+    
     match state.get_default_provider() {
         Some(provider) => {
             let mut ai_context = crate::ai::AIContext::default();
@@ -479,6 +734,25 @@ pub async fn tone_shift_write(
     tone: String,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
+    // Input validation
+    if document_id <= 0 {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Document ID must be a positive integer".to_string(),
+        });
+    }
+    
+    if tone.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Tone cannot be empty".to_string(),
+        });
+    }
+    
+    crate::security::validation::validate_content_length(&tone, 100)?;
+    crate::security::validation::validate_security_input(&tone)?;
+    
+    // Validate WriteSettings
+    validate_write_settings(&settings)?;
+    
     let processor = WriteProcessor::new(state.inner().clone(), ContextBuilder);
     
     // Create modified settings with the specified tone
@@ -494,6 +768,21 @@ pub async fn get_related_words(
     word: String,
     context: Option<String>,
 ) -> Result<Vec<String>> {
+    // Input validation
+    if word.trim().is_empty() {
+        return Err(StoryWeaverError::ValidationError {
+            message: "Word cannot be empty".to_string(),
+        });
+    }
+    
+    crate::security::validation::validate_content_length(&word, 100)?;
+    crate::security::validation::validate_security_input(&word)?;
+    
+    if let Some(ref ctx) = context {
+        crate::security::validation::validate_content_length(ctx, 5000)?;
+        crate::security::validation::validate_security_input(ctx)?;
+    }
+    
     match state.get_default_provider() {
         Some(provider) => {
             let mut ai_context = crate::ai::AIContext::default();

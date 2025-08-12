@@ -3,6 +3,7 @@
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::{Result, StoryWeaverError};
+use crate::security::validation::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -27,6 +28,55 @@ pub struct CreateOrUpdateStoryBibleRequest {
 #[tauri::command]
 pub async fn create_or_update_story_bible(request: CreateOrUpdateStoryBibleRequest) -> CommandResponse<StoryBible> {
     async fn create_or_update(request: CreateOrUpdateStoryBibleRequest) -> Result<StoryBible> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        
+        if let Some(ref braindump) = request.braindump {
+            validate_content_length(braindump, 50000)?;
+            validate_security_input(braindump)?;
+        }
+        
+        if let Some(ref synopsis) = request.synopsis {
+            validate_content_length(synopsis, 10000)?;
+            validate_security_input(synopsis)?;
+        }
+        
+        if let Some(ref genre) = request.genre {
+            validate_content_length(genre, 500)?;
+            validate_security_input(genre)?;
+        }
+        
+        if let Some(ref style) = request.style {
+            validate_content_length(style, 5000)?;
+            validate_security_input(style)?;
+        }
+        
+        if let Some(ref style_examples) = request.style_examples {
+            validate_content_length(style_examples, 20000)?;
+            validate_security_input(style_examples)?;
+        }
+        
+        if let Some(ref pov_mode) = request.pov_mode {
+            validate_content_length(pov_mode, 100)?;
+            validate_security_input(pov_mode)?;
+        }
+        
+        if let Some(ref global_pov) = request.global_pov {
+            validate_content_length(global_pov, 100)?;
+            validate_security_input(global_pov)?;
+        }
+        
+        if let Some(ref global_tense) = request.global_tense {
+            validate_content_length(global_tense, 100)?;
+            validate_security_input(global_tense)?;
+        }
+        
+        if let Some(ref character_pov_ids) = request.global_character_pov_ids {
+            for id in character_pov_ids {
+                validate_security_input(id)?;
+            }
+        }
+        
         let pool = get_pool()?;
         
         let story_bible = StoryBible {
@@ -55,6 +105,9 @@ pub async fn create_or_update_story_bible(request: CreateOrUpdateStoryBibleReque
 #[tauri::command]
 pub async fn get_story_bible(project_id: String) -> CommandResponse<Option<StoryBible>> {
     async fn get_by_project(project_id: String) -> Result<Option<StoryBible>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         match StoryBibleOps::get_by_project(&pool, &project_id).await {
             Ok(story_bible) => Ok(Some(story_bible)),
@@ -110,6 +163,12 @@ pub struct UpdateCharacterTraitRequest {
 #[tauri::command]
 pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> CommandResponse<CharacterTrait> {
     async fn create(request: CreateCharacterTraitRequest) -> Result<CharacterTrait> {
+        // Input validation
+        validate_security_input(&request.character_id)?;
+        validate_safe_name(&request.trait_name)?;
+        validate_content_length(&request.trait_value, 5000)?;
+        validate_security_input(&request.trait_value)?;
+        
         let pool = get_pool()?;
         
         let is_visible = request.visibility
@@ -135,6 +194,9 @@ pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> Com
 #[tauri::command]
 pub async fn get_character_traits(character_id: String) -> CommandResponse<Vec<CharacterTrait>> {
     async fn get_by_character(character_id: String) -> Result<Vec<CharacterTrait>> {
+        // Input validation
+        validate_security_input(&character_id)?;
+        
         let pool = get_pool()?;
         CharacterTraitOps::get_by_character(&pool, &character_id).await
     }
@@ -146,6 +208,18 @@ pub async fn get_character_traits(character_id: String) -> CommandResponse<Vec<C
 #[tauri::command]
 pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> CommandResponse<()> {
     async fn update(request: UpdateCharacterTraitRequest) -> Result<()> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref trait_name) = request.trait_name {
+            validate_safe_name(trait_name)?;
+        }
+        
+        if let Some(ref trait_value) = request.trait_value {
+            validate_content_length(trait_value, 5000)?;
+            validate_security_input(trait_value)?;
+        }
+        
         let pool = get_pool()?;
         
         // Get the existing trait
@@ -173,6 +247,9 @@ pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> Com
 #[tauri::command]
 pub async fn delete_character_trait(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         CharacterTraitOps::delete(&pool, &id).await
     }
@@ -209,6 +286,28 @@ pub struct UpdateWorldElementRequest {
 #[tauri::command]
 pub async fn create_world_element(request: CreateWorldElementRequest) -> CommandResponse<WorldElement> {
     async fn create(request: CreateWorldElementRequest) -> Result<WorldElement> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        validate_safe_name(&request.name)?;
+        validate_safe_name(&request.element_type)?;
+        
+        if let Some(ref series_id) = request.series_id {
+            validate_security_input(series_id)?;
+        }
+        
+        if let Some(ref description) = request.description {
+            validate_content_length(description, 10000)?;
+            validate_security_input(description)?;
+        }
+        
+        if let Some(ref properties) = request.properties {
+            for (key, value) in properties {
+                validate_safe_name(key)?;
+                validate_content_length(value, 5000)?;
+                validate_security_input(value)?;
+            }
+        }
+        
         let pool = get_pool()?;
         
         let element = WorldElement {
@@ -235,6 +334,9 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
 #[tauri::command]
 pub async fn get_world_elements(project_id: String) -> CommandResponse<Vec<WorldElement>> {
     async fn get_by_project(project_id: String) -> Result<Vec<WorldElement>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         WorldElementOps::get_by_project(&pool, &project_id).await
     }
@@ -246,6 +348,9 @@ pub async fn get_world_elements(project_id: String) -> CommandResponse<Vec<World
 #[tauri::command]
 pub async fn get_world_element(id: String) -> CommandResponse<Option<WorldElement>> {
     async fn get(id: String) -> Result<Option<WorldElement>> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         WorldElementOps::get_by_id(&pool, &id).await
     }
@@ -257,6 +362,30 @@ pub async fn get_world_element(id: String) -> CommandResponse<Option<WorldElemen
 #[tauri::command]
 pub async fn update_world_element(request: UpdateWorldElementRequest) -> CommandResponse<()> {
     async fn update(request: UpdateWorldElementRequest) -> Result<()> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref name) = request.name {
+            validate_safe_name(name)?;
+        }
+        
+        if let Some(ref description) = request.description {
+            validate_content_length(description, 10000)?;
+            validate_security_input(description)?;
+        }
+        
+        if let Some(ref element_type) = request.element_type {
+            validate_safe_name(element_type)?;
+        }
+        
+        if let Some(ref properties) = request.properties {
+            for (key, value) in properties {
+                validate_safe_name(key)?;
+                validate_content_length(value, 5000)?;
+                validate_security_input(value)?;
+            }
+        }
+        
         let pool = get_pool()?;
         
         // Get the existing world element
@@ -293,6 +422,9 @@ pub async fn update_world_element(request: UpdateWorldElementRequest) -> Command
 #[tauri::command]
 pub async fn delete_world_element(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         WorldElementOps::delete(&pool, &id).await
     }
@@ -304,6 +436,15 @@ pub async fn delete_world_element(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_world_elements(project_id: String, query: String) -> CommandResponse<Vec<WorldElement>> {
     async fn search(project_id: String, query: String) -> Result<Vec<WorldElement>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        validate_content_length(&query, 1000)?;
+        validate_security_input(&query)?;
+        
+        if query.trim().is_empty() {
+            return Err(StoryWeaverError::validation("Search query cannot be empty"));
+        }
+        
         let pool = get_pool()?;
         WorldElementOps::search(&pool, &project_id, &query).await
     }
@@ -340,6 +481,39 @@ pub struct UpdateOutlineRequest {
 #[tauri::command]
 pub async fn create_outline(request: CreateOutlineRequest) -> CommandResponse<Outline> {
     async fn create(request: CreateOutlineRequest) -> Result<Outline> {
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        
+        if request.chapter_number < 1 || request.chapter_number > 10000 {
+            return Err(StoryWeaverError::validation("Chapter number must be between 1 and 10000"));
+        }
+        
+        if let Some(ref title) = request.title {
+            validate_content_length(title, 500)?;
+            validate_security_input(title)?;
+        }
+        
+        if let Some(ref summary) = request.summary {
+            validate_content_length(summary, 10000)?;
+            validate_security_input(summary)?;
+        }
+        
+        if let Some(ref pov) = request.pov {
+            validate_content_length(pov, 100)?;
+            validate_security_input(pov)?;
+        }
+        
+        if let Some(ref tense) = request.tense {
+            validate_content_length(tense, 100)?;
+            validate_security_input(tense)?;
+        }
+        
+        if let Some(ref character_pov_ids) = request.character_pov_ids {
+            for id in character_pov_ids {
+                validate_security_input(id)?;
+            }
+        }
+        
         let pool = get_pool()?;
         
         let outline = Outline {
@@ -365,6 +539,9 @@ pub async fn create_outline(request: CreateOutlineRequest) -> CommandResponse<Ou
 #[tauri::command]
 pub async fn get_outlines(project_id: String) -> CommandResponse<Vec<Outline>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Outline>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
         let pool = get_pool()?;
         OutlineOps::get_by_project(&pool, &project_id).await
     }
@@ -376,6 +553,9 @@ pub async fn get_outlines(project_id: String) -> CommandResponse<Vec<Outline>> {
 #[tauri::command]
 pub async fn get_outline(id: String) -> CommandResponse<Outline> {
     async fn get(id: String) -> Result<Outline> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         OutlineOps::get_by_id(&pool, &id).await
     }
@@ -387,6 +567,13 @@ pub async fn get_outline(id: String) -> CommandResponse<Outline> {
 #[tauri::command]
 pub async fn get_outline_by_chapter(project_id: String, chapter_number: i32) -> CommandResponse<Option<Outline>> {
     async fn get_by_chapter(project_id: String, chapter_number: i32) -> Result<Option<Outline>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        
+        if chapter_number < 1 || chapter_number > 10000 {
+            return Err(StoryWeaverError::validation("Chapter number must be between 1 and 10000"));
+        }
+        
         let pool = get_pool()?;
         OutlineOps::get_by_chapter(&pool, &project_id, chapter_number).await
     }
@@ -398,6 +585,35 @@ pub async fn get_outline_by_chapter(project_id: String, chapter_number: i32) -> 
 #[tauri::command]
 pub async fn update_outline(request: UpdateOutlineRequest) -> CommandResponse<()> {
     async fn update(request: UpdateOutlineRequest) -> Result<()> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref title) = request.title {
+            validate_content_length(title, 500)?;
+            validate_security_input(title)?;
+        }
+        
+        if let Some(ref summary) = request.summary {
+            validate_content_length(summary, 10000)?;
+            validate_security_input(summary)?;
+        }
+        
+        if let Some(ref pov) = request.pov {
+            validate_content_length(pov, 100)?;
+            validate_security_input(pov)?;
+        }
+        
+        if let Some(ref tense) = request.tense {
+            validate_content_length(tense, 100)?;
+            validate_security_input(tense)?;
+        }
+        
+        if let Some(ref character_pov_ids) = request.character_pov_ids {
+            for id in character_pov_ids {
+                validate_security_input(id)?;
+            }
+        }
+        
         let pool = get_pool()?;
         
         // Get the existing outline
@@ -431,6 +647,9 @@ pub async fn update_outline(request: UpdateOutlineRequest) -> CommandResponse<()
 #[tauri::command]
 pub async fn delete_outline(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         OutlineOps::delete(&pool, &id).await
     }
@@ -442,6 +661,15 @@ pub async fn delete_outline(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_outlines(project_id: String, query: String) -> CommandResponse<Vec<Outline>> {
     async fn search(project_id: String, query: String) -> Result<Vec<Outline>> {
+        // Input validation
+        validate_security_input(&project_id)?;
+        validate_content_length(&query, 1000)?;
+        validate_security_input(&query)?;
+        
+        if query.trim().is_empty() {
+            return Err(StoryWeaverError::validation("Search query cannot be empty"));
+        }
+        
         let pool = get_pool()?;
         OutlineOps::search(&pool, &project_id, &query).await
     }
@@ -484,6 +712,56 @@ pub struct UpdateSceneRequest {
 #[tauri::command]
 pub async fn create_scene(request: CreateSceneRequest) -> CommandResponse<Scene> {
     async fn create(request: CreateSceneRequest) -> Result<Scene> {
+        // Input validation
+        validate_security_input(&request.outline_id)?;
+        
+        if request.scene_number < 1 || request.scene_number > 10000 {
+            return Err(StoryWeaverError::validation("Scene number must be between 1 and 10000"));
+        }
+        
+        if let Some(ref title) = request.title {
+            validate_content_length(title, 500)?;
+            validate_security_input(title)?;
+        }
+        
+        if let Some(ref summary) = request.summary {
+            validate_content_length(summary, 10000)?;
+            validate_security_input(summary)?;
+        }
+        
+        if let Some(ref extra_instructions) = request.extra_instructions {
+            validate_content_length(extra_instructions, 5000)?;
+            validate_security_input(extra_instructions)?;
+        }
+        
+        if let Some(ref pov) = request.pov {
+            validate_content_length(pov, 100)?;
+            validate_security_input(pov)?;
+        }
+        
+        if let Some(ref tense) = request.tense {
+            validate_content_length(tense, 100)?;
+            validate_security_input(tense)?;
+        }
+        
+        if let Some(ref character_pov_ids) = request.character_pov_ids {
+            for id in character_pov_ids {
+                validate_security_input(id)?;
+            }
+        }
+        
+        if let Some(word_count) = request.word_count_estimate {
+            if word_count < 0 || word_count > 1000000 {
+                return Err(StoryWeaverError::validation("Word count estimate must be between 0 and 1,000,000"));
+            }
+        }
+        
+        if let Some(credit_estimate) = request.credit_estimate {
+            if credit_estimate < 0.0 || credit_estimate > 1000000.0 {
+                return Err(StoryWeaverError::validation("Credit estimate must be between 0 and 1,000,000"));
+            }
+        }
+        
         let pool = get_pool()?;
         
         let scene = Scene {
@@ -514,6 +792,9 @@ pub async fn create_scene(request: CreateSceneRequest) -> CommandResponse<Scene>
 #[tauri::command]
 pub async fn get_scenes(outline_id: String) -> CommandResponse<Vec<Scene>> {
     async fn get_by_outline(outline_id: String) -> Result<Vec<Scene>> {
+        // Input validation
+        validate_security_input(&outline_id)?;
+        
         let pool = get_pool()?;
         SceneOps::get_by_outline(&pool, &outline_id).await
     }
@@ -525,6 +806,9 @@ pub async fn get_scenes(outline_id: String) -> CommandResponse<Vec<Scene>> {
 #[tauri::command]
 pub async fn get_scene(id: String) -> CommandResponse<Scene> {
     async fn get(id: String) -> Result<Scene> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         SceneOps::get_by_id(&pool, &id).await
     }
@@ -536,6 +820,52 @@ pub async fn get_scene(id: String) -> CommandResponse<Scene> {
 #[tauri::command]
 pub async fn update_scene(request: UpdateSceneRequest) -> CommandResponse<Scene> {
     async fn update(request: UpdateSceneRequest) -> Result<Scene> {
+        // Input validation
+        validate_security_input(&request.id)?;
+        
+        if let Some(ref title) = request.title {
+            validate_content_length(title, 500)?;
+            validate_security_input(title)?;
+        }
+        
+        if let Some(ref summary) = request.summary {
+            validate_content_length(summary, 10000)?;
+            validate_security_input(summary)?;
+        }
+        
+        if let Some(ref extra_instructions) = request.extra_instructions {
+            validate_content_length(extra_instructions, 5000)?;
+            validate_security_input(extra_instructions)?;
+        }
+        
+        if let Some(ref pov) = request.pov {
+            validate_content_length(pov, 100)?;
+            validate_security_input(pov)?;
+        }
+        
+        if let Some(ref tense) = request.tense {
+            validate_content_length(tense, 100)?;
+            validate_security_input(tense)?;
+        }
+        
+        if let Some(ref character_pov_ids) = request.character_pov_ids {
+            for id in character_pov_ids {
+                validate_security_input(id)?;
+            }
+        }
+        
+        if let Some(word_count) = request.word_count_estimate {
+            if word_count < 0 || word_count > 1000000 {
+                return Err(StoryWeaverError::validation("Word count estimate must be between 0 and 1,000,000"));
+            }
+        }
+        
+        if let Some(credit_estimate) = request.credit_estimate {
+            if credit_estimate < 0.0 || credit_estimate > 1000000.0 {
+                return Err(StoryWeaverError::validation("Credit estimate must be between 0 and 1,000,000"));
+            }
+        }
+        
         let pool = get_pool()?;
         
         // Get the existing scene first
@@ -561,6 +891,9 @@ pub async fn update_scene(request: UpdateSceneRequest) -> CommandResponse<Scene>
 #[tauri::command]
 pub async fn delete_scene(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         SceneOps::delete(&pool, &id).await
     }
@@ -572,6 +905,9 @@ pub async fn delete_scene(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn validate_scene(id: String) -> CommandResponse<()> {
     async fn validate(id: String) -> Result<()> {
+        // Input validation
+        validate_security_input(&id)?;
+        
         let pool = get_pool()?;
         SceneOps::get_validated(&pool, &id).await?;
         Ok(())
@@ -584,6 +920,15 @@ pub async fn validate_scene(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_scenes(outline_id: String, query: String) -> CommandResponse<Vec<Scene>> {
     async fn search(outline_id: String, query: String) -> Result<Vec<Scene>> {
+        // Input validation
+        validate_security_input(&outline_id)?;
+        validate_content_length(&query, 1000)?;
+        validate_security_input(&query)?;
+        
+        if query.trim().is_empty() {
+            return Err(StoryWeaverError::validation("Search query cannot be empty"));
+        }
+        
         let pool = get_pool()?;
         SceneOps::search(&pool, &outline_id, &query).await
     }

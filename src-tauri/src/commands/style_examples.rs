@@ -52,6 +52,17 @@ impl From<StyleExample> for StyleExampleResponse {
 pub async fn create_style_example(
     request: CreateStyleExampleRequest,
 ) -> Result<StyleExampleResponse> {
+    // Input validation
+    crate::security::validate_security_input(&request.project_id)?;
+    crate::security::validate_security_input(&request.user_id)?;
+    if request.example_text.trim().is_empty() {
+        return Err(StoryWeaverError::validation("Example text cannot be empty".to_string()));
+    }
+    if request.example_text.len() > 20000 {
+        return Err(StoryWeaverError::validation("Example text too long (max 20000 characters)".to_string()));
+    }
+    crate::security::validate_security_input(&request.example_text)?;
+
     let pool = get_pool()?;
     
     let style_example = StyleExample::new(
@@ -69,6 +80,9 @@ pub async fn create_style_example(
 pub async fn get_style_examples_by_project(
     project_id: String,
 ) -> Result<Vec<StyleExampleResponse>> {
+    // Input validation
+    crate::security::validate_security_input(&project_id)?;
+
     let pool = get_pool()?;
     
     let style_examples = StyleExampleOps::get_by_project(&pool, &project_id).await?;
@@ -80,6 +94,9 @@ pub async fn get_style_examples_by_project(
 pub async fn get_analyzed_style_examples(
     project_id: String,
 ) -> Result<Vec<StyleExampleResponse>> {
+    // Input validation
+    crate::security::validate_security_input(&project_id)?;
+
     let pool = get_pool()?;
     
     let style_examples = StyleExampleOps::get_analyzed_by_project(&pool, &project_id).await?;
@@ -91,6 +108,11 @@ pub async fn get_analyzed_style_examples(
 pub async fn get_style_example_by_id(
     id: i64,
 ) -> Result<StyleExampleResponse> {
+    // Input validation
+    if id <= 0 {
+        return Err(StoryWeaverError::validation("Invalid id".to_string()));
+    }
+
     let pool = get_pool()?;
     
     let style_example = StyleExampleOps::get_by_id(&pool, id).await
@@ -106,6 +128,32 @@ pub async fn get_style_example_by_id(
 pub async fn update_style_example(
     request: UpdateStyleExampleRequest,
 ) -> Result<StyleExampleResponse> {
+    // Input validation
+    if request.id <= 0 {
+        return Err(StoryWeaverError::validation("Invalid id".to_string()));
+    }
+    if let Some(ref example_text) = request.example_text {
+        if example_text.trim().is_empty() {
+            return Err(StoryWeaverError::validation("Example text cannot be empty".to_string()));
+        }
+        if example_text.len() > 20000 {
+            return Err(StoryWeaverError::validation("Example text too long (max 20000 characters)".to_string()));
+        }
+        crate::security::validate_security_input(example_text)?;
+    }
+    if let Some(ref analysis_result) = request.analysis_result {
+        if analysis_result.len() > 10000 {
+            return Err(StoryWeaverError::validation("Analysis result too long (max 10000 characters)".to_string()));
+        }
+        crate::security::validate_security_input(analysis_result)?;
+    }
+    if let Some(ref generated_style_prompt) = request.generated_style_prompt {
+        if generated_style_prompt.len() > 5000 {
+            return Err(StoryWeaverError::validation("Generated style prompt too long (max 5000 characters)".to_string()));
+        }
+        crate::security::validate_security_input(generated_style_prompt)?;
+    }
+
     let pool = get_pool()?;
     
     // Get the existing style example
@@ -132,6 +180,11 @@ pub async fn update_style_example(
 pub async fn delete_style_example(
     id: i64,
 ) -> Result<()> {
+    // Input validation
+    if id <= 0 {
+        return Err(StoryWeaverError::validation("Invalid id".to_string()));
+    }
+
     let pool = get_pool()?;
     
     StyleExampleOps::delete(&pool, id).await?;
@@ -143,6 +196,11 @@ pub async fn delete_style_example(
 pub async fn delete_style_examples_by_project(
     project_id: String,
 ) -> Result<()> {
+    // Input validation
+    if !crate::security::is_safe_input(&project_id) {
+        return Err(StoryWeaverError::validation("Invalid project_id".to_string()));
+    }
+
     let pool = get_pool()?;
     
     StyleExampleOps::delete_by_project(&pool, &project_id).await?;
