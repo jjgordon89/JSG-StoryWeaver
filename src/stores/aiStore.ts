@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '../utils/tauriSafe';
+import { AISettings } from '../types/ai';
 
 // Types for AI writing functionality
 export interface WriteSettings {
@@ -65,6 +66,7 @@ interface AIState {
   defaultRewriteSettings: RewriteSettings;
   defaultExpandSettings: ExpandSettings;
   defaultBrainstormSettings: BrainstormSettings;
+  globalSettings: AISettings;
   
   // Credit tracking
   creditsUsed: number;
@@ -106,6 +108,7 @@ interface AIState {
   updateRewriteSettings: (settings: Partial<RewriteSettings>) => void;
   updateExpandSettings: (settings: Partial<ExpandSettings>) => void;
   updateBrainstormSettings: (settings: Partial<BrainstormSettings>) => void;
+  updateGlobalSettings: (settings: Partial<AISettings>) => void;
   
   // Credit management
   updateCredits: (used: number, remaining?: number) => void;
@@ -156,6 +159,28 @@ export const useAIStore = create<AIState>((set, get) => ({
     category: 'plot_points',
     count: 5,
     creativity_level: 7,
+  },
+  
+  globalSettings: {
+    defaultProvider: 'openai',
+    defaultModel: 'gpt-4',
+    creativity: 0.5,
+    responseLength: 'medium',
+    writingStyle: 'balanced',
+    customInstructions: '',
+    autoSave: true,
+    showCosts: true,
+    enableStreaming: true,
+    contextAware: true,
+    requestTimeout: 30000,
+    maxConcurrentRequests: 3,
+    retryAttempts: 2,
+    cacheDuration: 300000,
+    logRequests: false,
+    shareAnalytics: false,
+    dataRetention: 30,
+    debugMode: false,
+    mockMode: false,
   },
   
   creditsUsed: 0,
@@ -559,6 +584,12 @@ export const useAIStore = create<AIState>((set, get) => ({
   updateBrainstormSettings: (settings: Partial<BrainstormSettings>) => {
     set((state) => ({
       defaultBrainstormSettings: { ...state.defaultBrainstormSettings, ...settings },
+    }));
+  },
+  
+  updateGlobalSettings: (settings: Partial<AISettings>) => {
+    set((state) => ({
+      globalSettings: { ...state.globalSettings, ...settings },
     }));
   },
   

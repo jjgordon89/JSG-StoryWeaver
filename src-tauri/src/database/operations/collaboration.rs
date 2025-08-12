@@ -42,11 +42,11 @@ pub async fn create_shared_document(
         now,
         now
     )
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
 
     Ok(SharedDocument {
-        id: result.id as i32,
+        id: result.id.unwrap_or(0).try_into().unwrap(),
         document_id: document_id.to_string(),
         project_id: project_id.to_string(),
         share_token,
@@ -76,7 +76,7 @@ pub async fn get_shared_document_by_token(
         "#,
         token
     )
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await?;
 
     if let Some(row) = row {
@@ -87,12 +87,12 @@ pub async fn get_shared_document_by_token(
             share_token: row.share_token,
             share_type: ShareType::from_str(&row.share_type.unwrap_or_default()).unwrap_or_default(),
             password_hash: row.password_hash,
-            expires_at: row.expires_at,
+            expires_at: row.expires_at.map(|dt| dt.and_utc()),
             current_uses: row.current_uses.unwrap_or(0) as i32,
             is_active: row.is_active.unwrap_or(false),
             created_by: row.created_by,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
+            created_at: row.created_at.map(|dt| dt.and_utc()).unwrap_or_else(|| Utc::now()),
+            updated_at: row.updated_at.map(|dt| dt.and_utc()).unwrap_or_else(|| Utc::now()),
         }))
     } else {
         Ok(None)
@@ -114,7 +114,7 @@ pub async fn increment_share_usage(
         now,
         shared_doc_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -151,11 +151,11 @@ pub async fn create_comment(
         now,
         now
     )
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
 
     Ok(Comment {
-        id: result.id as i32,
+        id: result.id.unwrap_or(0) as i32,
         document_id: request.document_id,
         parent_comment_id: request.parent_comment_id,
         author_name: request.author_name,
@@ -179,11 +179,10 @@ pub async fn get_document_comments(
     pool: &SqlitePool,
     document_id: &str,
 ) -> Result<Vec<Comment>, sqlx::Error> {
-    let rows = sqlx::query_as!(
-        Comment,
+    let rows = sqlx::query!(
         r#"
         SELECT id, document_id, parent_comment_id, author_name, author_identifier,
-               content, position_start, position_end, selected_text, comment_type as "comment_type: _",
+               content, position_start, position_end, selected_text, comment_type,
                status, is_resolved, resolved_by, resolved_at, created_at, updated_at
         FROM document_comments
         WHERE document_id = ?
@@ -191,10 +190,31 @@ pub async fn get_document_comments(
         "#,
         document_id
     )
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await?;
 
-    Ok(rows)
+    let comments = rows.into_iter().map(|row| {
+        Comment {
+            id: row.id.unwrap_or(0) as i32,
+            document_id: row.document_id.to_string(),
+            parent_comment_id: row.parent_comment_id.map(|id| id as i32),
+            author_name: row.author_name,
+            author_identifier: Some(row.author_identifier),
+            content: row.content,
+            position_start: row.position_start.map(|pos| pos as i32),
+            position_end: row.position_end.map(|pos| pos as i32),
+            selected_text: row.selected_text,
+            comment_type: CommentType::from_str(&row.comment_type.unwrap_or_default()).unwrap_or_default(),
+            status: row.status.unwrap_or_default(),
+            is_resolved: row.is_resolved.unwrap_or(false),
+            resolved_by: row.resolved_by,
+            resolved_at: row.resolved_at.map(|dt| dt.and_utc()),
+            created_at: row.created_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()).and_utc(),
+            updated_at: row.updated_at.unwrap_or_else(|| chrono::Utc::now().naive_utc()).and_utc(),
+        }
+    }).collect();
+
+    Ok(comments)
 }
 
 /// Resolve a comment
@@ -215,7 +235,7 @@ pub async fn resolve_comment(
         now,
         comment_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -227,7 +247,7 @@ pub async fn delete_comment(
     comment_id: i32,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!("DELETE FROM document_comments WHERE id = ?", comment_id)
-        .execute(pool)
+        .execute(&*pool)
         .await?;
 
     Ok(())
@@ -260,11 +280,11 @@ pub async fn create_collaboration_session(
         expires_at,
         now
     )
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
 
     Ok(CollaborationSession {
-        id: result.id as i32,
+        id: result.id.unwrap_or(0).try_into().unwrap(),
         document_id: document_id.to_string(),
         session_token,
         is_active: true,
@@ -289,7 +309,7 @@ pub async fn get_collaboration_session_by_token(
         "#,
     )
     .bind(token)
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await
 }
 
@@ -298,7 +318,7 @@ pub async fn get_comment_threads(
     pool: &SqlitePool,
     document_id: &str,
 ) -> Result<Vec<CommentThread>, sqlx::Error> {
-    let comments = get_document_comments(pool, document_id).await?;
+    let comments = get_document_comments(&*pool, document_id).await?;
     let mut threads = Vec::new();
     let mut comment_map: HashMap<i32, Comment> = HashMap::new();
     let mut children_map: HashMap<Option<i32>, Vec<i32>> = HashMap::new();
@@ -382,7 +402,7 @@ pub async fn duplicate_document_for_sharing(
         "#,
         original_document_id
     )
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
     
     let original = Document {
@@ -394,8 +414,8 @@ pub async fn duplicate_document_for_sharing(
             order_index: row.order_index as i32,
             word_count: row.word_count as i32,
             parent_id: row.parent_id,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
+            created_at: row.created_at.and_utc(),
+            updated_at: row.updated_at.and_utc(),
             metadata: row.metadata,
             folder_id: row.folder_id,
     };
@@ -426,7 +446,7 @@ pub async fn duplicate_document_for_sharing(
         original.metadata,
         original.folder_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(new_id)
@@ -447,7 +467,7 @@ pub async fn unpublish_shared_document(
         now,
         share_token
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -468,7 +488,7 @@ pub async fn republish_shared_document(
         now,
         share_token
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -479,10 +499,9 @@ pub async fn get_project_shared_documents(
     pool: &SqlitePool,
     project_id: &str,
 ) -> Result<Vec<SharedDocument>, sqlx::Error> {
-    let rows = sqlx::query_as!(
-        SharedDocument,
+    let rows = sqlx::query!(
         r#"
-        SELECT id, document_id, project_id, share_token, share_type as "share_type: _", 
+        SELECT id, document_id, project_id, share_token, share_type, 
                password_hash, expires_at, current_uses, is_active, 
                created_by, created_at, updated_at
         FROM shared_documents
@@ -491,10 +510,28 @@ pub async fn get_project_shared_documents(
         "#,
         project_id
     )
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await?;
     
-    Ok(rows)
+    let shared_documents = rows
+        .into_iter()
+        .map(|row| SharedDocument {
+            id: row.id.unwrap_or(0) as i32,
+            document_id: row.document_id.to_string(),
+            project_id: row.project_id.to_string(),
+            share_token: row.share_token,
+            share_type: ShareType::from_str(&row.share_type.unwrap_or_default()).unwrap_or_default(),
+            password_hash: row.password_hash,
+            expires_at: row.expires_at.map(|dt| dt.and_utc()),
+            current_uses: row.current_uses.unwrap_or(0) as i32,
+            is_active: row.is_active.unwrap_or(false),
+            created_by: row.created_by,
+            created_at: row.created_at.map(|dt| dt.and_utc()).unwrap_or_else(|| Utc::now()),
+            updated_at: row.updated_at.map(|dt| dt.and_utc()).unwrap_or_else(|| Utc::now()),
+        })
+        .collect();
+    
+    Ok(shared_documents)
 }
 
 /// Create a new collaboration notification
@@ -522,11 +559,11 @@ pub async fn create_notification(
         false, // is_read starts as false
         now
     )
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
 
     Ok(CollaborationNotification {
-        id: result.id as i32,
+        id: result.id.unwrap_or(0).try_into().unwrap(),
         document_id: document_id.to_string(),
         notification_type,
         message: message.to_string(),
@@ -544,10 +581,9 @@ pub async fn get_notifications_for_user(
 ) -> Result<Vec<CollaborationNotification>, sqlx::Error> {
     let limit = limit.unwrap_or(50);
     
-    let results = sqlx::query_as!(
-        CollaborationNotification,
+    let rows = sqlx::query!(
         r#"
-        SELECT id, document_id, notification_type as "notification_type: _", message, recipient_token, is_read, created_at
+        SELECT id, document_id, notification_type, message, recipient_token, is_read, created_at
         FROM collaboration_notifications
         WHERE recipient_token = ?
         ORDER BY created_at DESC
@@ -556,8 +592,26 @@ pub async fn get_notifications_for_user(
         recipient_token,
         limit
     )
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await?;
+
+    let results = rows
+        .into_iter()
+        .map(|row| {
+            let notification_type = NotificationType::from_str(&row.notification_type)
+                .unwrap_or(NotificationType::default());
+            
+            CollaborationNotification {
+                id: row.id.unwrap_or(0) as i32,
+                document_id: row.document_id,
+                notification_type,
+                message: row.message,
+                recipient_token: row.recipient_token,
+                is_read: row.is_read,
+                created_at: row.created_at.and_utc(),
+            }
+        })
+        .collect();
 
     Ok(results)
 }
@@ -571,7 +625,7 @@ pub async fn mark_notification_read(
         "UPDATE collaboration_notifications SET is_read = true WHERE id = ?",
         notification_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -586,7 +640,7 @@ pub async fn mark_all_notifications_read(
         "UPDATE collaboration_notifications SET is_read = true WHERE recipient_token = ?",
         recipient_token
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -601,10 +655,10 @@ pub async fn get_unread_notification_count(
         "SELECT COUNT(*) as count FROM collaboration_notifications WHERE recipient_token = ? AND is_read = false",
         recipient_token
     )
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
 
-    Ok(result.count)
+    Ok(result.count.try_into().unwrap())
 }
 
 /// Delete old notifications (cleanup)
@@ -619,7 +673,7 @@ pub async fn delete_old_notifications(
         "DELETE FROM collaboration_notifications WHERE created_at < ?",
         cutoff_date
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())

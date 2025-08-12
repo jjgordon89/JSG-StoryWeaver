@@ -329,6 +329,24 @@ impl std::fmt::Display for ExportFormat {
     }
 }
 
+impl std::str::FromStr for ExportFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "story_bible" => Ok(ExportFormat::StoryBible),
+            "outline" => Ok(ExportFormat::Outline),
+            "json" => Ok(ExportFormat::Json),
+            "markdown" => Ok(ExportFormat::Markdown),
+            "image" => Ok(ExportFormat::Image),
+            "png" => Ok(ExportFormat::PNG),
+            "svg" => Ok(ExportFormat::SVG),
+            "pdf" => Ok(ExportFormat::PDF),
+            _ => Err(format!("Invalid ExportFormat: {}", s)),
+        }
+    }
+}
+
 /// Canvas export result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CanvasExportResult {
@@ -403,6 +421,24 @@ impl std::fmt::Display for CanvasOperationType {
             CanvasOperationType::CreateConnection => write!(f, "create_connection"),
             CanvasOperationType::DeleteConnection => write!(f, "delete_connection"),
             CanvasOperationType::UpdateCanvas => write!(f, "update_canvas"),
+        }
+    }
+}
+
+impl std::str::FromStr for CanvasOperationType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "create_element" => Ok(CanvasOperationType::CreateElement),
+            "update_element" => Ok(CanvasOperationType::UpdateElement),
+            "delete_element" => Ok(CanvasOperationType::DeleteElement),
+            "move_element" => Ok(CanvasOperationType::MoveElement),
+            "resize_element" => Ok(CanvasOperationType::ResizeElement),
+            "create_connection" => Ok(CanvasOperationType::CreateConnection),
+            "delete_connection" => Ok(CanvasOperationType::DeleteConnection),
+            "update_canvas" => Ok(CanvasOperationType::UpdateCanvas),
+            _ => Err(format!("Invalid CanvasOperationType: {}", s)),
         }
     }
 }

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 import { invoke } from '../utils/tauriSafe';
-import { withSyncMiddleware, SyncEventType, createPayloadMapper } from '../utils/stateSynchronizer';
 
 interface SettingsState {
   // Focus mode settings
@@ -57,20 +56,7 @@ interface SettingsState {
   loadFromBackend: () => Promise<void>;
 }
 
-export const useSettingsStore = create<SettingsState>()(
-  withSyncMiddleware(
-    SyncEventType.SETTINGS_UPDATED,
-    createPayloadMapper((state) => ({
-      category: 'app',
-      key: 'settings',
-      value: {
-        theme: state.theme,
-        editorSettings: state.editorSettings,
-        accessibilitySettings: state.accessibilitySettings,
-        appSettings: state.appSettings
-      }
-    }))
-  )(
+export const useSettingsStore = create<SettingsState>()(devtools(
   persist(
     (set, get) => ({
       // Default focus mode settings
@@ -244,5 +230,6 @@ export const useSettingsStore = create<SettingsState>()(
         }
       }
     }
-  ))
-);
+  ),
+  { name: 'SettingsStore' }
+));

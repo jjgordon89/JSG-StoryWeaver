@@ -23,6 +23,7 @@ import type {
   StoryBibleState,
   CreateStoryBibleRequest,
   UpdateStoryBibleRequest,
+  CreateCharacterRequest,
   CreateCharacterTraitRequest,
   UpdateCharacterTraitRequest,
   CreateWorldElementRequest,
@@ -158,6 +159,27 @@ export const useStoryBible = (): UseStoryBibleReturn => {
         setState(prevState => ({
           ...prevState,
           characters: response.data || [],
+          isLoadingCharacters: false,
+          charactersError: null
+        }));
+      } else {
+        handleError(response.error, 'charactersError');
+      }
+    } catch (error) {
+      handleError(error, 'charactersError');
+    }
+  }, [handleError]);
+
+  const createCharacter = useCallback(async (request: CreateCharacterRequest): Promise<void> => {
+    setState(prevState => ({ ...prevState, isLoadingCharacters: true, charactersError: null }));
+    
+    try {
+      const response = await invoke<TauriResponse<Character>>('create_character', { request });
+      
+      if (response.success) {
+        setState(prevState => ({
+          ...prevState,
+          characters: [...prevState.characters, response.data as Character],
           isLoadingCharacters: false,
           charactersError: null
         }));
@@ -828,6 +850,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     
     // Character operations
     loadCharacters,
+    createCharacter,
     createCharacterTrait,
     updateCharacterTrait,
     deleteCharacterTrait,

@@ -3,8 +3,7 @@
 use super::{AIProvider, AIContext};
 use crate::database::DbPool;
 use crate::database::operations::{document_ops, DocumentOps};
-use crate::error::StoryWeaverError;
-use anyhow::{Result, Context as AnyhowContext};
+use crate::error::{Result, StoryWeaverError};
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 

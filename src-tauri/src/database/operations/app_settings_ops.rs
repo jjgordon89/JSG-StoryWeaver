@@ -34,7 +34,7 @@ impl super::AppSettingsOps {
             "SELECT EXISTS(SELECT 1 FROM settings WHERE key = ?)"
         )
         .bind(key)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check if setting exists: {}", e)))?;
         
@@ -46,7 +46,7 @@ impl super::AppSettingsOps {
             .bind(value)
             .bind(Utc::now())
             .bind(key)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update setting: {}", e)))?;
         } else {
@@ -58,7 +58,7 @@ impl super::AppSettingsOps {
             .bind(key)
             .bind(value)
             .bind(Utc::now())
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to insert setting: {}", e)))?;
         }
@@ -70,7 +70,7 @@ impl super::AppSettingsOps {
     pub async fn delete_setting(pool: &Pool<Sqlite>, key: &str) -> Result<()> {
         sqlx::query("DELETE FROM settings WHERE key = ?")
             .bind(key)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete setting: {}", e)))?;
         
@@ -140,7 +140,7 @@ impl UserPreferenceOps {
         )
         .bind(category)
         .bind(key)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check if preference exists: {}", e)))?;
         
@@ -158,7 +158,7 @@ impl UserPreferenceOps {
             .bind(Utc::now())
             .bind(category)
             .bind(key)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update preference: {}", e)))?;
         } else {
@@ -178,7 +178,7 @@ impl UserPreferenceOps {
             .bind(value)
             .bind(&data_type)
             .bind(Utc::now())
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to insert preference: {}", e)))?;
         }
@@ -220,7 +220,7 @@ impl UserPreferenceOps {
         pool: &Pool<Sqlite>, 
         category: &str
     ) -> Result<serde_json::Value> {
-        let preferences = Self::get_preferences_by_category(pool, category).await?;
+        let preferences = Self::get_preferences_by_category(&*pool, category).await?;
         
         let mut result = serde_json::Map::new();
         

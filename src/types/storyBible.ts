@@ -129,6 +129,20 @@ export interface UpdateStoryBibleRequest {
   global_character_pov_ids?: string;
 }
 
+export interface CreateCharacterRequest {
+  project_id: string;
+  name: string;
+  description?: string;
+  role?: 'protagonist' | 'antagonist' | 'supporting' | 'minor';
+  age?: number;
+  appearance?: string;
+  personality?: string;
+  background?: string;
+  goals?: string;
+  relationships?: string;
+  visibility?: 'public' | 'private' | 'series';
+}
+
 export interface CreateCharacterTraitRequest {
   character_id: string;
   trait_name: string;
@@ -315,6 +329,7 @@ export interface UseStoryBibleReturn {
   
   // Characters
   loadCharacters: (projectId: string) => Promise<void>;
+  createCharacter: (request: CreateCharacterRequest) => Promise<void>;
   
   // Character traits
   createCharacterTrait: (request: CreateCharacterTraitRequest) => Promise<void>;

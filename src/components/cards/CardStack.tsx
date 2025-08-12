@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AIResponseCard, AIResponseCardProps } from './AIResponseCard';
-import { Card, CardHeader, CardContent } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card, CardHeader, CardContent } from '../../ui/components/common';
+import { Button } from '../../ui/components/common';
 import { ChevronDownIcon, ChevronUpIcon } from '../ui/Icons';
 
 export interface CardStackProps {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../../../ui/components/common';
 import { Input } from '../../../ui/components/common';
 import { Card } from '../../../ui/components/common';

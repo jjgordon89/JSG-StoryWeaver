@@ -89,7 +89,7 @@ impl AIResponseCard {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create AI card: {}", e)))?;
         
-        Self::get_by_id(pool, &id).await
+        Self::get_by_id(&*pool, &id).await
     }
     
     /// Get AI card by ID
@@ -198,7 +198,7 @@ impl AIResponseCard {
         let mut bindings: Vec<&str> = binding_values.iter().map(|s| s.as_str()).collect();
         
         if updates.is_empty() {
-            return Self::get_by_id(pool, id).await;
+            return Self::get_by_id(&*pool, id).await;
         }
         
         updates.push("updated_at = ?");
@@ -220,7 +220,7 @@ impl AIResponseCard {
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update AI card: {}", e)))?;
         
-        Self::get_by_id(pool, id).await
+        Self::get_by_id(&*pool, id).await
     }
     
     /// Delete AI card

@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { Modal } from '../ui/Modal';
-import { Button } from '../ui/Button';
-import { Textarea } from '../ui/textarea';
-import { Input } from '../ui/input';
+import { Modal } from '../../ui/components/common';
+import { Button, Textarea, Input } from '../../ui/components/common';
 
 interface Template {
   id: string;

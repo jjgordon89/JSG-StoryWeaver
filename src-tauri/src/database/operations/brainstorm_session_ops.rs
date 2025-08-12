@@ -50,7 +50,7 @@ impl super::BrainstormSessionOps {
             session.cost_credits,
             session.status
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create brainstorm session: {}", e)))?;
 
@@ -68,7 +68,7 @@ impl super::BrainstormSessionOps {
             "#,
             id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm session: {}", e)))?;
 
@@ -102,7 +102,7 @@ impl super::BrainstormSessionOps {
             "#,
             project_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by project: {}", e)))?;
 
@@ -136,7 +136,7 @@ impl super::BrainstormSessionOps {
             "#,
             session_type
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by type: {}", e)))?;
 
@@ -170,7 +170,7 @@ impl super::BrainstormSessionOps {
             "#,
             status
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by status: {}", e)))?;
 
@@ -203,7 +203,7 @@ impl super::BrainstormSessionOps {
             FROM brainstorm_sessions ORDER BY updated_at DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list brainstorm sessions: {}", e)))?;
 
@@ -250,7 +250,7 @@ impl super::BrainstormSessionOps {
             session.status,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update brainstorm session: {}", e)))?;
 
@@ -269,7 +269,7 @@ impl super::BrainstormSessionOps {
             selected_ideas,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update session ideas: {}", e)))?;
 
@@ -287,7 +287,7 @@ impl super::BrainstormSessionOps {
             status,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update session status: {}", e)))?;
 
@@ -305,7 +305,7 @@ impl super::BrainstormSessionOps {
             notes,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update session notes: {}", e)))?;
 
@@ -315,7 +315,7 @@ impl super::BrainstormSessionOps {
     /// Delete a brainstorm session
     pub async fn delete(pool: &Pool<Sqlite>, id: i32) -> Result<()> {
         sqlx::query!("DELETE FROM brainstorm_sessions WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete brainstorm session: {}", e)))?;
 
@@ -333,7 +333,7 @@ impl super::BrainstormSessionOps {
             "#,
             limit
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent brainstorm sessions: {}", e)))?;
 
@@ -362,7 +362,7 @@ impl super::BrainstormSessionOps {
             "SELECT COALESCE(SUM(cost_credits), 0.0) as total_cost FROM brainstorm_sessions WHERE project_id = ?",
             project_id
         )
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total brainstorm cost for project: {}", e)))?;
 

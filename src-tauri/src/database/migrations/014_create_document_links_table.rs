@@ -10,7 +10,7 @@ pub async fn up(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
         );
         "
     )
-    .execute(pool)
+    .execute(&**pool)
     .await?;
 
     Ok(())
@@ -18,7 +18,7 @@ pub async fn up(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
 
 pub async fn down(pool: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
     sqlx::query("DROP TABLE IF EXISTS document_links;")
-        .execute(pool)
+        .execute(&**pool)
         .await?;
     Ok(())
 }

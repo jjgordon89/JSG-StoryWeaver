@@ -1,9 +1,10 @@
 use crate::error::{Result, StoryWeaverError};
 use sqlx;
 use std::path::{Path, PathBuf};
-use chrono::{Utc, DateTime};
+use chrono::{Utc, DateTime, NaiveDateTime, TimeZone};
 use tokio::fs;
 use tauri::{AppHandle, Manager};
+use tauri::path::BaseDirectory;
 
 /// Database backup manager
 pub struct BackupManager;
@@ -15,13 +16,10 @@ impl BackupManager {
         backup_name: Option<String>,
     ) -> Result<PathBuf> {
         // Get app data directory
-        let app_data_dir = app_handle
-            .path_resolver()
-            .app_data_dir()
-            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
+        let backups_dir = app_handle.path().resolve("backups", BaseDirectory::AppData)
+            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
         
         // Create backups directory if it doesn't exist
-        let backups_dir = app_data_dir.join("backups");
         fs::create_dir_all(&backups_dir)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to create backups directory: {}", e)))?;
@@ -76,7 +74,7 @@ impl BackupManager {
         .bind(Utc::now())
         .bind(backup_name.is_none()) // If no name provided, it's an auto backup
         .bind(backup_name)
-        .execute(pool)
+        .execute(pool.as_ref())
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to record backup: {}", e)))?;
         
@@ -89,13 +87,10 @@ impl BackupManager {
         backup_filename: &str,
     ) -> Result<()> {
         // Get app data directory
-        let app_data_dir = app_handle
-            .path_resolver()
-            .app_data_dir()
-            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
+        let backups_dir = app_handle.path().resolve("backups", BaseDirectory::AppData)
+            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
         
         // Backup source path
-        let backups_dir = app_data_dir.join("backups");
         let backup_path = backups_dir.join(backup_filename);
         
         if !Path::new(&backup_path).exists() {
@@ -150,21 +145,25 @@ impl BackupManager {
     pub async fn get_backups(app_handle: &AppHandle) -> Result<Vec<BackupInfo>> {
         let pool = crate::database::get_pool()?;
         
-        let backups = sqlx::query_as!(
-            BackupRecord,
+        let backups = sqlx::query!(
             r#"SELECT id, filename, created_at, is_auto, comment FROM backups ORDER BY created_at DESC"#
         )
-        .fetch_all(pool)
+        .fetch_all(pool.as_ref())
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get backups: {}", e)))?;
+        .map_err(|e| StoryWeaverError::database(format!("Failed to get backups: {}", e)))?
+        .into_iter()
+        .map(|row| BackupRecord {
+            id: row.id,
+            filename: row.filename,
+            created_at: Some(row.created_at),
+            is_auto: row.is_auto,
+            comment: row.comment,
+        })
+        .collect::<Vec<_>>();
         
         // Get app data directory
-        let app_data_dir = app_handle
-            .path_resolver()
-            .app_data_dir()
-            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
-        
-        let backups_dir = app_data_dir.join("backups");
+        let backups_dir = app_handle.path().resolve("backups", BaseDirectory::AppData)
+            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
         
         // Convert to BackupInfo and check if file exists
         let mut backup_infos = Vec::new();
@@ -181,9 +180,9 @@ impl BackupManager {
             };
             
             backup_infos.push(BackupInfo {
-                id: backup.id,
+                id: backup.id.unwrap_or_default(),
                 filename: backup.filename,
-                created_at: backup.created_at,
+                created_at: backup.created_at.map(|dt| dt.and_utc()).unwrap_or_else(|| Utc::now()),
                 is_auto: backup.is_auto,
                 comment: backup.comment,
                 file_exists,
@@ -203,18 +202,16 @@ impl BackupManager {
             "SELECT filename FROM backups WHERE id = ?",
             backup_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(pool.as_ref())
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get backup: {}", e)))?
         .ok_or_else(|| StoryWeaverError::database(format!("Backup not found: {}", backup_id)))?;
         
         // Get app data directory
-        let app_data_dir = app_handle
-            .path_resolver()
-            .app_data_dir()
-            .ok_or_else(|| StoryWeaverError::database("Failed to get app data dir".to_string()))?;
+        let app_data_dir = app_handle.path().resolve("backups", BaseDirectory::AppData)
+            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
         
-        let backups_dir = app_data_dir.join("backups");
+        let backups_dir = app_data_dir;
         let backup_path = backups_dir.join(&backup.filename);
         
         // Delete the backup file if it exists
@@ -243,7 +240,7 @@ impl BackupManager {
         // Delete the backup record
         sqlx::query("DELETE FROM backups WHERE id = ?")
             .bind(backup_id)
-            .execute(pool)
+            .execute(pool.as_ref())
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete backup record: {}", e)))?;
         
@@ -259,18 +256,17 @@ impl BackupManager {
         let last_auto_backup: Option<DateTime<Utc>> = sqlx::query_scalar(
             "SELECT MAX(created_at) FROM backups WHERE is_auto = 1"
         )
-        .fetch_one(pool)
+        .fetch_one(pool.as_ref())
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get last auto backup: {}", e)))?;
         
         // Get the auto backup interval from settings
-        let auto_backup_interval: String = sqlx::query_scalar(
+        let auto_backup_interval: String = sqlx::query_scalar::<_, String>(
             "SELECT value FROM settings WHERE key = 'auto_backup_interval'"
         )
-        .fetch_one(pool)
+        .fetch_one(pool.as_ref())
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get auto backup interval: {}", e)))?
-        .unwrap_or_else(|| "daily".to_string());
+        .unwrap_or_else(|_| "daily".to_string());
         
         let now = Utc::now();
         let should_backup = match last_auto_backup {
@@ -299,15 +295,14 @@ impl BackupManager {
         let pool = crate::database::get_pool()?;
         
         // Get the max number of auto backups to keep
-        let max_auto_backups: i64 = sqlx::query_scalar(
+        let max_auto_backups_str: String = sqlx::query_scalar::<_, String>(
             "SELECT value FROM settings WHERE key = 'max_auto_backups'"
         )
-        .fetch_one(pool)
+        .fetch_one(pool.as_ref())
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to get max auto backups: {}", e)))?
-        .unwrap_or_else(|| "10".to_string())
-        .parse()
-        .unwrap_or(10);
+        .unwrap_or_else(|_| "10".to_string());
+        
+        let max_auto_backups: i64 = max_auto_backups_str.parse::<i64>().unwrap_or(10);
         
         // Get auto backups to delete
         let backups_to_delete = sqlx::query!(
@@ -320,7 +315,7 @@ impl BackupManager {
             "#,
             max_auto_backups
         )
-        .fetch_all(pool)
+        .fetch_all(pool.as_ref())
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get old backups: {}", e)))?;
         
@@ -338,9 +333,9 @@ impl BackupManager {
 /// Backup record from database
 #[derive(Debug, sqlx::FromRow)]
 struct BackupRecord {
-    pub id: String,
+    pub id: Option<String>,
     pub filename: String,
-    pub created_at: DateTime<Utc>,
+    pub created_at: Option<NaiveDateTime>,
     pub is_auto: bool,
     pub comment: Option<String>,
 }

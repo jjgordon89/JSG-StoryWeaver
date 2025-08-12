@@ -16,15 +16,13 @@ import {
   Check,
   RotateCcw
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '../../ui/components/common';
+import { Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/components/common';
 import { Slider } from '../ui/slider';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../ui/components/common';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useAI, useAIWriteStream, useAITextProcessor, useAICreative, useAISettings, useAICredits } from '../../hooks/useAI';
 import { StreamingText } from './StreamingText';
@@ -47,7 +45,8 @@ const toolConfig = {
     title: 'Write',
     description: 'Generate new content based on context',
     color: 'blue',
-    requiresPrompt: true
+    requiresPrompt: true,
+    requiresSelection: false
   },
   rewrite: {
     icon: RefreshCw,
@@ -70,21 +69,24 @@ const toolConfig = {
     title: 'Brainstorm',
     description: 'Generate creative ideas and concepts',
     color: 'yellow',
-    requiresPrompt: true
+    requiresPrompt: true,
+    requiresSelection: false
   },
   describe: {
     icon: MessageSquare,
     title: 'Describe',
     description: 'Create detailed scene descriptions',
     color: 'indigo',
-    requiresPrompt: true
+    requiresPrompt: true,
+    requiresSelection: false
   },
   visualize: {
     icon: Eye,
     title: 'Visualize',
     description: 'Generate visual scene descriptions',
     color: 'pink',
-    requiresPrompt: true
+    requiresPrompt: true,
+    requiresSelection: false
   },
   quickEdit: {
     icon: Zap,
@@ -99,7 +101,8 @@ const toolConfig = {
     title: 'Chat',
     description: 'Interactive AI conversation',
     color: 'teal',
-    requiresPrompt: true
+    requiresPrompt: true,
+    requiresSelection: false
   }
 };
 
@@ -123,12 +126,12 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
   
   // Hooks
   const { autoWrite, guidedWrite } = useAI();
-  const { startStreaming, streaming } = useAIWriteStream();
-  const { rewriteText, expandText, quickEdit } = useAITextProcessor();
-  const { brainstorm, describeScene, visualizeScene } = useAICreative();
+  const { streaming } = useAIWriteStream();
+  const { processText } = useAITextProcessor();
+  const { generateIdeas, generateSceneDescription, generateVisualization } = useAICreative();
   const { settings, updateSettings } = useAISettings();
-  const { credits, estimateCredits } = useAICredits();
-  const { addCard } = useCards();
+  const { creditsRemaining } = useAICredits();
+  const { addCard } = useCards({ projectId: parseInt(projectId || '0', 10), documentId: parseInt(documentId || '0', 10) });
   
   const currentTool = toolConfig[activeTool];
   const canExecute = currentTool.requiresPrompt ? prompt.trim().length > 0 : true;
@@ -152,65 +155,66 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
       
       switch (activeTool) {
         case 'write':
-          if (settings.streamingEnabled) {
-            await startStreaming('write', { prompt, documentId, projectId });
+          if (settings.write.prose_mode === 'streaming') {
+            // TODO: Implement streaming write functionality
+            console.log('Streaming write not yet implemented');
             return;
           } else {
-            response = await autoWrite({
-              prompt,
-              documentId,
-              projectId,
-              tone: settings.tone,
-              style: settings.style,
-              length: settings.length
-            });
+            const writeResult = await autoWrite(
+              parseInt(documentId!, 10),
+              0, // cursor position
+              {
+                creativity_level: settings.write.creativity_level,
+                tone: settings.write.tone,
+                key_details: settings.write.key_details || '',
+                card_count: settings.write.card_count,
+                card_length: settings.write.card_length
+              }
+            );
+            response = writeResult.generated_text;
           }
           break;
           
         case 'rewrite':
-          response = await rewriteText({
-            text: selectedText,
-            instructions: prompt || 'Rewrite this text',
-            tone: settings.tone,
-            style: settings.style
+          response = await processText(selectedText, 'rewrite', {
+            style: settings.rewrite.style || 'rephrase',
+            creativity_level: settings.rewrite.creativity_level || 5,
+            preserve_meaning: settings.rewrite.preserve_meaning ?? true
           });
           break;
           
         case 'expand':
-          response = await expandText({
-            text: selectedText,
-            instructions: prompt || 'Expand this text with more detail',
-            targetLength: settings.length
+          response = await processText(selectedText, 'expand', {
+            focus: settings.expand.focus || 'sensory_details',
+            length_multiplier: settings.expand.length_multiplier || 2,
+            creativity_level: settings.expand.creativity_level || 5
           });
           break;
           
         case 'brainstorm':
-          response = await brainstorm({
-            topic: prompt,
-            count: 5,
-            style: settings.style
+          const brainstormResult = await generateIdeas(prompt, {
+            category: settings.brainstorm.category || 'plot_points',
+            count: settings.brainstorm.count || 5,
+            creativity_level: settings.brainstorm.creativity_level || 5
           });
+          response = brainstormResult.join('\n');
           break;
           
         case 'describe':
-          response = await describeScene({
+          response = await generateSceneDescription(
             prompt,
-            style: settings.style,
-            detail: settings.length
-          });
+            settings.write.tone
+          );
           break;
           
         case 'visualize':
-          response = await visualizeScene({
-            prompt,
-            style: settings.style,
-            detail: settings.length
-          });
+          response = await generateVisualization(
+            prompt
+          );
           break;
           
         case 'quickEdit':
-          response = await quickEdit({
-            text: selectedText,
+          response = await processText(selectedText, 'quickEdit', {
             instruction: prompt
           });
           break;
@@ -220,12 +224,12 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
           setChatHistory(newHistory);
           
           // For chat, we'll use guided write with conversation context
-          response = await guidedWrite({
+          const writeResult = await guidedWrite(
+            parseInt(documentId!, 10),
             prompt,
-            context: newHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n'),
-            documentId,
-            projectId
-          });
+            settings.write
+          );
+          response = writeResult.generated_text;
           
           setChatHistory([...newHistory, { role: 'assistant', content: response }]);
           break;
@@ -234,12 +238,12 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
       setResult(response);
       
       // Add to cards if enabled
-      if (settings.saveToCards && documentId) {
+      if (documentId && projectId) {
         await addCard({
           content: response,
           type: activeTool,
-          documentId,
-          projectId,
+          documentId: parseInt(documentId, 10),
+          projectId: parseInt(projectId, 10),
           metadata: {
             tool: activeTool,
             prompt: prompt,
@@ -258,12 +262,12 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
     setResult(text);
     
     // Add to cards if enabled
-    if (settings.saveToCards && documentId) {
+    if (documentId && projectId) {
       addCard({
         content: text,
         type: activeTool,
-        documentId,
-        projectId,
+        documentId: parseInt(documentId, 10),
+        projectId: parseInt(projectId, 10),
         metadata: {
           tool: activeTool,
           prompt: prompt,
@@ -302,7 +306,8 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
     }
   };
   
-  const estimatedCost = estimateCredits(activeTool, prompt.length + selectedText.length);
+  // TODO: Implement credit estimation based on tool and input length
+    const estimatedCost = 0;
   
   return (
     <Card className={`w-full max-w-2xl ${className}`}>
@@ -315,7 +320,7 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
           
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              {credits.remaining} credits
+              {creditsRemaining || 'Unlimited'} credits
             </Badge>
             
             <Button
@@ -384,7 +389,7 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Tone</label>
-                  <Select value={settings.tone} onValueChange={(value) => updateSettings({ tone: value })}>
+                  <Select value={settings.write.tone || 'professional'} onValueChange={(value) => updateSettings.write({ tone: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -398,8 +403,8 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Style</label>
-                  <Select value={settings.style} onValueChange={(value) => updateSettings({ style: value })}>
+                  <label className="text-sm font-medium">Tone</label>
+                  <Select value={settings.write.tone} onValueChange={(value) => updateSettings.write({ tone: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -413,11 +418,11 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Length: {settings.length}</label>
+                  <label className="text-sm font-medium">Card Count: {settings.write.card_count || 0}</label>
                   <Slider
-                    value={[settings.length]}
-                    onValueChange={([value]) => updateSettings({ length: value })}
-                    min={1}
+                    value={[settings.write.card_count || 0]}
+                    onValueChange={([value]) => updateSettings.write({ card_count: value })}
+                    min={0}
                     max={5}
                     step={1}
                     className="w-full"
@@ -425,13 +430,13 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Creativity: {settings.creativity}</label>
+                  <label className="text-sm font-medium">Creativity: {settings.write.creativity_level}</label>
                   <Slider
-                    value={[settings.creativity]}
-                    onValueChange={([value]) => updateSettings({ creativity: value })}
-                    min={0}
-                    max={1}
-                    step={0.1}
+                    value={[settings.write.creativity_level]}
+                    onValueChange={([value]) => updateSettings.write({ creativity_level: value })}
+                    min={1}
+                    max={10}
+                    step={1}
                     className="w-full"
                   />
                 </div>
@@ -478,10 +483,10 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
             <Textarea
               ref={textareaRef}
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPrompt(e.target.value)}
               placeholder={`Enter your ${activeTool === 'chat' ? 'message' : 'prompt'}...`}
               className="min-h-[80px] resize-none"
-              onKeyDown={(e) => {
+              onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault();
                   handleExecute();

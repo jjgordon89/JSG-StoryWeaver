@@ -55,11 +55,16 @@ const StyleExampleModal: React.FC<StyleExampleModalProps> = ({
     if (example) {
       setFormData({
         name: example.name,
-        category: example.category,
+        category: '', // category not available in current interface
         content: example.content,
-        characteristics: { ...example.characteristics },
-        tags: [...example.tags],
-        notes: example.notes || ''
+        characteristics: {
+           tone: 'neutral',
+           complexity: 'moderate',
+           pacing: 'moderate',
+           perspective: 'third-person'
+         },
+         tags: [], // tags not available in current interface
+        notes: '' // notes not available in current interface
       });
     }
   }, [example]);

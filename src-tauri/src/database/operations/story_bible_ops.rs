@@ -12,7 +12,7 @@ impl super::StoryBibleOps {
         let mut story_bible = story_bible;
         
         // Check if story bible already exists for this project
-        let existing = Self::get_by_project(pool, &story_bible.project_id).await;
+        let existing = Self::get_by_project(&*pool, &story_bible.project_id).await;
         
         if existing.is_ok() {
             // Update existing

@@ -12,7 +12,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onImageGenerated }) => 
   // State
   const [prompt, setPrompt] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<ImageStyle>('realistic');
-  const [selectedResolution, setSelectedResolution] = useState<ImageResolution>('1024x1024');
+  const [selectedResolution, setSelectedResolution] = useState<string>('1024x1024');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [quality, setQuality] = useState('standard');
   const [enhancePrompt, setEnhancePrompt] = useState(true);
@@ -32,7 +32,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onImageGenerated }) => 
   const canGenerate = advancedAIStore.canGenerate;
   const projectImages = advancedAIStore.projectImages;
   const availableStyles: ImageStyle[] = ['realistic', 'artistic', 'fantasy', 'sci-fi', 'cartoon', 'sketch'];
-  const availableResolutions: ImageResolution[] = ['512x512', '768x768', '1024x1024', '1024x1792', '1792x1024'];
+  const availableResolutions: string[] = ['512x512', '768x768', '1024x1024', '1024x1792', '1792x1024'];
   const aspectRatios = ['1:1', '4:3', '3:4', '16:9', '9:16'];
   const qualityOptions = ['standard', 'high', 'ultra'];
 
@@ -177,7 +177,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onImageGenerated }) => 
               <select
                 id="resolution"
                 value={selectedResolution}
-                onChange={(e) => setSelectedResolution(e.target.value as ImageResolution)}
+                onChange={(e) => setSelectedResolution(e.target.value)}
               >
                 {availableResolutions.map((resolution) => (
                   <option key={resolution} value={resolution}>
@@ -328,7 +328,7 @@ const ImageGenerator: React.FC<ImageGeneratorProps> = ({ onImageGenerated }) => 
           </div>
 
           <div className={`images-gallery ${viewMode}`}>
-            {projectImages.map((image) => (
+            {projectImages.map((image: GeneratedImage) => (
               <div key={image.id} className="image-item">
                 <div className="image-container" onClick={() => handleImageClick(image)}>
                   <img src={image.url} alt={image.prompt} />

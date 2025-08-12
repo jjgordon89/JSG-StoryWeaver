@@ -51,7 +51,7 @@ impl super::AIModelConfigurationOps {
             config.specializations,
             config.is_active
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create AI model configuration: {}", e)))?;
 
@@ -69,7 +69,7 @@ impl super::AIModelConfigurationOps {
             "#,
             id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI model configuration: {}", e)))?;
 
@@ -103,7 +103,7 @@ impl super::AIModelConfigurationOps {
             "#,
             provider_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI model configurations by provider: {}", e)))?;
 
@@ -136,7 +136,7 @@ impl super::AIModelConfigurationOps {
             FROM ai_model_configurations ORDER BY display_name
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list AI model configurations: {}", e)))?;
 
@@ -169,7 +169,7 @@ impl super::AIModelConfigurationOps {
             FROM ai_model_configurations WHERE is_active = 1 ORDER BY display_name
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list active AI model configurations: {}", e)))?;
 
@@ -217,7 +217,7 @@ impl super::AIModelConfigurationOps {
             config.is_active,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update AI model configuration: {}", e)))?;
 
@@ -227,7 +227,7 @@ impl super::AIModelConfigurationOps {
     /// Delete an AI model configuration
     pub async fn delete(pool: &Pool<Sqlite>, id: i32) -> Result<()> {
         sqlx::query!("DELETE FROM ai_model_configurations WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete AI model configuration: {}", e)))?;
 
@@ -240,7 +240,7 @@ impl super::AIModelConfigurationOps {
             "UPDATE ai_model_configurations SET is_active = NOT is_active WHERE id = ?",
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to toggle AI model configuration status: {}", e)))?;
 
@@ -259,7 +259,7 @@ impl super::AIModelConfigurationOps {
             model_name,
             provider_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI model configuration by model and provider: {}", e)))?;
 

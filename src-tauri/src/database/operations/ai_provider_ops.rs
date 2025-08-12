@@ -29,7 +29,7 @@ impl super::AIProviderOps {
             provider.api_endpoint,
             provider.is_active
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create AI provider: {}", e)))?;
 
@@ -42,7 +42,7 @@ impl super::AIProviderOps {
             "SELECT id, name, display_name, api_endpoint, is_active, created_at FROM ai_providers WHERE id = ?",
             id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI provider: {}", e)))?;
 
@@ -62,7 +62,7 @@ impl super::AIProviderOps {
             "SELECT id, name, display_name, api_endpoint, is_active, created_at FROM ai_providers WHERE name = ?",
             name
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI provider by name: {}", e)))?;
 
@@ -81,7 +81,7 @@ impl super::AIProviderOps {
         let rows = sqlx::query!(
             "SELECT id, name, display_name, api_endpoint, is_active, created_at FROM ai_providers ORDER BY name"
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list AI providers: {}", e)))?;
 
@@ -100,7 +100,7 @@ impl super::AIProviderOps {
         let rows = sqlx::query!(
             "SELECT id, name, display_name, api_endpoint, is_active, created_at FROM ai_providers WHERE is_active = 1 ORDER BY name"
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list active AI providers: {}", e)))?;
 
@@ -128,7 +128,7 @@ impl super::AIProviderOps {
             provider.is_active,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update AI provider: {}", e)))?;
 
@@ -138,7 +138,7 @@ impl super::AIProviderOps {
     /// Delete an AI provider
     pub async fn delete(pool: &Pool<Sqlite>, id: i32) -> Result<()> {
         sqlx::query!("DELETE FROM ai_providers WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete AI provider: {}", e)))?;
 
@@ -151,7 +151,7 @@ impl super::AIProviderOps {
             "UPDATE ai_providers SET is_active = NOT is_active WHERE id = ?",
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to toggle AI provider status: {}", e)))?;
 

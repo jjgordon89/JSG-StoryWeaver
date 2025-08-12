@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card, CardContent, CardFooter, CardHeader } from '../../ui/components/common';
+import { Button } from '../../ui/components/common';
 import { StarIcon, ChevronDownIcon, ChevronUpIcon } from '../ui/Icons';
 
 export interface AIResponseCardProps {

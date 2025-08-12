@@ -277,7 +277,7 @@ impl super::DeletedItemOps {
             .map_err(|e| StoryWeaverError::database(format!("Failed to start transaction: {}", e)))?;
         
         // Get the deleted item
-        let deleted_item = Self::get_by_id(pool, deleted_item_id).await?
+        let deleted_item = Self::get_by_id(&*pool, deleted_item_id).await?
             .ok_or_else(|| StoryWeaverError::DeletedItemNotFound { id: deleted_item_id.to_string() })?;
         
         // Restore based on item type

@@ -15,14 +15,9 @@ import {
   Square
 } from 'lucide-react';
 import { useAI, useAIWriteStream, useAITextProcessor, useAICreative } from '../../hooks/useAI';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Slider } from '../ui/slider';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../../ui/components/common';
+import { Input, Textarea } from '../../ui/components/common';
 import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
 import { useAICredits } from '../../hooks/useAI';
 import RelatedWords from './RelatedWords';
 
@@ -141,7 +136,7 @@ export const AISelectionMenu: React.FC<AISelectionMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   
   // AI hooks
-  const { writeWithCards, quickEdit, quickChat, isLoading, error } = useAI();
+  const { quickEdit, quickChat, isLoading, error } = useAI();
   const { streaming, streamedContent, startStreamingWrite, stopStreamingWrite } = useAIWriteStream();
   const { processText, processedText, resetProcessedText } = useAITextProcessor();
   const { generateIdeas, generateSceneDescription, generateVisualization, ideas, sceneDescription, visualizationUrl } = useAICreative();

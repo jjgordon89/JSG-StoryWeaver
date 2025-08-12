@@ -33,7 +33,7 @@ impl super::AIHistoryOps {
             record.context_used,
             record.created_at
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create AI history record: {}", e)))?;
 
@@ -49,7 +49,7 @@ impl super::AIHistoryOps {
         )
         .bind(project_id)
         .bind(limit)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI history: {}", e)))?;
 
@@ -62,7 +62,7 @@ impl super::AIHistoryOps {
             "SELECT * FROM ai_generation_history WHERE document_id = ? ORDER BY created_at DESC"
         )
         .bind(document_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI history by document: {}", e)))?;
 
@@ -75,7 +75,7 @@ impl super::AIHistoryOps {
             "SELECT * FROM ai_generation_history WHERE id = ?"
         )
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get AI history by ID: {}", e)))?;
 
@@ -85,7 +85,7 @@ impl super::AIHistoryOps {
     /// Delete AI generation history record
     pub async fn delete(pool: &Pool<Sqlite>, id: &str) -> Result<()> {
         sqlx::query!("DELETE FROM ai_generation_history WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete AI history: {}", e)))?;
 
@@ -95,7 +95,7 @@ impl super::AIHistoryOps {
     /// Clear all AI generation history for a project
     pub async fn clear_by_project(pool: &Pool<Sqlite>, project_id: &str) -> Result<()> {
         sqlx::query!("DELETE FROM ai_generation_history WHERE project_id = ?", project_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to clear AI history: {}", e)))?;
 
@@ -124,7 +124,7 @@ impl super::AIHistoryOps {
             record.context_used,
             record.id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update AI history: {}", e)))?;
 

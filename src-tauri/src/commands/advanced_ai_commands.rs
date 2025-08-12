@@ -12,7 +12,8 @@ use crate::ai::{
 use crate::commands::CommandResponse;
 use crate::error::{Result, StoryWeaverError};
 use crate::ai::saliency_engine::StoryBibleElements as SaliencyStoryBible;
-use crate::database::models::ai::{ImageResolution, BrainstormCategory};
+use crate::ai::visualize::ImageResolution;
+use crate::ai::brainstorm::BrainstormCategory;
 
 // State wrapper for the Advanced AI Manager
 pub type AdvancedAIState = Mutex<AdvancedAIManager>;

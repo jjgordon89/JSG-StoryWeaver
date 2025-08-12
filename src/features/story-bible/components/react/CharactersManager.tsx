@@ -44,10 +44,9 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     characters,
     characterTraits, 
     isLoading,
-    isLoading,
     charactersError,
-    error, 
     loadCharacters,
+    createCharacter,
     createCharacterTrait, 
     updateCharacterTrait, 
     deleteCharacterTrait, 
@@ -142,7 +141,6 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   const closeModals = () => {
     setShowCreateModal(false);
     setShowEditModal(false);
-    setEditingTrait(null);
     
     // Reset forms
     setCreateForm({
@@ -212,7 +210,6 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   };
 
   const handleEditTrait = (trait: CharacterTrait) => {
-    setEditingTrait(trait);
     setEditForm({
       id: trait.id,
       traitType: trait.trait_name,
@@ -228,29 +225,25 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     setIsGeneratingTraits(true);
     
     try {
-      await generateCharacterTraits({
-        project_id: projectId,
-        character_id: selectedCharacter,
-        trait_type: createForm.traitType || 'personality'
-      });
-      
       const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
       if (!selectedCharacterData) return;
 
       const existingTraits = characterTraits
         .filter(t => t.character_id === selectedCharacter)
-        .map(t => ({
-          trait_type: t.trait_name,
-          trait_value: t.trait_value
-        }));
+        .map(t => t.trait_value);
 
-      const generatedContent = await generateCharacterTraits({
-        project_id: projectId,
+      await generateCharacterTraits({
         character_id: selectedCharacter,
         character_name: selectedCharacterData.name,
-        trait_type: createForm.traitType,
-        story_context: "", // Add story context if available
-        existing_traits: existingTraits.map(trait => trait.trait_value)
+        story_context: "",
+        existing_traits: existingTraits
+      });
+      
+      const generatedContent = await generateCharacterTraits({
+        character_id: selectedCharacter,
+        character_name: selectedCharacterData.name,
+        story_context: "",
+        existing_traits: existingTraits
       });
       
       if (generatedContent) {
@@ -268,8 +261,6 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     
     const selectedCharacterData = characters.find(c => c.id === selectedCharacter);
     if (!selectedCharacterData) return;
-    
-const filteredTraits = characterTraits.filter(t => t.character_id === selectedCharacter);
     
     // Create CSV content
     const headers = ['Character Name', 'Trait Type', 'Content', 'Visibility'];
@@ -417,7 +408,7 @@ const filteredTraits = characterTraits.filter(t => t.character_id === selectedCh
           <Button 
             onClick={handleExportCSV}
             variant="outline"
-            disabled={!selectedCharacter || traits.filter(t => t.character_id === selectedCharacter).length === 0}
+            disabled={!selectedCharacter || characterTraits.filter(t => t.character_id === selectedCharacter).length === 0}
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
@@ -537,9 +528,9 @@ const filteredTraits = characterTraits.filter(t => t.character_id === selectedCh
                 <div className="text-center py-8 text-gray-500">
                   Loading traits...
                 </div>
-              ) : error ? (
+              ) : charactersError ? (
                 <div className="text-center py-8 text-red-600">
-                  Error loading traits: {error}
+                  Error loading traits: {charactersError}
                 </div>
               ) : characterTraits.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
@@ -790,11 +781,18 @@ const filteredTraits = characterTraits.filter(t => t.character_id === selectedCh
              try {
                // Process imported character data
                for (const characterData of data) {
-                 await createCharacterTrait({
+                 await createCharacter({
+                   project_id: projectId,
                    name: characterData.name,
                    description: characterData.description,
                    visibility: characterData.visibility,
-                   series_shared: characterData.series_shared
+                   role: 'supporting',
+                   age: 0,
+                   appearance: '',
+                   personality: '',
+                   background: '',
+                   goals: '',
+                   relationships: ''
                  });
                  
                  // Add traits for the character

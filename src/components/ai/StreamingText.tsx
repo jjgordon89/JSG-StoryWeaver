@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Pause, Play, Square, Zap, Clock } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '../../ui/components/common';
 import { Progress } from '../ui/progress';
 import { Badge } from '../ui/badge';
 import { useAIStreaming } from '../../hooks/useAI';
@@ -34,7 +34,7 @@ export const StreamingText: React.FC<StreamingTextProps> = ({
   className = '',
   showControls = true,
   showProgress = true,
-  estimatedDuration = 30,
+  estimatedDuration: _estimatedDuration = 30,
   wordsPerMinute = 150,
 }) => {
   const [displayedText, setDisplayedText] = useState('');

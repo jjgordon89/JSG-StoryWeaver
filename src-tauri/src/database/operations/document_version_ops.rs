@@ -103,7 +103,7 @@ impl super::DocumentVersionOps {
         .ok_or_else(|| StoryWeaverError::DocumentNotFound { id: document_id.to_string() })?;
         
         // Get the next version number
-        let version_number = Self::get_next_version_number(pool, document_id).await?;
+        let version_number = Self::get_next_version_number(&*pool, document_id).await?;
         
         // Create the version
         let version = DocumentVersion {
@@ -117,7 +117,7 @@ impl super::DocumentVersionOps {
             comment,
         };
         
-        Self::create(pool, version).await
+        Self::create(&*pool, version).await
     }
     
     /// Delete a document version
@@ -149,7 +149,7 @@ impl super::DocumentVersionOps {
             .map_err(|e| StoryWeaverError::database(format!("Failed to start transaction: {}", e)))?;
         
         // Get the version
-        let version = Self::get_by_id(pool, version_id).await?
+        let version = Self::get_by_id(&*pool, version_id).await?
             .ok_or_else(|| StoryWeaverError::VersionNotFound { id: version_id.to_string() })?;
         
         // Update the document with the version content

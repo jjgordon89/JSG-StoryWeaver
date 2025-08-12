@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAdvancedAIStore } from '../../stores/advancedAIStore';
 import { useProjectStore } from '../../stores/projectStore';
-import type { QuickAction, GenerationOptions } from '../../types/advancedAI';
+// Removed non-existent imports - QuickAction and GenerationOptions don't exist in advancedAI types
 
 interface QuickGenerateModalProps {
   isOpen: boolean;
@@ -343,7 +343,7 @@ const QuickGenerateModal: React.FC<QuickGenerateModalProps> = ({ isOpen, onClose
               {options.useContext && currentProject && (
                 <div className="info-item">
                   <i className="fas fa-book"></i>
-                  <span>Using context from: {currentProject.title}</span>
+                  <span>Using context from: {currentProject.name}</span>
                 </div>
               )}
             </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from './ThemeProvider';
-import { Button } from '../ui/Button';
+import { Button } from '../../ui/components/common';
 import { DropdownButton } from '../ui/Dropdown';
 
 type Theme = 'light' | 'dark' | 'system';

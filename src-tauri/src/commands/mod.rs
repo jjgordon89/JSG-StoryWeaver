@@ -81,7 +81,7 @@ impl<T> From<Result<T>> for CommandResponse<T> {
 #[tauri::command]
 pub async fn health_check() -> CommandResponse<String> {
     match get_pool() {
-        Ok(pool) => {
+        Ok(&*pool) => {
             match sqlx::query("SELECT 1").execute(&*pool).await {
                 Ok(_) => CommandResponse::success("Database connection healthy".to_string()),
                 Err(e) => CommandResponse::error(format!("Database error: {}", e)),

@@ -3,7 +3,7 @@
 use super::{AIProvider, AIContext, TextStream, RewriteStyle};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
+use crate::error::{Result, StoryWeaverError};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -250,17 +250,29 @@ impl AIProvider for GeminiProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Gemini API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "gemini".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Gemini API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Gemini API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "gemini".to_string(),
+                status_code,
+                message: format!("Gemini API error: {}", error_text),
+            });
         }
         
         // Parse response
         let gemini_response: GeminiResponse = response.json().await
-            .context("Failed to parse Gemini API response")?;
+            .map_err(|e| StoryWeaverError::AIProvider {
+                provider: "gemini".to_string(),
+                message: format!("Failed to parse Gemini API response: {}", e),
+            })?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &gemini_response.usage_metadata {
@@ -273,10 +285,16 @@ impl AIProvider for GeminiProvider {
             if let Some(part) = candidate.content.parts.first() {
                 Ok(part.text.clone())
             } else {
-                Err(anyhow::anyhow!("No text parts in response"))
+                Err(StoryWeaverError::AIProvider {
+                    provider: "gemini".to_string(),
+                    message: "No text parts in response".to_string(),
+                })
             }
         } else {
-            Err(anyhow::anyhow!("No candidates returned"))
+            Err(StoryWeaverError::AIProvider {
+                provider: "gemini".to_string(),
+                message: "No candidates returned".to_string(),
+            })
         }
     }
 
@@ -309,12 +327,21 @@ impl AIProvider for GeminiProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Gemini API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "gemini".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Gemini API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Gemini API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "gemini".to_string(),
+                status_code,
+                message: format!("Gemini API error: {}", error_text),
+            });
         }
         
         // Create a new TextStream
@@ -325,7 +352,9 @@ impl AIProvider for GeminiProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::Network {
+                message: format!("Error reading stream chunk: {}", e),
+            })?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // Gemini streaming format is a series of JSON objects, each on its own line
@@ -742,6 +771,10 @@ impl AIProvider for GeminiProvider {
     async fn generate_image(&self, _prompt: &str) -> Result<String> {
         // Gemini doesn't directly support image generation
         // Return an error indicating this feature is not supported
-        Err(anyhow::anyhow!("Image generation is not supported by Gemini. Please use OpenAI or another provider that supports image generation."))
+        Err(StoryWeaverError::NotSupported {
+            operation: "generate_image".to_string(),
+            message: String::from("Image generation is not supported by Gemini"),
+            name: "gemini".to_string(),
+        })
     }
 }

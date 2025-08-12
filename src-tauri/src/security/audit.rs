@@ -222,7 +222,7 @@ pub async fn init() -> Result<(), StoryWeaverError> {
     .await
     .map_err(|e| StoryWeaverError::Database { message: format!("Failed to create audit logs index: {}", e) })?;
 
-    let logger = AuditLogger::new(pool);
+    let logger = AuditLogger::new(&*pool);
     
     unsafe {
         AUDIT_LOGGER = Some(Arc::new(logger));

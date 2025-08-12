@@ -55,7 +55,7 @@ impl super::ProseModeOps {
             prose_mode.supports_unfiltered,
             prose_mode.is_active
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create prose mode: {}", e)))?;
 
@@ -74,7 +74,7 @@ impl super::ProseModeOps {
             "#,
             id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get prose mode: {}", e)))?;
 
@@ -111,7 +111,7 @@ impl super::ProseModeOps {
             "#,
             name
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get prose mode by name: {}", e)))?;
 
@@ -147,7 +147,7 @@ impl super::ProseModeOps {
             FROM prose_modes ORDER BY name
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list prose modes: {}", e)))?;
 
@@ -183,7 +183,7 @@ impl super::ProseModeOps {
             FROM prose_modes WHERE is_active = 1 ORDER BY name
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list active prose modes: {}", e)))?;
 
@@ -235,7 +235,7 @@ impl super::ProseModeOps {
             prose_mode.is_active,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update prose mode: {}", e)))?;
 
@@ -245,7 +245,7 @@ impl super::ProseModeOps {
     /// Delete a prose mode
     pub async fn delete(pool: &Pool<Sqlite>, id: i32) -> Result<()> {
         sqlx::query!("DELETE FROM prose_modes WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete prose mode: {}", e)))?;
 
@@ -258,7 +258,7 @@ impl super::ProseModeOps {
             "UPDATE prose_modes SET is_active = NOT is_active WHERE id = ?",
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to toggle prose mode status: {}", e)))?;
 
@@ -277,7 +277,7 @@ impl super::ProseModeOps {
             "#,
             model_config_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get prose modes by model configuration: {}", e)))?;
 

@@ -86,13 +86,13 @@ impl super::SeriesConsistencyOps {
         let mut conflicts = Vec::new();
         
         // Check character consistency
-        conflicts.extend(Self::check_character_consistency(pool, &projects).await?);
+        conflicts.extend(Self::check_character_consistency(&*pool, &projects).await?);
         
         // Check world element consistency
-        conflicts.extend(Self::check_world_element_consistency(pool, &projects).await?);
+        conflicts.extend(Self::check_world_element_consistency(&*pool, &projects).await?);
         
         // Check story bible consistency
-        conflicts.extend(Self::check_story_bible_consistency(pool, &projects).await?);
+        conflicts.extend(Self::check_story_bible_consistency(&*pool, &projects).await?);
         
         // Calculate consistency score
         let consistency_score = Self::calculate_consistency_score(&conflicts, projects.len());
@@ -434,7 +434,7 @@ impl super::SeriesConsistencyOps {
         pool: &Pool<Sqlite>,
         series_id: &str,
     ) -> Result<(f64, usize)> {
-        let report = Self::generate_consistency_report(pool, series_id).await?;
+        let report = Self::generate_consistency_report(&*pool, series_id).await?;
         Ok((report.consistency_score, report.conflicts.len()))
     }
     
@@ -444,7 +444,7 @@ impl super::SeriesConsistencyOps {
         series_id: &str,
         severity: ConflictSeverity,
     ) -> Result<Vec<ConsistencyConflict>> {
-        let report = Self::generate_consistency_report(pool, series_id).await?;
+        let report = Self::generate_consistency_report(&*pool, series_id).await?;
         Ok(report.conflicts.into_iter()
             .filter(|c| matches!(&c.severity, severity))
             .collect())

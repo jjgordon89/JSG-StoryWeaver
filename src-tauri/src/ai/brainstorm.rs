@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use uuid::Uuid;
 use std::collections::HashMap;
 
@@ -15,7 +16,7 @@ pub struct BrainstormSession {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum BrainstormCategory {
     Characters,
     Plot,
@@ -47,6 +48,29 @@ impl BrainstormCategory {
         }
     }
 
+}
+
+impl FromStr for BrainstormCategory {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Characters" => Ok(BrainstormCategory::Characters),
+            "Plot" => Ok(BrainstormCategory::Plot),
+            "Worldbuilding" => Ok(BrainstormCategory::Worldbuilding),
+            "Dialogue" => Ok(BrainstormCategory::Dialogue),
+            "Scenes" => Ok(BrainstormCategory::Scenes),
+            "Themes" => Ok(BrainstormCategory::Themes),
+            "Conflicts" => Ok(BrainstormCategory::Conflicts),
+            "Settings" => Ok(BrainstormCategory::Settings),
+            "Relationships" => Ok(BrainstormCategory::Relationships),
+            "Backstory" => Ok(BrainstormCategory::Backstory),
+            other => Ok(BrainstormCategory::Custom(other.to_string())),
+        }
+    }
+}
+
+impl BrainstormCategory {
     pub fn get_prompt_template(&self) -> String {
         match self {
             BrainstormCategory::Characters => {

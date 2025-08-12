@@ -3,7 +3,7 @@
 use super::{AIProvider, AIContext, TextStream, RewriteStyle};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
+use crate::error::{Result, StoryWeaverError};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -168,17 +168,29 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
+            let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code,
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Parse response
         let completion: ClaudeCompletionResponse = response.json().await
-            .context("Failed to parse Claude API response")?;
+            .map_err(|e| StoryWeaverError::AIProvider {
+                provider: "claude".to_string(),
+                message: format!("Failed to parse Claude API response: {}", e),
+            })?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -195,7 +207,10 @@ impl AIProvider for ClaudeProvider {
         }
         
         if result.is_empty() {
-            Err(anyhow::anyhow!("No text content returned"))
+            Err(StoryWeaverError::AIProvider {
+                provider: "claude".to_string(),
+                message: "No text content returned".to_string(),
+            })
         } else {
             Ok(result)
         }
@@ -239,12 +254,20 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: response.status().as_u16(),
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Create a new TextStream
@@ -255,7 +278,10 @@ impl AIProvider for ClaudeProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::AIProvider {
+                provider: "claude".to_string(),
+                message: format!("Error reading stream chunk: {}", e),
+            })?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // Claude sends "data: " prefixed SSE events
@@ -339,17 +365,28 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: response.status().as_u16(),
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Parse response
         let completion: ClaudeCompletionResponse = response.json().await
-            .context("Failed to parse Claude API response")?;
+            .map_err(|e| StoryWeaverError::AIProvider {
+                provider: "claude".to_string(),
+                message: format!("Failed to parse Claude API response: {}", e),
+            })?;
         
         // Update rate limiter with actual token usage
         if let Some(usage) = &completion.usage {
@@ -366,7 +403,10 @@ impl AIProvider for ClaudeProvider {
         }
         
         if result.is_empty() {
-            Err(anyhow::anyhow!("No text content returned"))
+            Err(StoryWeaverError::AIProvider {
+                provider: "claude".to_string(),
+                message: "No text content returned".to_string(),
+            })
         } else {
             Ok(result)
         }
@@ -374,7 +414,10 @@ impl AIProvider for ClaudeProvider {
 
     async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
         // Claude doesn't have a native embedding API, so we'll return an error
-        Err(anyhow::anyhow!("Claude does not support embeddings"))
+        Err(StoryWeaverError::AIProvider {
+            provider: "claude".to_string(),
+            message: "Claude does not support embeddings".to_string(),
+        })
     }
 
     fn supports_streaming(&self) -> bool {
@@ -450,12 +493,20 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: response.status().as_u16(),
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Create a new TextStream
@@ -466,7 +517,9 @@ impl AIProvider for ClaudeProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::Network {
+                message: format!("Error reading stream chunk: {}", e),
+            })?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // Claude sends "data: " prefixed SSE events
@@ -568,12 +621,20 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: response.status().as_u16(),
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Create a new TextStream
@@ -584,7 +645,9 @@ impl AIProvider for ClaudeProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::Network {
+                message: format!("Error reading stream chunk: {}", e),
+            })?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // Claude sends "data: " prefixed SSE events
@@ -708,12 +771,20 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: response.status().as_u16(),
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Create a new TextStream
@@ -724,7 +795,9 @@ impl AIProvider for ClaudeProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::Network {
+                message: format!("Error reading stream chunk: {}", e),
+            })?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // Claude sends "data: " prefixed SSE events
@@ -828,12 +901,20 @@ impl AIProvider for ClaudeProvider {
             .json(&request)
             .send()
             .await
-            .context("Failed to send request to Claude API")?;
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: 0,
+                message: format!("Failed to send request to Claude API: {}", e),
+            })?;
         
         // Check for errors
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow::anyhow!("Claude API error: {}", error_text));
+            return Err(StoryWeaverError::AIRequest {
+                provider: "claude".to_string(),
+                status_code: response.status().as_u16(),
+                message: format!("Claude API error: {}", error_text),
+            });
         }
         
         // Create a new TextStream
@@ -844,7 +925,9 @@ impl AIProvider for ClaudeProvider {
         use futures_util::StreamExt;
         
         while let Some(chunk_result) = stream.next().await {
-            let chunk = chunk_result.context("Error reading stream chunk")?;
+            let chunk = chunk_result.map_err(|e| StoryWeaverError::Network {
+                message: format!("Error reading stream chunk: {}", e),
+            })?;
             let chunk_str = String::from_utf8_lossy(&chunk);
             
             // Claude sends "data: " prefixed SSE events
@@ -883,6 +966,9 @@ impl AIProvider for ClaudeProvider {
     }
 
     async fn generate_image(&self, _prompt: &str) -> Result<String> {
-        Err(anyhow::anyhow!("Claude does not support image generation."))
+        Err(StoryWeaverError::AIProvider {
+            provider: "claude".to_string(),
+            message: "Claude does not support image generation".to_string(),
+        })
     }
 }

@@ -13,19 +13,18 @@ import {
   ArrowRight,
   Sparkles
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Card, CardContent } from '../ui/card';
+import { Button } from '../../ui/components/common';
+import { Input } from '../../ui/components/common';
+import { Card, CardContent } from '../../ui/components/common';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { useAI, useAITextProcessor, useAICreative, useAICredits } from '../../hooks/useAI';
+import { useAI, useAITextProcessor, useAICreative, useAIQuickTools, useAICredits } from '../../hooks/useAI';
 
 interface AIQuickToolsProps {
   selectedText?: string;
-  cursorPosition?: { line: number; column: number };
-  documentId?: string;
-  projectId?: string;
-  onInsertText?: (text: string, position?: { line: number; column: number }) => void;
+  cursorPosition?: number;
+  documentId?: number;
+  onInsertText?: (text: string) => void;
   onReplaceText?: (text: string) => void;
   onClose?: () => void;
   className?: string;
@@ -114,7 +113,6 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
   selectedText = '',
   cursorPosition,
   documentId,
-  projectId,
   onInsertText,
   onReplaceText,
   onClose,
@@ -127,13 +125,14 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
   const [showPromptInput, setShowPromptInput] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+
   
   // Hooks
-  const { autoWrite, guidedWrite } = useAI();
-  const { rewriteText, expandText, quickEdit } = useAITextProcessor();
-  const { brainstorm, describeScene } = useAICreative();
-  const { credits, estimateCredits } = useAICredits();
+  const { autoWrite } = useAI();
+  const { processText } = useAITextProcessor();
+  const { generateIdeas, generateSceneDescription } = useAICreative();
+  const { quickEdit } = useAIQuickTools();
+  const { creditsRemaining } = useAICredits();
   
   const hasSelection = selectedText.length > 0;
   const availableActions = quickActions.filter(action => 
@@ -170,19 +169,17 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
       
       switch (actionId) {
         case 'continue':
-          response = await autoWrite({
-            prompt: 'Continue writing from this point',
-            documentId,
-            projectId,
+          const writeResult = await autoWrite(documentId || 0, cursorPosition || 0, {
             tone: 'narrative',
-            style: 'creative',
-            length: 2
+            creativity_level: 7,
+            key_details: '',
+            card_count: 1
           });
+          response = writeResult.generated_text;
           break;
           
         case 'improve':
-          response = await rewriteText({
-            text: selectedText,
+          response = await processText(selectedText, 'rewrite', {
             instructions: 'Improve the quality, clarity, and flow of this text',
             tone: 'professional',
             style: 'polished'
@@ -190,8 +187,7 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
           break;
           
         case 'rewrite':
-          response = await rewriteText({
-            text: selectedText,
+          response = await processText(selectedText, 'rewrite', {
             instructions: 'Rewrite this text with a different style while maintaining the core meaning',
             tone: 'creative',
             style: 'varied'
@@ -199,16 +195,14 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
           break;
           
         case 'expand':
-          response = await expandText({
-            text: selectedText,
+          response = await processText(selectedText, 'expand', {
             instructions: 'Expand this text with more detail, description, and depth',
             targetLength: 3
           });
           break;
           
         case 'summarize':
-          response = await rewriteText({
-            text: selectedText,
+          response = await processText(selectedText, 'rewrite', {
             instructions: 'Create a concise summary of this text, capturing the key points',
             tone: 'professional',
             style: 'concise'
@@ -216,26 +210,20 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
           break;
           
         case 'brainstorm':
-          response = await brainstorm({
-            topic: userPrompt || prompt,
+          const ideas = await generateIdeas(userPrompt || prompt, {
+            category: 'plot_points',
             count: 5,
-            style: 'creative'
+            creativity_level: 5
           });
+          response = ideas.join('\n\n');
           break;
           
         case 'describe':
-          response = await describeScene({
-            prompt: userPrompt || prompt,
-            style: 'descriptive',
-            detail: 3
-          });
+          response = await generateSceneDescription(userPrompt || prompt, 'general');
           break;
           
         case 'quickEdit':
-          response = await quickEdit({
-            text: selectedText,
-            instruction: userPrompt || prompt
-          });
+          response = await quickEdit(selectedText, userPrompt || prompt);
           break;
       }
       
@@ -263,7 +251,7 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
       if (action?.requiresSelection && hasSelection) {
         onReplaceText?.(result);
       } else {
-        onInsertText?.(result, cursorPosition);
+        onInsertText?.(result);
       }
       onClose?.();
     }
@@ -307,7 +295,7 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
         transition={{ duration: 0.15 }}
         className={`fixed z-50 ${className}`}
       >
-        <Card ref={cardRef} className="w-80 shadow-lg border-2">
+        <Card className="w-80 shadow-lg border-2">
           <CardContent className="p-4">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -318,7 +306,7 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
               
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
-                  {credits.remaining} credits
+                  {creditsRemaining || 'Unlimited'} credits
                 </Badge>
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="w-3 h-3" />
@@ -413,7 +401,7 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
                 {availableActions.map((action) => {
                   const Icon = action.icon;
                   const isDisabled = isExecuting || (action.requiresSelection && !hasSelection);
-                  const estimatedCost = estimateCredits(action.id, selectedText.length);
+                  const estimatedCost = 0; // TODO: Implement credit estimation
                   
                   return (
                     <motion.div

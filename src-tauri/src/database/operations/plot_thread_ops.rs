@@ -134,7 +134,7 @@ impl super::PlotThreadOps {
     
     /// Get plot threads by character involvement
     pub async fn get_by_character(pool: &Pool<Sqlite>, project_id: &str, character_id: &str) -> Result<Vec<PlotThread>> {
-        let plot_threads = Self::get_by_project(pool, project_id).await?;
+        let plot_threads = Self::get_by_project(&*pool, project_id).await?;
         
         Ok(plot_threads.into_iter()
             .filter(|thread| {
@@ -146,7 +146,7 @@ impl super::PlotThreadOps {
     
     /// Get plot threads by document involvement
     pub async fn get_by_document(pool: &Pool<Sqlite>, project_id: &str, document_id: &str) -> Result<Vec<PlotThread>> {
-        let plot_threads = Self::get_by_project(pool, project_id).await?;
+        let plot_threads = Self::get_by_project(&*pool, project_id).await?;
         
         Ok(plot_threads.into_iter()
             .filter(|thread| {
@@ -255,13 +255,13 @@ impl super::PlotThreadOps {
     
     /// Add character to plot thread
     pub async fn add_character(pool: &Pool<Sqlite>, plot_thread_id: &str, character_id: &str) -> Result<()> {
-        let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
+        let mut plot_thread = Self::get_by_id(&*pool, plot_thread_id).await?;
         
         let mut characters: Vec<String> = serde_json::from_str(&plot_thread.characters_involved).unwrap_or_default();
         if !characters.contains(&character_id.to_string()) {
             characters.push(character_id.to_string());
             plot_thread.characters_involved = serde_json::to_string(&characters).unwrap_or_default();
-            Self::update(pool, &plot_thread).await?;
+            Self::update(&*pool, &plot_thread).await?;
         }
         
         Ok(())
@@ -269,25 +269,25 @@ impl super::PlotThreadOps {
     
     /// Remove character from plot thread
     pub async fn remove_character(pool: &Pool<Sqlite>, plot_thread_id: &str, character_id: &str) -> Result<()> {
-        let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
+        let mut plot_thread = Self::get_by_id(&*pool, plot_thread_id).await?;
         
         let mut characters: Vec<String> = serde_json::from_str(&plot_thread.characters_involved).unwrap_or_default();
         characters.retain(|id| id != character_id);
         plot_thread.characters_involved = serde_json::to_string(&characters).unwrap_or_default();
-        Self::update(pool, &plot_thread).await?;
+        Self::update(&*pool, &plot_thread).await?;
         
         Ok(())
     }
     
     /// Add document to plot thread
     pub async fn add_document(pool: &Pool<Sqlite>, plot_thread_id: &str, document_id: &str) -> Result<()> {
-        let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
+        let mut plot_thread = Self::get_by_id(&*pool, plot_thread_id).await?;
         
         let mut documents: Vec<String> = serde_json::from_str(&plot_thread.documents_involved).unwrap_or_default();
         if !documents.contains(&document_id.to_string()) {
             documents.push(document_id.to_string());
             plot_thread.documents_involved = serde_json::to_string(&documents).unwrap_or_default();
-            Self::update(pool, &plot_thread).await?;
+            Self::update(&*pool, &plot_thread).await?;
         }
         
         Ok(())
@@ -295,12 +295,12 @@ impl super::PlotThreadOps {
     
     /// Remove document from plot thread
     pub async fn remove_document(pool: &Pool<Sqlite>, plot_thread_id: &str, document_id: &str) -> Result<()> {
-        let mut plot_thread = Self::get_by_id(pool, plot_thread_id).await?;
+        let mut plot_thread = Self::get_by_id(&*pool, plot_thread_id).await?;
         
         let mut documents: Vec<String> = serde_json::from_str(&plot_thread.documents_involved).unwrap_or_default();
         documents.retain(|id| id != document_id);
         plot_thread.documents_involved = serde_json::to_string(&documents).unwrap_or_default();
-        Self::update(pool, &plot_thread).await?;
+        Self::update(&*pool, &plot_thread).await?;
         
         Ok(())
     }

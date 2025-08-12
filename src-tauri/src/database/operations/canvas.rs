@@ -34,7 +34,7 @@ pub async fn create_canvas(
         naive_now,
         naive_now
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid() as i32;
@@ -70,7 +70,7 @@ pub async fn get_canvas_by_id(
         "#,
     )
     .bind(canvas_id)
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await
 }
 
@@ -89,7 +89,7 @@ pub async fn get_project_canvases(
         "#,
     )
     .bind(project_id)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await
 }
 
@@ -110,7 +110,8 @@ pub async fn create_canvas_element(
     order_index: i32,
 ) -> Result<CanvasElement, sqlx::Error> {
     let now = Utc::now();
-    let naive_now = now.naive_utc();
+    let naive_now = Utc::now().naive_utc();
+    let element_type_str = element_type.to_string();
 
     let result = sqlx::query!(
         r#"
@@ -121,7 +122,7 @@ pub async fn create_canvas_element(
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
         canvas_id,
-        element_type.to_string(),
+        element_type_str,
         title,
         content,
         position_x,
@@ -135,7 +136,7 @@ pub async fn create_canvas_element(
         naive_now,
         naive_now
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid() as i32;
@@ -174,7 +175,7 @@ pub async fn get_canvas_elements(
         "#,
     )
     .bind(canvas_id)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await
 }
 
@@ -234,7 +235,7 @@ pub async fn update_canvas_element(
     query_builder.push(" WHERE id = ");
     query_builder.push_bind(element_id);
 
-    query_builder.build().execute(pool).await?;
+    query_builder.build().execute(&*pool).await?;
 
     Ok(())
 }
@@ -245,7 +246,7 @@ pub async fn delete_canvas_element(
     element_id: i32,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!("DELETE FROM canvas_elements WHERE id = ?", element_id)
-        .execute(pool)
+        .execute(&*pool)
         .await?;
     Ok(())
 }
@@ -276,7 +277,7 @@ pub async fn create_outline_template(
         is_official,
         naive_now
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid() as i32;
@@ -308,7 +309,7 @@ pub async fn get_outline_templates(
 
     builder.push(" ORDER BY created_at DESC");
 
-    builder.build_query_as().fetch_all(pool).await
+    builder.build_query_as().fetch_all(&*pool).await
 }
 
 /// Increment template usage count
@@ -320,7 +321,7 @@ pub async fn increment_template_usage(
         "UPDATE outline_templates SET usage_count = usage_count + 1 WHERE id = ?",
         template_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -346,7 +347,7 @@ pub async fn create_canvas_snapshot(
         snapshot_data,
         naive_now
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid() as i32;
@@ -374,7 +375,7 @@ pub async fn get_canvas_snapshots(
         "#,
     )
     .bind(canvas_id)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await
 }
 
@@ -387,16 +388,17 @@ pub async fn restore_canvas_snapshot(
         "SELECT * FROM canvas_snapshots WHERE id = ?",
     )
     .bind(snapshot_id)
-    .fetch_one(pool)
+    .fetch_one(&*pool)
     .await?;
 
+    let now = Utc::now().naive_utc();
     sqlx::query!(
         "UPDATE canvas SET canvas_data = ?, updated_at = ? WHERE id = ?",
         snapshot.canvas_data,
-        Utc::now().naive_utc(),
+        now,
         snapshot.canvas_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -425,7 +427,7 @@ pub async fn create_canvas_collaboration_session(
         naive_now,
         expires_at,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(CanvasCollaborationSession {
@@ -454,7 +456,7 @@ pub async fn get_canvas_collaboration_session_by_token(
         "#,
     )
     .bind(session_token)
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await
 }
 
@@ -472,7 +474,7 @@ pub async fn get_canvas_collaboration_session_by_canvas_id(
         "#,
     )
     .bind(canvas_id)
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await
 }
 
@@ -502,7 +504,7 @@ pub async fn update_canvas_collaboration_session(
     builder.push(" WHERE id = ");
     builder.push_bind(session_id);
 
-    builder.build().execute(pool).await?;
+    builder.build().execute(&*pool).await?;
 
     Ok(())
 }
@@ -514,9 +516,9 @@ pub async fn export_canvas(
     canvas_id: i32,
     format: ExportFormat,
 ) -> Result<CanvasExportResult, sqlx::Error> {
-    let canvas = get_canvas_by_id(pool, canvas_id).await?
+    let canvas = get_canvas_by_id(&*pool, canvas_id).await?
         .ok_or_else(|| sqlx::Error::RowNotFound)?;
-    let elements = get_canvas_elements(pool, canvas_id).await?;
+    let elements = get_canvas_elements(&*pool, canvas_id).await?;
 
     let export_data = serde_json::json!({
         "canvas": canvas,
@@ -559,7 +561,7 @@ pub async fn update_canvas(
     builder.push(" WHERE id = ");
     builder.push_bind(canvas_id);
 
-    builder.build().execute(pool).await?;
+    builder.build().execute(&*pool).await?;
 
     Ok(())
 }
@@ -570,7 +572,7 @@ pub async fn delete_canvas(
     canvas_id: i32,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!("DELETE FROM canvas WHERE id = ?", canvas_id)
-        .execute(pool)
+        .execute(&*pool)
         .await?;
     Ok(())
 }
@@ -580,6 +582,7 @@ pub async fn record_canvas_operation(
     pool: &SqlitePool,
     operation: &CanvasOperation,
 ) -> Result<(), sqlx::Error> {
+    let operation_type_str = operation.operation_type.to_string();
     sqlx::query!(
         r#"
         INSERT INTO canvas_operations (
@@ -589,13 +592,13 @@ pub async fn record_canvas_operation(
         "#,
         operation.id,
         operation.canvas_id,
-        operation.operation_type.to_string(),
+        operation_type_str,
         operation.element_id,
         operation.data,
         operation.user_token,
         operation.timestamp
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -619,6 +622,6 @@ pub async fn get_canvas_operations(
     .bind(canvas_id)
     .bind(limit)
     .bind(offset)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await
 }

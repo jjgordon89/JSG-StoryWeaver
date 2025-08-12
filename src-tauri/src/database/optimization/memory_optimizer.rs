@@ -88,9 +88,9 @@ impl MemoryOptimizedProcessor {
     /// Create a new memory-optimized processor
     pub fn new(config: MemoryConfig) -> Self {
         let document_cache_size = NonZeroUsize::new(config.max_document_cache_size)
-            .unwrap_or(NonZeroUsize::new(100).unwrap());
+            .unwrap_or_else(|| NonZeroUsize::new(100).expect("Default cache size should be valid"));
         let embedding_cache_size = NonZeroUsize::new(config.max_embedding_cache_size)
-            .unwrap_or(NonZeroUsize::new(500).unwrap());
+            .unwrap_or_else(|| NonZeroUsize::new(500).expect("Default cache size should be valid"));
 
         Self {
             document_cache: Arc::new(RwLock::new(LruCache::new(document_cache_size))),
@@ -536,7 +536,8 @@ mod tests {
         });
         
         let content = "This is a test document with more than five words to test chunking functionality properly.";
-        let result = processor.process_document("test_doc", content).await.unwrap();
+        let result = processor.process_document("test_doc", content).await
+            .expect("Document processing should succeed in test");
         
         assert!(result.chunks.len() > 1);
         assert_eq!(result.document_id, "test_doc");
@@ -550,12 +551,14 @@ mod tests {
         let content = "This is a test document for caching.";
         
         // First processing - should be a cache miss
-        let result1 = processor.process_document("test_doc", content).await.unwrap();
+        let result1 = processor.process_document("test_doc", content).await
+            .expect("First document processing should succeed in test");
         assert_eq!(result1.cache_misses, 1);
         assert_eq!(result1.cache_hits, 0);
         
         // Second processing - should be a cache hit
-        let result2 = processor.process_document("test_doc", content).await.unwrap();
+        let result2 = processor.process_document("test_doc", content).await
+            .expect("Second document processing should succeed in test");
         assert_eq!(result2.cache_hits, 1);
         assert_eq!(result2.cache_misses, 0);
     }
@@ -568,10 +571,12 @@ mod tests {
         let content_hash = "test_hash";
         
         // Cache the embedding
-        processor.cache_embedding(content_hash, embedding.clone(), "test_model").await.unwrap();
+        processor.cache_embedding(content_hash, embedding.clone(), "test_model").await
+            .expect("Embedding caching should succeed in test");
         
         // Retrieve the embedding
-        let cached = processor.get_cached_embedding(content_hash).await.unwrap();
+        let cached = processor.get_cached_embedding(content_hash).await
+            .expect("Embedding retrieval should succeed in test");
         assert_eq!(cached.embedding, embedding);
         assert_eq!(cached.model, "test_model");
         assert_eq!(cached.access_count, 2); // 1 for caching, 1 for retrieval

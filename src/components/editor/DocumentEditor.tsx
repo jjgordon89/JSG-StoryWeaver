@@ -13,7 +13,7 @@ import FocusModeSettings from './FocusModeSettings';
 import VersionHistory from './VersionHistory';
 import StoryBibleBoxes from './StoryBibleBoxes';
 import { AISelectionMenu, AIWritingPanel, AIQuickTools } from '../ai';
-import { Button } from '../ui/button';
+import { Button } from '../../ui/components/common';
 import { Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import '../../styles/focus-mode.css';
 import { emitSyncEvent, SyncEventType } from '../../utils/stateSynchronizer';

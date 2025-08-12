@@ -17,6 +17,8 @@ pub async fn create_plugin_from_struct(
 ) -> Result<Plugin, sqlx::Error> {
     let now = Utc::now();
     let plugin_category_str = plugin.category.to_string();
+    let created_at = now.naive_utc();
+    let updated_at = now.naive_utc();
 
     let result = sqlx::query!(
         r#"
@@ -42,10 +44,10 @@ pub async fn create_plugin_from_struct(
         plugin.creator_id,
         plugin.is_public,
         plugin.version,
-        now.naive_utc(),
-        now.naive_utc()
+        created_at,
+        updated_at
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid();
@@ -72,7 +74,7 @@ pub async fn get_plugin_by_id(
         "#,
     )
     .bind(plugin_id)
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await?
     .map(|row| {
         Ok(Plugin {
@@ -152,7 +154,7 @@ pub async fn search_plugins(
     sql.push(" LIMIT ").push_bind(limit);
     sql.push(" OFFSET ").push_bind(offset);
 
-    let results = sql.build().fetch_all(pool).await?;
+    let results = sql.build().fetch_all(&*pool).await?;
 
     let plugins = results
         .into_iter()
@@ -217,7 +219,7 @@ pub async fn increment_plugin_downloads(
         "UPDATE plugin_marketplace_entries SET download_count = download_count + 1 WHERE plugin_id = ?",
         plugin_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -247,7 +249,7 @@ pub async fn get_plugin_execution_history(
             .bind(uid)
             .bind(limit)
             .bind(offset)
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
         }
         (Some(pid), None) => {
@@ -264,7 +266,7 @@ pub async fn get_plugin_execution_history(
             .bind(pid)
             .bind(limit)
             .bind(offset)
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
         }
         (None, Some(uid)) => {
@@ -281,7 +283,7 @@ pub async fn get_plugin_execution_history(
             .bind(uid)
             .bind(limit)
             .bind(offset)
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
         }
         (None, None) => {
@@ -296,7 +298,7 @@ pub async fn get_plugin_execution_history(
             )
             .bind(limit)
             .bind(offset)
-            .fetch_all(pool)
+            .fetch_all(&*pool)
             .await
         }
     }
@@ -330,13 +332,13 @@ pub async fn create_plugin_rating(
         naive_now,
         naive_now,
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid() as i32;
 
     // Update plugin's average rating
-    update_plugin_rating_average(pool, plugin_id).await?;
+    update_plugin_rating_average(&*pool, plugin_id).await?;
 
     Ok(PluginRating {
         id,
@@ -353,19 +355,15 @@ async fn update_plugin_rating_average(
     pool: &SqlitePool,
     plugin_id: i32,
 ) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!(
-        r#"
-        SELECT AVG(rating) as avg_rating, COUNT(*) as count
-        FROM plugin_ratings
-        WHERE plugin_id = ?
-        "#,
-        plugin_id
+    let result = sqlx::query_as::<_, (Option<f64>, i64)>(
+        "SELECT AVG(rating) as avg_rating, COUNT(*) as count FROM plugin_ratings WHERE plugin_id = ?"
     )
-    .fetch_one(pool)
+    .bind(plugin_id)
+    .fetch_one(&*pool)
     .await?;
 
-    let avg_rating: f32 = result.avg_rating.unwrap_or(0.0) as f32;
-    let count: i32 = result.count.unwrap_or(0) as i32;
+    let avg_rating: f32 = result.0.unwrap_or(0.0) as f32;
+    let count: i32 = result.1 as i32;
 
     sqlx::query!(
         "UPDATE plugin_marketplace_entries SET rating_average = ?, rating_count = ? WHERE plugin_id = ?",
@@ -373,7 +371,7 @@ async fn update_plugin_rating_average(
         count,
         plugin_id
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -398,7 +396,7 @@ pub async fn get_plugin_ratings(
     .bind(plugin_id)
     .bind(limit)
     .bind(offset)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await?
     .into_iter()
     .map(|row| {
@@ -445,11 +443,11 @@ pub async fn record_plugin_execution(
         result.error_message,
         now.naive_utc()
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     // Update usage stats
-    update_plugin_usage_stats(pool, request.plugin_id, result.success).await?;
+    update_plugin_usage_stats(&*pool, request.plugin_id, result.success).await?;
 
     Ok(result)
 }
@@ -482,7 +480,7 @@ pub async fn update_plugin_usage_stats(
         now.naive_utc(),
         now.naive_utc()
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     Ok(())
@@ -507,7 +505,7 @@ pub async fn get_plugin_daily_stats(
     )
     .bind(plugin_id)
     .bind(start_date)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await
 }
 
@@ -532,7 +530,7 @@ pub async fn get_plugin_templates(
 
     query
         .build()
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await?
         .into_iter()
         .map(|row| {
@@ -566,7 +564,7 @@ pub async fn get_plugin_template_by_id(
         "#,
     )
     .bind(template_id)
-    .fetch_optional(pool)
+    .fetch_optional(&*pool)
     .await?
     .map(|row| {
         Ok(PluginTemplate {
@@ -596,6 +594,7 @@ pub async fn create_plugin_template(
 ) -> Result<PluginTemplate, sqlx::Error> {
     let now = Utc::now();
     let category_str = category.to_string();
+    let created_at = now.naive_utc();
 
     let result = sqlx::query!(
         r#"
@@ -610,9 +609,9 @@ pub async fn create_plugin_template(
         category_str,
         template_code,
         false,
-        now.naive_utc()
+        created_at
     )
-    .execute(pool)
+    .execute(&*pool)
     .await?;
 
     let id = result.last_insert_rowid() as i32;
@@ -702,7 +701,7 @@ pub async fn delete_plugin(
 ) -> Result<(), sqlx::Error> {
     // This should be a real delete, not a soft delete.
     sqlx::query!("DELETE FROM plugins WHERE id = ?", plugin_id)
-        .execute(pool)
+        .execute(&*pool)
         .await?;
     Ok(())
 }
@@ -735,7 +734,7 @@ pub async fn get_plugins(
     query.push(" OFFSET ");
     query.push_bind(offset);
 
-    query.build().fetch_all(pool).await?
+    query.build().fetch_all(&*pool).await?
         .into_iter()
         .map(|row| Ok(Plugin::from_row(&row)?))
         .collect()
@@ -758,7 +757,7 @@ pub async fn get_user_plugins(
         "#,
     )
     .bind(creator_id)
-    .fetch_all(pool)
+    .fetch_all(&*pool)
     .await?
     .into_iter()
     .map(|row| Ok(Plugin::from_row(&row)?))

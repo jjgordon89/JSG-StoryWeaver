@@ -54,7 +54,7 @@ impl super::GeneratedImageOps {
             image.cost_credits,
             image.metadata
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create generated image: {}", e)))?;
 
@@ -71,7 +71,7 @@ impl super::GeneratedImageOps {
             "#,
             id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated image: {}", e)))?;
 
@@ -106,7 +106,7 @@ impl super::GeneratedImageOps {
             "#,
             project_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated images by project: {}", e)))?;
 
@@ -140,7 +140,7 @@ impl super::GeneratedImageOps {
             FROM generated_images ORDER BY created_at DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list generated images: {}", e)))?;
 
@@ -192,7 +192,7 @@ impl super::GeneratedImageOps {
             image.metadata,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update generated image: {}", e)))?;
 
@@ -202,7 +202,7 @@ impl super::GeneratedImageOps {
     /// Delete a generated image record
     pub async fn delete(pool: &Pool<Sqlite>, id: i32) -> Result<()> {
         sqlx::query!("DELETE FROM generated_images WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete generated image: {}", e)))?;
 
@@ -216,7 +216,7 @@ impl super::GeneratedImageOps {
             local_path,
             id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update image local path: {}", e)))?;
 
@@ -233,7 +233,7 @@ impl super::GeneratedImageOps {
             "#,
             model_used
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get generated images by model: {}", e)))?;
 
@@ -268,7 +268,7 @@ impl super::GeneratedImageOps {
             "#,
             limit
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent generated images: {}", e)))?;
 
@@ -299,7 +299,7 @@ impl super::GeneratedImageOps {
             "SELECT COALESCE(SUM(cost_credits), 0.0) as total_cost FROM generated_images WHERE project_id = ?",
             project_id
         )
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total cost for project: {}", e)))?;
 

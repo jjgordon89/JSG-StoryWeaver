@@ -401,7 +401,7 @@ pub async fn down(pool: &Pool<Sqlite>) -> Result<()> {
 
     for table in tables {
         sqlx::query(&format!("DROP TABLE IF EXISTS {}", table))
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to drop table {}: {}", table, e)))?;
     }

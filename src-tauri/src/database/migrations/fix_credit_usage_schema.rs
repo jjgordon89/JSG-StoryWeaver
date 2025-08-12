@@ -7,7 +7,7 @@ use sqlx::{Pool, Sqlite};
 pub async fn up(pool: &Pool<Sqlite>) -> Result<()> {
     // First, check if the table exists and what columns it has
     let table_info = sqlx::query!("PRAGMA table_info(credit_usage)")
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get table info: {}", e)))?;
 

@@ -1,12 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../../../../ui/components/common';
-import { Textarea } from '../../../../ui/components/common';
-import { Input } from '../../../../ui/components/common';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useStoryBible } from '../../hooks/useStoryBible';
-import type { CreateStoryBibleRequest, GenerateSynopsisRequest } from '../../../../types/storyBible';
+import { useErrorHandler } from '../../../../hooks/useErrorHandler';
+// Using standard HTML elements instead of custom UI components
+import { Loader2, Lightbulb, Save, Edit, X, Trash2, Plus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import './BraindumpEditor.css';
+
+// Debounce utility function
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 interface BraindumpEditorProps {
   projectId: string;
@@ -33,11 +43,13 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
   globalTense = '',
   globalCharacterPovIds = ''
 }) => {
-  const { generateSynopsis: generateSynopsisAction } = useStoryBible();
+  const { generateSynopsis: generateSynopsisAction, createOrUpdateStoryBible } = useStoryBible();
+  const { handleError, handleWarning, handleInfo } = useErrorHandler();
   
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isGeneratingSynopsis, setIsGeneratingSynopsis] = useState(false);
   const [isBrainstorming, setIsBrainstorming] = useState(false);
   const [brainstormIdeas, setBrainstormIdeas] = useState<string[]>([]);
@@ -110,12 +122,16 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
     setHasChanges(hasChangesValue);
   }, [formData, content, synopsis, genre, style, styleExamples, povMode, globalPov, globalTense, globalCharacterPovIds]);
   
+  // Event handlers
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  
   const startEditing = () => {
     setIsEditing(true);
   };
   
   const cancelEditing = () => {
-    // Reset form data
     setFormData({
       braindump: content,
       synopsis: synopsis,
@@ -131,50 +147,91 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
     setHasChanges(false);
   };
   
-  const saveChanges = async () => {
-    if (!hasChanges) return;
-    
+  // Enhanced save functionality with error handling
+  const saveContent = useCallback(async (dataToSave = formData, showSuccessMessage = true) => {
+    if (!dataToSave.braindump.trim() && !dataToSave.synopsis.trim()) {
+      handleWarning('Cannot save empty content');
+      return false;
+    }
+
     setIsSaving(true);
-    
     try {
-      const request: CreateStoryBibleRequest = {
+      await createOrUpdateStoryBible({
         project_id: projectId,
-        ...formData
-      };
+        braindump: dataToSave.braindump,
+        synopsis: dataToSave.synopsis,
+        genre: dataToSave.genre,
+        style: dataToSave.style,
+        style_examples: dataToSave.style_examples,
+        pov_mode: dataToSave.pov_mode,
+        global_pov: dataToSave.global_pov,
+        global_tense: dataToSave.global_tense,
+        global_character_pov_ids: dataToSave.global_character_pov_ids
+      });
       
-      // TODO: Implement save functionality
-      console.log('Saving story bible:', request);
-      
-      setIsEditing(false);
+      setLastSaved(new Date());
       setHasChanges(false);
+      
+      if (showSuccessMessage) {
+        handleInfo('Story bible saved successfully');
+      }
+      
+      return true;
     } catch (error) {
-      console.error('Failed to save story bible:', error);
+      handleError(error, { 
+        action: 'save_story_bible',
+        projectId,
+        contentLength: dataToSave.braindump.length,
+        retryAction: () => saveContent(dataToSave, showSuccessMessage)
+      });
+      return false;
     } finally {
       setIsSaving(false);
     }
-  };
-  
-  const handleGenreSelect = (selectedGenre: string) => {
-    setFormData(prev => ({ ...prev, genre: selectedGenre }));
-  };
+  }, [projectId, formData, createOrUpdateStoryBible, handleError, handleWarning, handleInfo]);
+
+  // Manual save handler
+  const saveChanges = useCallback(async () => {
+    if (!hasChanges) return;
+    
+    const success = await saveContent(formData, true);
+    if (success) {
+      setIsEditing(false);
+    }
+  }, [hasChanges, formData, saveContent]);
+
+  // Debounced auto-save
+  const debouncedAutoSave = useMemo(
+    () => debounce((data: typeof formData) => {
+      if (hasChanges && isEditing) {
+        saveContent(data, false); // Auto-save without success message
+      }
+    }, 3000),
+    [saveContent, hasChanges, isEditing]
+  );
+
+  // Trigger auto-save when form data changes
+  useEffect(() => {
+    if (hasChanges && isEditing) {
+      debouncedAutoSave(formData);
+    }
+  }, [formData, hasChanges, isEditing, debouncedAutoSave]);
   
   const generateSynopsis = async () => {
-    if (!projectId || !formData.braindump.trim()) return;
+    if (!formData.braindump.trim()) return;
     
     setIsGeneratingSynopsis(true);
-    
     try {
-      const request: GenerateSynopsisRequest = {
+      const result = await generateSynopsisAction({
         project_id: projectId,
         braindump: formData.braindump,
         genre: formData.genre,
-        style: formData.style
-      };
+        style: formData.style,
+        creativity: 0.7
+      });
       
-      const response = await generateSynopsisAction(request);
-      
-      if (response && response.generated_content) {
-        setFormData(prev => ({ ...prev, synopsis: response.generated_content }));
+      if (result && result.generated_content) {
+        setFormData(prev => ({ ...prev, synopsis: result.generated_content }));
       }
     } catch (error) {
       console.error('Failed to generate synopsis:', error);
@@ -183,25 +240,22 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
     }
   };
   
-  const generateBrainstormIdeas = async () => {
+  const startBrainstorming = async () => {
     if (!brainstormPrompt.trim()) return;
     
     setIsBrainstorming(true);
-    
     try {
-      // TODO: Implement AI brainstorming
+      // Mock brainstorming for now - replace with actual AI call
       const mockIdeas = [
-        'A mysterious character with a hidden past',
-        'An unexpected plot twist that changes everything',
-        'A unique setting that becomes a character itself',
-        'A conflict that tests the protagonist\'s values',
-        'A theme that resonates throughout the story'
+        `A mysterious ${selectedCategory === 'characters' ? 'character' : 'element'} related to: ${brainstormPrompt}`,
+        `An unexpected twist involving: ${brainstormPrompt}`,
+        `A compelling backstory for: ${brainstormPrompt}`
       ];
       
       setBrainstormIdeas(mockIdeas);
       setShowBrainstormResults(true);
     } catch (error) {
-      console.error('Failed to generate brainstorm ideas:', error);
+      console.error('Failed to brainstorm:', error);
     } finally {
       setIsBrainstorming(false);
     }
@@ -217,28 +271,10 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
     setKeepersList(prev => prev.filter(keeper => keeper !== idea));
   };
   
-  const addKeepersToContent = () => {
-    if (keepersList.length === 0) return;
-    
-    const keepersText = '\n\n--- Brainstorm Ideas ---\n' + keepersList.map(idea => `• ${idea}`).join('\n') + '\n';
-    setFormData(prev => ({ ...prev, braindump: prev.braindump + keepersText }));
-    
-    // Clear keepers and hide results
-    setKeepersList([]);
-    setShowBrainstormResults(false);
-    setBrainstormIdeas([]);
-    setBrainstormPrompt('');
-  };
-  
   const clearBrainstormResults = () => {
     setBrainstormIdeas([]);
-    setKeepersList([]);
     setShowBrainstormResults(false);
     setBrainstormPrompt('');
-  };
-  
-  const updateFormData = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
   };
   
   return (
@@ -246,188 +282,193 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
       {/* Header */}
       <div className="editor-header">
         <div className="header-content">
-          <h2>Story Bible & Braindump</h2>
-          <p className="subtitle">
-            Capture your story's core elements, world-building notes, and creative brainstorming.
-          </p>
+          <h2>Story Bible</h2>
+          <p className="subtitle">Capture your story's essence, characters, and world</p>
+          {/* Save Status Indicator */}
+          <div className="save-status">
+            {isSaving && (
+              <span className="saving-indicator">
+                <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                Auto-saving...
+              </span>
+            )}
+            {lastSaved && !isSaving && (
+              <span className="saved-indicator">
+                Last saved: {lastSaved.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
-        
         <div className="header-actions">
-          {!isEditing ? (
-            <Button variant="primary" onClick={startEditing}>
-              <span className="icon">✏️</span>
-              Edit
-            </Button>
-          ) : (
+          {isEditing ? (
             <div className="edit-actions">
-              <Button 
-                variant="secondary" 
+              <button
+                type="button"
+                className="btn btn-outline"
                 onClick={cancelEditing}
                 disabled={isSaving}
               >
+                <X className="w-4 h-4 mr-2" />
                 Cancel
-              </Button>
-              <Button 
-                variant="primary" 
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
                 onClick={saveChanges}
                 disabled={!hasChanges || isSaving}
               >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
                 {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
+              </button>
             </div>
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={startEditing}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </button>
           )}
         </div>
       </div>
       
       {/* Content */}
       <div className="editor-content">
-        {/* Story Metadata */}
-        <Card className="metadata-card">
-          <CardHeader>
-            <CardTitle>Story Metadata</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="metadata-grid">
-              {/* Genre */}
-              <div className="field-group">
-                <label htmlFor="genre">Genre</label>
-                {isEditing ? (
-                  <div className="genre-input-container">
-                    <Input
-                      id="genre"
-                      value={formData.genre}
-                      onChange={(e) => updateFormData('genre', e.target.value)}
-                      placeholder="Enter genre..."
-                      list="genre-suggestions"
-                    />
-                    <datalist id="genre-suggestions">
-                      {genreSuggestions.map((suggestion) => (
-                        <option key={suggestion} value={suggestion}></option>
-                      ))}
-                    </datalist>
-                  </div>
-                ) : (
-                  <p className="field-value">{genre || 'Not specified'}</p>
-                )}
+        {/* Metadata Grid */}
+        <div className="metadata-grid">
+          {/* Genre */}
+          <div className="field-group">
+            <label htmlFor="genre">Genre</label>
+            {isEditing ? (
+              <input
+                type="text"
+                id="genre"
+                className="form-input"
+                value={formData.genre}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('genre', e.target.value)}
+                placeholder="e.g., Fantasy, Science Fiction, Mystery"
+                list="genre-suggestions"
+              />
+            ) : (
+              <div className="field-content">
+                {genre || <span className="field-value">No genre specified</span>}
               </div>
-              
-              {/* POV Mode */}
-              <div className="field-group">
-                <label htmlFor="pov-mode">Point of View</label>
-                {isEditing ? (
-                  <Select value={formData.pov_mode} onValueChange={(value) => updateFormData('pov_mode', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select POV Mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {povModeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p className="field-value">
-                    {povModeOptions.find(opt => opt.value === povMode)?.label || 'Not specified'}
-                  </p>
-                )}
+            )}
+            <datalist id="genre-suggestions">
+              {genreSuggestions.map(suggestion => (
+                <option key={suggestion} value={suggestion} />
+              ))}
+            </datalist>
+          </div>
+          
+          {/* POV Mode */}
+          <div className="field-group">
+            <label htmlFor="pov-mode">Point of View</label>
+            {isEditing ? (
+              <select
+                id="pov-mode"
+                className="form-select"
+                value={formData.pov_mode}
+                onChange={(e) => handleInputChange('pov_mode', e.target.value)}
+              >
+                {povModeOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}              </select>
+            ) : (
+              <div className="field-content">
+                {povModeOptions.find(opt => opt.value === povMode)?.label || 
+                 <span className="field-value">No POV mode selected</span>}
               </div>
-              
-              {/* Global Tense */}
-              <div className="field-group">
-                <label htmlFor="global-tense">Narrative Tense</label>
-                {isEditing ? (
-                  <Select value={formData.global_tense} onValueChange={(value) => updateFormData('global_tense', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Tense" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tenseOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p className="field-value">
-                    {tenseOptions.find(opt => opt.value === globalTense)?.label || 'Not specified'}
-                  </p>
-                )}
+            )}
+          </div>
+          
+          {/* Global Tense */}
+          <div className="field-group">
+            <label htmlFor="global-tense">Narrative Tense</label>
+            {isEditing ? (
+              <select
+                id="global-tense"
+                className="form-select"
+                value={formData.global_tense}
+                onChange={(e) => handleInputChange('global_tense', e.target.value)}
+              >
+                {tenseOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}              </select>
+            ) : (
+              <div className="field-content">
+                {tenseOptions.find(opt => opt.value === globalTense)?.label || 
+                 <span className="field-value">No tense selected</span>}
               </div>
-              
-              {/* Global POV Character */}
-              <div className="field-group">
-                <label htmlFor="global-pov">Primary POV Character</label>
-                {isEditing ? (
-                  <Input
-                    id="global-pov"
-                    value={formData.global_pov}
-                    onChange={(e) => updateFormData('global_pov', e.target.value)}
-                    placeholder="Main character name..."
-                  />
-                ) : (
-                  <p className="field-value">{globalPov || 'Not specified'}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          </div>
+        </div>
         
         {/* Synopsis */}
-        <Card className="synopsis-card">
-          <CardHeader className="card-header-with-actions">
-            <CardTitle>Synopsis</CardTitle>
-            {isEditing && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={generateSynopsis}
-                disabled={isGeneratingSynopsis || !formData.braindump.trim()}
-                className="ai-generate-btn"
-              >
-                <span className="icon">{isGeneratingSynopsis ? '⏳' : '✨'}</span>
-                {isGeneratingSynopsis ? 'Generating...' : 'Generate with AI'}
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent>
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title flex items-center justify-between">
+              Synopsis
+              {isEditing && (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={generateSynopsis}
+                  disabled={!formData.braindump.trim() || isGeneratingSynopsis}
+                >
+                  {isGeneratingSynopsis ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Lightbulb className="w-4 h-4 mr-2" />
+                  )}
+                  {isGeneratingSynopsis ? 'Generating...' : 'AI Generate'}
+                </button>
+              )}
+            </h3>
+          </div>
+          <div className="card-content">
             {isEditing ? (
-              <TextArea
+              <textarea
+                className="form-textarea synopsis-textarea"
                 value={formData.synopsis}
-                onChange={(value) => updateFormData('synopsis', value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('synopsis', e.target.value)}
                 placeholder="Write a brief synopsis of your story..."
                 rows={4}
-                className="synopsis-textarea"
               />
             ) : (
               <div className="synopsis-content">
                 {synopsis ? (
                   <p>{synopsis}</p>
                 ) : (
-                  <p className="empty-state">No synopsis written yet. Click Edit to add one.</p>
+                  <p className="field-value">No synopsis written yet. Click Edit to add one.</p>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         
         {/* Writing Style */}
-        <Card className="style-card">
-          <CardHeader>
-            <CardTitle>Writing Style & Voice</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Writing Style & Voice</h3>
+          </div>
+          <div className="card-content">
             <div className="style-content">
               {/* Style Description */}
               <div className="field-group">
                 <label htmlFor="style">Style Description</label>
                 {isEditing ? (
-                  <Textarea
+                  <textarea
                     id="style"
+                    className="form-textarea"
                     value={formData.style}
-                    onChange={(value) => updateFormData('style', value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('style', e.target.value)}
                     placeholder="Describe your writing style, tone, and voice..."
                     rows={3}
                   />
@@ -436,7 +477,7 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
                     {style ? (
                       <p>{style}</p>
                     ) : (
-                      <p className="empty-state">No style description yet.</p>
+                      <p className="field-value">No style description yet.</p>
                     )}
                   </div>
                 )}
@@ -446,10 +487,11 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
               <div className="field-group">
                 <label htmlFor="style-examples">Style Examples</label>
                 {isEditing ? (
-                  <Textarea
+                  <textarea
                     id="style-examples"
+                    className="form-textarea"
                     value={formData.style_examples}
-                    onChange={(value) => updateFormData('style_examples', value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('style_examples', e.target.value)}
                     placeholder="Paste example sentences or paragraphs that capture your desired style..."
                     rows={4}
                   />
@@ -458,83 +500,80 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
                     {styleExamples ? (
                       <pre className="style-examples">{styleExamples}</pre>
                     ) : (
-                      <p className="empty-state">No style examples yet.</p>
+                      <p className="field-value">No style examples yet.</p>
                     )}
                   </div>
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         
         {/* AI Brainstorming */}
         {isEditing && (
-          <Card className="brainstorm-card">
-            <CardHeader>
-              <CardTitle>AI Brainstorming</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">AI Brainstorming</h3>
+            </div>
+            <div className="card-content">
               <div className="brainstorm-content">
                 <div className="brainstorm-controls">
                   <div className="brainstorm-input-row">
                     <div className="category-select">
                       <label htmlFor="brainstorm-category">Category:</label>
-                      <Select value={selectedCategory} onValueChange={(value: any) => setSelectedCategory(value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {brainstormCategories.map((category) => (
-                            <SelectItem key={category.value} value={category.value}>
-                              {category.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <select
+                        id="brainstorm-category"
+                        className="form-select"
+                        value={selectedCategory}
+                        onChange={(e: any) => setSelectedCategory(e.target.value)}
+                      >
+                        {brainstormCategories.map(category => (
+                          <option key={category.value} value={category.value}>
+                            {category.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     
                     <div className="prompt-input">
-                      <Input
+                      <input
+                        type="text"
+                        className="form-input brainstorm-prompt"
                         value={brainstormPrompt}
-                        onChange={(e) => setBrainstormPrompt(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBrainstormPrompt(e.target.value)}
                         placeholder="What would you like to brainstorm? (e.g., 'mysterious characters for a fantasy tavern')"
-                        className="brainstorm-prompt"
                       />
                     </div>
                     
-                    <Button
-                      variant="primary"
-                      onClick={generateBrainstormIdeas}
-                      disabled={isBrainstorming || !brainstormPrompt.trim()}
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={startBrainstorming}
+                      disabled={!brainstormPrompt.trim() || isBrainstorming}
                     >
-                      <span className="icon">{isBrainstorming ? '⏳' : '💡'}</span>
-                      {isBrainstorming ? 'Generating...' : 'Generate Ideas'}
-                    </Button>
+                      {isBrainstorming ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Lightbulb className="w-4 h-4 mr-2" />
+                      )}
+                      {isBrainstorming ? 'Brainstorming...' : 'Brainstorm'}
+                    </button>
                   </div>
                 </div>
                 
+                {/* Brainstorm Results */}
                 {showBrainstormResults && (
                   <div className="brainstorm-results">
                     <div className="results-header">
-                      <h4>Generated Ideas</h4>
+                      <h4>Brainstorm Results</h4>
                       <div className="results-actions">
-                        {keepersList.length > 0 && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={addKeepersToContent}
-                          >
-                            <span className="icon">📝</span>
-                            Add {keepersList.length} to Braindump
-                          </Button>
-                        )}
-                        <Button
-                          variant="secondary"
-                          size="sm"
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
                           onClick={clearBrainstormResults}
                         >
-                          Clear
-                        </Button>
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                     
@@ -542,48 +581,37 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
                       {brainstormIdeas.map((idea, index) => (
                         <div key={index} className="idea-item">
                           <div className="idea-content">
-                            <span className="idea-text">{idea}</span>
+                            <p className="idea-text">{idea}</p>
                           </div>
                           <div className="idea-actions">
-                            {keepersList.includes(idea) ? (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => removeFromKeepers(idea)}
-                                title="Remove from keepers"
-                              >
-                                <span className="icon">👍</span>
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => addToKeepers(idea)}
-                                title="Add to keepers"
-                              >
-                                <span className="icon">👍</span>
-                              </Button>
-                            )}
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => addToKeepers(idea)}
+                              disabled={keepersList.includes(idea)}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
                     
+                    {/* Keepers List */}
                     {keepersList.length > 0 && (
                       <div className="keepers-list">
-                        <h5>Keepers List ({keepersList.length})</h5>
+                        <h5>Keepers</h5>
                         <div className="keepers-items">
                           {keepersList.map((keeper, index) => (
                             <div key={index} className="keeper-item">
                               <span className="keeper-text">{keeper}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                              <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
                                 onClick={() => removeFromKeepers(keeper)}
-                                title="Remove from keepers"
                               >
-                                <span className="icon">✕</span>
-                              </Button>
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -592,23 +620,23 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
         
-        {/* Braindump */}
-        <Card className="braindump-card">
-          <CardHeader>
-            <CardTitle>Creative Braindump</CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Main Braindump */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Creative Braindump</h3>
+          </div>
+          <div className="card-content">
             {isEditing ? (
-              <Textarea
+              <textarea
+                className="form-textarea braindump-textarea"
                 value={formData.braindump}
-                onChange={(value) => updateFormData('braindump', value)}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('braindump', e.target.value)}
                 placeholder="Let your creativity flow! Jot down ideas, plot points, character thoughts, world-building details, or anything else related to your story..."
                 rows={12}
-                className="braindump-textarea"
               />
             ) : (
               <div className="braindump-content">
@@ -619,15 +647,15 @@ const BraindumpEditor: React.FC<BraindumpEditorProps> = ({
                     <span className="empty-icon">💭</span>
                     <h3>Start Your Creative Journey</h3>
                     <p>This is your creative space. Use it to brainstorm ideas, capture inspiration, and develop your story's foundation.</p>
-                    <Button variant="primary" onClick={startEditing}>
+                    <button type="button" className="btn btn-primary" onClick={startEditing}>
                       Start Writing
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

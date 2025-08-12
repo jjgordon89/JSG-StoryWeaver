@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button } from '../ui/Button';
-import { Select } from '../ui/select';
+import { Button } from '../../ui/components/common';
+import { Select } from '../../ui/components/common';
 
 interface Template {
   id: string;

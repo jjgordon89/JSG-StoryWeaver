@@ -138,7 +138,7 @@ impl super::TimelineOps {
     
     /// Get timeline events by character involvement
     pub async fn get_by_character(pool: &Pool<Sqlite>, project_id: &str, character_id: &str) -> Result<Vec<TimelineEvent>> {
-        let events = Self::get_by_project(pool, project_id).await?;
+        let events = Self::get_by_project(&*pool, project_id).await?;
         
         Ok(events.into_iter()
             .filter(|event| event.characters_involved.contains(&character_id.to_string()))
@@ -147,7 +147,7 @@ impl super::TimelineOps {
     
     /// Get timeline events by location involvement
     pub async fn get_by_location(pool: &Pool<Sqlite>, project_id: &str, location_id: &str) -> Result<Vec<TimelineEvent>> {
-        let events = Self::get_by_project(pool, project_id).await?;
+        let events = Self::get_by_project(&*pool, project_id).await?;
         
         Ok(events.into_iter()
             .filter(|event| event.locations_involved.contains(&location_id.to_string()))

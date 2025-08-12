@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Textarea } from '../ui/textarea';
-import { Input } from '../ui/input';
+import { Card, CardContent, CardHeader, CardTitle, Button, Textarea, Input } from '../../ui/components/common';
 import { useStoryBible } from '../../features/story-bible/hooks/useStoryBible';
 import type { StoryBible } from '../../types/storyBible';
 

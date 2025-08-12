@@ -38,7 +38,7 @@ impl super::CreditUsageOps {
         .bind(usage.credits_consumed)
         .bind(&usage.operation_details)
         .bind(&usage.session_id)
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create credit usage record: {}", e)))?;
 
@@ -55,7 +55,7 @@ impl super::CreditUsageOps {
             "#
         )
         .bind(id)
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage record: {}", e)))?;
 
@@ -82,7 +82,7 @@ impl super::CreditUsageOps {
             "#
         )
         .bind(project_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage by project: {}", e)))?;
 
@@ -136,7 +136,7 @@ impl super::CreditUsageOps {
             "#
         )
         .bind(session_id)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage by session: {}", e)))?;
 
@@ -162,7 +162,7 @@ impl super::CreditUsageOps {
             FROM credit_usage ORDER BY created_at DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list credit usage records: {}", e)))?;
 
@@ -196,7 +196,7 @@ impl super::CreditUsageOps {
             "SELECT COALESCE(SUM(credits_consumed), 0.0) as total_credits FROM credit_usage WHERE project_id = ?"
         )
         .bind(project_id)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total credits for project: {}", e)))?;
 
@@ -227,7 +227,7 @@ impl super::CreditUsageOps {
         )
         .bind(project_id)
         .bind(date)
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get daily credit usage: {}", e)))?;
 
@@ -248,7 +248,7 @@ impl super::CreditUsageOps {
         .bind(project_id)
         .bind(start_date)
         .bind(end_date)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage in range: {}", e)))?;
 
@@ -275,7 +275,7 @@ impl super::CreditUsageOps {
             "#
         )
         .bind(limit)
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent credit usage: {}", e)))?;
 
@@ -304,7 +304,7 @@ impl super::CreditUsageOps {
             ORDER BY total_credits DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage stats by model: {}", e)))?;
 
@@ -323,7 +323,7 @@ impl super::CreditUsageOps {
             ORDER BY total_credits DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get credit usage stats by operation: {}", e)))?;
 

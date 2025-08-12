@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Plus, X, Reply, Trash2, Edit3, Check, MoreHorizontal } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '../../ui/components/common';
 import { Avatar } from '../ui/avatar';
 
 interface Comment {

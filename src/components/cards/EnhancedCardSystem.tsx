@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CardStack } from './CardStack';
-import { Button } from '../ui/Button';
+import { Button } from '../../ui/components/common';
 import { FilterIcon, SortIcon, StarIcon } from '../ui/Icons';
 import { useCards } from '../../hooks/useCards';
 import { DropdownButton } from '../ui/Dropdown';

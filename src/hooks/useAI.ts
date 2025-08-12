@@ -408,10 +408,12 @@ export const useAISettings = () => {
     defaultRewriteSettings,
     defaultExpandSettings,
     defaultBrainstormSettings,
+    globalSettings,
     updateWriteSettings,
     updateRewriteSettings,
     updateExpandSettings,
     updateBrainstormSettings,
+    updateGlobalSettings,
   } = useAIStore();
   
   return {
@@ -420,12 +422,14 @@ export const useAISettings = () => {
       rewrite: defaultRewriteSettings,
       expand: defaultExpandSettings,
       brainstorm: defaultBrainstormSettings,
+      ...globalSettings,
     },
     updateSettings: {
       write: updateWriteSettings,
       rewrite: updateRewriteSettings,
       expand: updateExpandSettings,
       brainstorm: updateBrainstormSettings,
+      global: updateGlobalSettings,
     },
   };
 };

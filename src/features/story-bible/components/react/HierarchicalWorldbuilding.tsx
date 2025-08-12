@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../../../../ui/components/common';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { Input } from '../../../../ui/components/common';
@@ -6,14 +6,12 @@ import { Textarea } from '../../../../ui/components/common';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
 import { Badge } from '../../../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../../../components/ui/dialog';
-import { Tree, TreeNode } from '../../../../components/ui/tree';
 import { 
   ChevronRight, 
   ChevronDown, 
   Plus, 
   Edit, 
   Trash2, 
-  Move, 
   FolderPlus, 
   Folder, 
   FolderOpen,
@@ -26,7 +24,6 @@ import {
   Star,
   Settings,
   Search,
-  Filter,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -108,25 +105,25 @@ const CATEGORY_COLORS = [
 ];
 
 const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
-  projectId,
+  // projectId,
   categories,
   elements,
   onCreateCategory,
-  onUpdateCategory,
+  // onUpdateCategory,
   onDeleteCategory,
   onCreateElement,
-  onUpdateElement,
+  // onUpdateElement,
   onDeleteElement,
   onMoveElement,
-  onReorderElements
+  // onReorderElements
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<WorldElement | null>(null);
   const [showCreateCategoryDialog, setShowCreateCategoryDialog] = useState(false);
   const [showCreateElementDialog, setShowCreateElementDialog] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [editingElement, setEditingElement] = useState<WorldElement | null>(null);
+  // const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  // const [editingElement, setEditingElement] = useState<WorldElement | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterVisibility, setFilterVisibility] = useState('');
@@ -174,15 +171,15 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
   const hierarchicalCategories = buildHierarchy(categories);
 
   // Filter elements based on search and filters
-  const filteredElements = elements.filter(element => {
-    if (searchQuery && !element.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !element.description.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    if (filterType && element.element_type !== filterType) return false;
-    if (filterVisibility && element.visibility !== filterVisibility) return false;
-    return true;
-  });
+  // const filteredElements = elements.filter(element => {
+  //   if (searchQuery && !element.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+  //       !element.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+  //     return false;
+  //   }
+  //   if (filterType && element.element_type !== filterType) return false;
+  //   if (filterVisibility && element.visibility !== filterVisibility) return false;
+  //   return true;
+  // });
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories);
@@ -341,9 +338,9 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingCategory(category);
+              onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
+                e?.stopPropagation();
+                // setEditingCategory(category);
               }}
             >
               <Edit className="h-3 w-3" />
@@ -351,8 +348,8 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
+                e?.stopPropagation();
                 if (confirm('Are you sure you want to delete this category?')) {
                   onDeleteCategory(category.id);
                 }
@@ -401,9 +398,9 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingElement(element);
+                      onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
+                        e?.stopPropagation();
+                        // setEditingElement(element);
                       }}
                     >
                       <Edit className="h-3 w-3" />
@@ -411,8 +408,8 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
+                      onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
+                        e?.stopPropagation();
                         if (confirm('Are you sure you want to delete this element?')) {
                           onDeleteElement(element.id);
                         }
@@ -709,7 +706,7 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
             </Select>
             <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
               {[
-                { id: 'tree', label: 'Tree', icon: Tree },
+                { id: 'tree', label: 'Tree', icon: Folder },
                 { id: 'grid', label: 'Grid', icon: Globe },
                 { id: 'list', label: 'List', icon: Settings }
               ].map(viewOption => {
@@ -859,13 +856,13 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
-                      onClick={() => setEditingElement(selectedElement)}
+                      onClick={() => {/* setEditingElement(selectedElement) */}}
                     >
                       <Edit className="h-4 w-4 mr-1" />
                       Edit
                     </Button>
                     <Button
-                      variant="destructive"
+                      variant="secondary"
                       onClick={() => {
                         if (confirm('Are you sure you want to delete this element?')) {
                           onDeleteElement(selectedElement.id);

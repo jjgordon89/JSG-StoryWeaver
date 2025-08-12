@@ -23,36 +23,36 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         .map_err(|e| StoryWeaverError::database(format!("Failed to enable foreign keys: {}", e)))?;
     
     // Create migrations table
-    create_migrations_table(pool).await?;
+    create_migrations_table(&*pool).await?;
     
     // Run migrations in order
     let migrations: &[(&str, fn(&Pool<Sqlite>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + Send + '_>>)] = &[
-        ("001_initial_schema", |pool| Box::pin(migration_001_initial_schema(pool))),
-        ("002_story_bible_tables", |pool| Box::pin(migration_002_story_bible_tables(pool))),
-        ("003_ai_history_table", |pool| Box::pin(migration_003_ai_history_table(pool))),
-        ("004_user_preferences", |pool| Box::pin(migration_004_user_preferences(pool))),
-        ("005_full_text_search", |pool| Box::pin(migration_005_full_text_search(pool))),
-        ("006_indexes", |pool| Box::pin(migration_006_indexes(pool))),
-        ("007_backup_recovery_versioning", |pool| Box::pin(migration_007_backup_recovery_versioning(pool))),
-        ("008_background_tasks", |pool| Box::pin(migration_008_background_tasks(pool))),
-        ("009_performance_metrics", |pool| Box::pin(migration_009_performance_metrics(pool))),
-        ("010_ai_response_cards", |pool| Box::pin(migration_010_ai_response_cards(pool))),
-        ("011_story_bible_core", |pool| Box::pin(migration_011_story_bible_core(pool))),
-        ("012_style_examples", |pool| Box::pin(migration_012_style_examples(pool))),
-        ("013_character_series_support", |pool| Box::pin(migration_013_character_series_support(pool))),
-        ("014_create_document_links_table", |pool| Box::pin(migration_014_create_document_links_table(pool))),
-        ("015_phase4_advanced_ai", |pool| Box::pin(phase4_advanced_ai::up(pool))),
-        ("016_fix_credit_usage_schema", |pool| Box::pin(fix_credit_usage_schema::up(pool))),
-        ("017_phase5_collaboration_plugins", |pool| Box::pin(phase5_collaboration_plugins::up(pool))),
-        ("018_add_folder_support", |pool| Box::pin(add_folder_support::up(pool))),
-        ("019_phase6_optimization", |pool| Box::pin(_015_phase6_optimization::up(pool))),
+        ("001_initial_schema", |pool| Box::pin(migration_001_initial_schema(&*pool))),
+        ("002_story_bible_tables", |pool| Box::pin(migration_002_story_bible_tables(&*pool))),
+        ("003_ai_history_table", |pool| Box::pin(migration_003_ai_history_table(&*pool))),
+        ("004_user_preferences", |pool| Box::pin(migration_004_user_preferences(&*pool))),
+        ("005_full_text_search", |pool| Box::pin(migration_005_full_text_search(&*pool))),
+        ("006_indexes", |pool| Box::pin(migration_006_indexes(&*pool))),
+        ("007_backup_recovery_versioning", |pool| Box::pin(migration_007_backup_recovery_versioning(&*pool))),
+        ("008_background_tasks", |pool| Box::pin(migration_008_background_tasks(&*pool))),
+        ("009_performance_metrics", |pool| Box::pin(migration_009_performance_metrics(&*pool))),
+        ("010_ai_response_cards", |pool| Box::pin(migration_010_ai_response_cards(&*pool))),
+        ("011_story_bible_core", |pool| Box::pin(migration_011_story_bible_core(&*pool))),
+        ("012_style_examples", |pool| Box::pin(migration_012_style_examples(&*pool))),
+        ("013_character_series_support", |pool| Box::pin(migration_013_character_series_support(&*pool))),
+        ("014_create_document_links_table", |pool| Box::pin(migration_014_create_document_links_table(&*pool))),
+        ("015_phase4_advanced_ai", |pool| Box::pin(phase4_advanced_ai::up(&*pool))),
+        ("016_fix_credit_usage_schema", |pool| Box::pin(fix_credit_usage_schema::up(&*pool))),
+        ("017_phase5_collaboration_plugins", |pool| Box::pin(phase5_collaboration_plugins::up(&*pool))),
+        ("018_add_folder_support", |pool| Box::pin(add_folder_support::up(&*pool))),
+        ("019_phase6_optimization", |pool| Box::pin(_015_phase6_optimization::up(&*pool))),
     ];
     
     for (name, migration_fn) in migrations {
-        if !is_migration_applied(pool, name).await? {
-            let future = migration_fn(pool);
+        if !is_migration_applied(&*pool, name).await? {
+            let future = migration_fn(&*pool);
             future.await?;
-            mark_migration_applied(pool, name).await?;
+            mark_migration_applied(&*pool, name).await?;
             println!("Applied migration: {}", name);
         }
     }
@@ -132,7 +132,7 @@ async fn migration_013_character_series_support(pool: &Pool<Sqlite>) -> Result<(
 }
 
 async fn migration_014_create_document_links_table(pool: &Pool<Sqlite>) -> Result<()> {
-    _014_create_document_links_table::up(pool).await.map_err(|e| StoryWeaverError::database(format!("Failed to apply 014_create_document_links_table migration: {}", e)))
+    _014_create_document_links_table::up(&*pool).await.map_err(|e| StoryWeaverError::database(format!("Failed to apply 014_create_document_links_table migration: {}", e)))
 }
 
 /// Migration 010: Create AI response cards table
@@ -189,7 +189,7 @@ async fn migration_010_ai_response_cards(pool: &Pool<Sqlite>) -> Result<()> {
 
 /// Migration 008: Add background tasks table
 async fn migration_008_background_tasks(pool: &Pool<Sqlite>) -> Result<()> {
-    background_tasks::create_background_tasks_table(pool).await?;
+    background_tasks::create_background_tasks_table(&*pool).await?;
     
     // Add default settings for background processing
     let default_settings = [
@@ -214,7 +214,7 @@ async fn migration_008_background_tasks(pool: &Pool<Sqlite>) -> Result<()> {
 
 /// Migration 009: Add performance metrics tables
 async fn migration_009_performance_metrics(pool: &Pool<Sqlite>) -> Result<()> {
-    performance_metrics::create_performance_metrics_table(pool).await?;
+    performance_metrics::create_performance_metrics_table(&*pool).await?;
     Ok(())
 }
 

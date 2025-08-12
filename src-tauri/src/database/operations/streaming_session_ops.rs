@@ -48,7 +48,7 @@ impl super::StreamingSessionOps {
             session.metadata,
             session.started_at
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create streaming session: {}", e)))?;
 
@@ -66,7 +66,7 @@ impl super::StreamingSessionOps {
             "#,
             id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming session: {}", e)))?;
 
@@ -100,7 +100,7 @@ impl super::StreamingSessionOps {
             "#,
             session_id
         )
-        .fetch_optional(pool)
+        .fetch_optional(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming session by session ID: {}", e)))?;
 
@@ -134,7 +134,7 @@ impl super::StreamingSessionOps {
             "#,
             project_id
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming sessions by project: {}", e)))?;
 
@@ -168,7 +168,7 @@ impl super::StreamingSessionOps {
             "#,
             status
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming sessions by status: {}", e)))?;
 
@@ -201,7 +201,7 @@ impl super::StreamingSessionOps {
             FROM streaming_sessions ORDER BY created_at DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list streaming sessions: {}", e)))?;
 
@@ -236,7 +236,7 @@ impl super::StreamingSessionOps {
             tokens_generated,
             session_id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update streaming session content: {}", e)))?;
 
@@ -261,7 +261,7 @@ impl super::StreamingSessionOps {
                 status,
                 session_id
             )
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update streaming session status: {}", e)))?;
         } else {
@@ -274,7 +274,7 @@ impl super::StreamingSessionOps {
                 status,
                 session_id
             )
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to update streaming session status: {}", e)))?;
         }
@@ -293,7 +293,7 @@ impl super::StreamingSessionOps {
             error_message,
             session_id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update streaming session error: {}", e)))?;
 
@@ -311,7 +311,7 @@ impl super::StreamingSessionOps {
             credits_consumed,
             session_id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update streaming session credits: {}", e)))?;
 
@@ -329,7 +329,7 @@ impl super::StreamingSessionOps {
             metadata,
             session_id
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to update streaming session metadata: {}", e)))?;
 
@@ -339,7 +339,7 @@ impl super::StreamingSessionOps {
     /// Delete a streaming session
     pub async fn delete(pool: &Pool<Sqlite>, id: i32) -> Result<()> {
         sqlx::query!("DELETE FROM streaming_sessions WHERE id = ?", id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete streaming session: {}", e)))?;
 
@@ -349,7 +349,7 @@ impl super::StreamingSessionOps {
     /// Delete streaming session by session ID
     pub async fn delete_by_session_id(pool: &Pool<Sqlite>, session_id: &str) -> Result<()> {
         sqlx::query!("DELETE FROM streaming_sessions WHERE session_id = ?", session_id)
-            .execute(pool)
+            .execute(&*pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to delete streaming session by session ID: {}", e)))?;
 
@@ -366,7 +366,7 @@ impl super::StreamingSessionOps {
             FROM streaming_sessions WHERE status = 'active' ORDER BY created_at DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get active streaming sessions: {}", e)))?;
 
@@ -400,7 +400,7 @@ impl super::StreamingSessionOps {
             "#,
             limit
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent streaming sessions: {}", e)))?;
 
@@ -429,7 +429,7 @@ impl super::StreamingSessionOps {
             "SELECT COALESCE(SUM(credits_consumed), 0.0) as total_credits FROM streaming_sessions WHERE project_id = ?",
             project_id
         )
-        .fetch_one(pool)
+        .fetch_one(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get total streaming credits for project: {}", e)))?;
 
@@ -448,7 +448,7 @@ impl super::StreamingSessionOps {
             ORDER BY session_count DESC
             "#
         )
-        .fetch_all(pool)
+        .fetch_all(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get streaming session stats: {}", e)))?;
 
@@ -465,7 +465,7 @@ impl super::StreamingSessionOps {
             "#,
             days_old
         )
-        .execute(pool)
+        .execute(&*pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to cleanup old streaming sessions: {}", e)))?;
 

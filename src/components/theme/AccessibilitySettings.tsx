@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card, CardHeader, CardContent } from '../../ui/components/common';
+import { Button } from '../../ui/components/common';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 interface AccessibilitySettingsProps {

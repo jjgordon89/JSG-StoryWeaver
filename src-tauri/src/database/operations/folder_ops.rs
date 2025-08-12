@@ -22,7 +22,7 @@ impl super::FolderOps {
         .bind(&folder.parent_folder_id)
         .bind(folder.is_series)
         .bind(folder.created_at)
-        .execute(&*pool)
+        .execute(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create folder: {}", e)))?;
         
@@ -33,7 +33,7 @@ impl super::FolderOps {
     pub async fn get_by_id(pool: &Pool<Sqlite>, id: &str) -> Result<Option<Folder>> {
         let folder = sqlx::query_as::<_, Folder>("SELECT * FROM folders WHERE id = ?")
             .bind(id)
-            .fetch_optional(&*pool)
+            .fetch_optional(pool)
             .await
             .map_err(|e| StoryWeaverError::database(format!("Failed to get folder: {}", e)))?;
         
@@ -45,7 +45,7 @@ impl super::FolderOps {
         let folders = sqlx::query_as::<_, Folder>(
             "SELECT * FROM folders WHERE parent_folder_id IS NULL ORDER BY name"
         )
-        .fetch_all(&*pool)
+        .fetch_all(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get root folders: {}", e)))?;
         
@@ -103,7 +103,7 @@ impl super::FolderOps {
             "SELECT COUNT(*) FROM folders WHERE parent_folder_id = ?"
         )
         .bind(id)
-        .fetch_one(&*pool)
+        .fetch_one(pool)
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to check child folders: {}", e)))?;
         
@@ -188,7 +188,7 @@ impl super::FolderOps {
     /// Get folder hierarchy as a tree
     pub async fn get_folder_tree(pool: &Pool<Sqlite>) -> Result<Vec<FolderTreeNode>> {
         // Get all folders
-        let folders = Self::get_all(pool).await?;
+        let folders = Self::get_all(&*pool).await?;
         
         // Build tree structure
         let mut folder_map = std::collections::HashMap::new();

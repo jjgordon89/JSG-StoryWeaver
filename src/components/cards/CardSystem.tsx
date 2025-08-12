@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { CardStack } from './CardStack';
-import { Button } from '../ui/Button';
+import { Button } from '../../ui/components/common';
 import { FilterIcon, SortIcon } from '../ui/Icons';
 import { useCardStore } from '../../stores/cardStore';
 

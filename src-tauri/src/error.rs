@@ -103,6 +103,9 @@ pub enum StoryWeaverError {
     #[error("AI content filtered: {reason}")]
     AIContentFiltered { reason: String },
     
+    #[error("Saliency engine error: {message}")]
+    SaliencyEngineError { message: String },
+    
     // Not Found Errors
     #[error("Resource not found: {resource_type} - {id}")]
     NotFound { resource_type: String, id: String },

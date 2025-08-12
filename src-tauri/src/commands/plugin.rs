@@ -170,9 +170,19 @@ pub async fn execute_plugin_command(
         cursor_position,
     };
 
-    let result = plugin_ops::record_plugin_execution(&pool, request, todo!()).await?;
+    // For now, create a placeholder result since actual plugin execution is not implemented
+    let result = PluginExecutionResult {
+        success: false,
+        result_text: None,
+        error_message: Some("Plugin execution not yet implemented".to_string()),
+        credits_used: 0,
+        execution_time_ms: 0,
+        stage_results: None,
+    };
 
-    Ok(result)
+    let recorded_result = plugin_ops::record_plugin_execution(&pool, request, result.clone()).await?;
+
+    Ok(recorded_result)
 }
 
 /// Rate plugin

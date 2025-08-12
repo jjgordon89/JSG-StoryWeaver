@@ -167,7 +167,7 @@ impl AdvancedAIManager {
                 &request.project_id,
                 &request.text_context,
                 &story_bible.unwrap(),
-            ).map_err(|e| StoryWeaverError::SaliencyEngineError(e.to_string()))?)
+            ).map_err(|e| StoryWeaverError::SaliencyEngineError { message: e.to_string() })?)
         } else {
             None
         };
@@ -588,7 +588,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
     }
 
     pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, is_keeper: bool) -> Result<()> {
-        self.brainstorm_engine.mark_as_keeper(session_id, idea_id, is_keeper)
+        Ok(self.brainstorm_engine.mark_as_keeper(session_id, idea_id, is_keeper)?)
     }
 
     pub async fn get_daily_usage(&self) -> Result<i32> {
@@ -606,7 +606,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         story_bible: &StoryBibleElements,
     ) -> Result<SaliencyContext> {
         self.saliency_engine.build_context(project_id, text_context, story_bible)
-            .map_err(|e| StoryWeaverError::SaliencyEngineError(e.to_string()))
+            .map_err(|e| StoryWeaverError::SaliencyEngineError { message: e.to_string() })
     }
 
     pub async fn start_streaming_generation(

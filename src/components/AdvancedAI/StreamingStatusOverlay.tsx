@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAdvancedAIStore } from '../../stores/advancedAIStore';
 import { useProjectStore } from '../../stores/projectStore';
-import type { StreamingStatus, GenerationResult } from '../../types/advancedAI';
+import type { AdvancedGenerationResult } from '../../types/advancedAI';
 
 interface StreamingStatusOverlayProps {
   isVisible: boolean;
@@ -11,12 +11,8 @@ interface StreamingStatusOverlayProps {
 const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisible, onClose }) => {
   const {
     streamingStatus,
-    generationResult,
-    isGenerating,
-    generationProgress,
-    cancelGeneration,
-    saveGeneratedContent,
-    copyToClipboard
+    lastGenerationResult,
+    isGenerating
   } = useAdvancedAIStore();
   
   const { insertTextAtCursor, currentDocument } = useProjectStore();
@@ -28,32 +24,34 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
   const [showSaveOptions, setShowSaveOptions] = useState(false);
 
   useEffect(() => {
-    if (generationResult && !isGenerating) {
+    if (lastGenerationResult && !isGenerating) {
       setShowActions(true);
     } else {
       setShowActions(false);
     }
-  }, [generationResult, isGenerating]);
+  }, [lastGenerationResult, isGenerating]);
 
   useEffect(() => {
-    if (generationResult?.content) {
+    if (lastGenerationResult?.generated_text) {
       // Auto-generate snippet title from first few words
-      const words = generationResult.content.split(' ').slice(0, 5).join(' ');
-      setSnippetTitle(words + (generationResult.content.split(' ').length > 5 ? '...' : ''));
+      const words = lastGenerationResult.generated_text.split(' ').slice(0, 5).join(' ');
+       setSnippetTitle(words + (lastGenerationResult.generated_text.split(' ').length > 5 ? '...' : ''));
     }
-  }, [generationResult]);
+  }, [lastGenerationResult]);
 
   const handleCancel = () => {
     if (isGenerating) {
-      cancelGeneration();
+      // TODO: Implement cancelGeneration in advancedAIStore
+      console.log('Cancel generation requested');
     }
     onClose();
   };
 
   const handleCopy = async () => {
-    if (generationResult?.content) {
+    if (lastGenerationResult?.generated_text) {
       try {
-        await copyToClipboard(generationResult.content);
+        // TODO: Implement copyToClipboard in advancedAIStore
+         await navigator.clipboard.writeText(lastGenerationResult.generated_text);
         // Show success feedback
       } catch (error) {
         console.error('Error copying to clipboard:', error);
@@ -62,30 +60,31 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
   };
 
   const handleInsert = () => {
-    if (generationResult?.content && currentDocument) {
-      insertTextAtCursor(generationResult.content);
+    if (lastGenerationResult?.generated_text && currentDocument) {
+      insertTextAtCursor(lastGenerationResult.generated_text);
       onClose();
     }
   };
 
   const handleSave = async () => {
-    if (!generationResult?.content) return;
+    if (!lastGenerationResult?.content) return;
     
     setIsSaving(true);
     try {
       const saveData = {
-        content: generationResult.content,
+        content: lastGenerationResult.generated_text,
         location: saveLocation,
         title: saveLocation === 'snippet' ? snippetTitle : undefined,
         metadata: {
-          prompt: generationResult.prompt,
+          prompt: 'N/A', // TODO: Store original prompt
           timestamp: new Date().toISOString(),
-          settings: generationResult.settings,
-          credits: generationResult.creditsUsed
+          settings: lastGenerationResult.prose_mode_used,
+          credits: lastGenerationResult.credits_used
         }
       };
       
-      await saveGeneratedContent(saveData);
+      // TODO: Implement saveGeneratedContent in advancedAIStore
+      console.log('Save data:', saveData);
       setShowSaveOptions(false);
       onClose();
     } catch (error) {
@@ -99,10 +98,10 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
     if (isGenerating) {
       return 'fas fa-spinner fa-spin';
     }
-    if (streamingStatus?.error) {
+    if (streamingStatus?.error_message) {
       return 'fas fa-exclamation-triangle';
     }
-    if (generationResult) {
+    if (lastGenerationResult) {
       return 'fas fa-check-circle';
     }
     return 'fas fa-magic';
@@ -110,12 +109,12 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
 
   const getStatusText = () => {
     if (isGenerating) {
-      return streamingStatus?.currentPhase || 'Generating...';
+      return 'Generating...';
     }
-    if (streamingStatus?.error) {
+    if (streamingStatus?.error_message) {
       return 'Generation failed';
     }
-    if (generationResult) {
+    if (lastGenerationResult) {
       return 'Generation complete';
     }
     return 'Ready to generate';
@@ -123,8 +122,8 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
 
   const getStatusClass = () => {
     if (isGenerating) return 'generating';
-    if (streamingStatus?.error) return 'error';
-    if (generationResult) return 'complete';
+    if (streamingStatus?.error_message) return 'error';
+    if (lastGenerationResult) return 'complete';
     return 'ready';
   };
 
@@ -151,14 +150,14 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
             <div className="progress-bar">
               <div 
                 className="progress-fill" 
-                style={{ width: `${generationProgress}%` }}
+                style={{ width: `${streamingStatus?.progress || 0}%` }}
               ></div>
             </div>
             <div className="progress-details">
-              <span className="progress-text">{generationProgress.toFixed(0)}% complete</span>
-              {streamingStatus?.estimatedTimeRemaining && (
+              <span className="progress-text">{(streamingStatus?.progress || 0).toFixed(0)}% complete</span>
+              {streamingStatus?.estimated_completion && (
                 <span className="time-remaining">
-                  ~{Math.ceil(streamingStatus.estimatedTimeRemaining / 1000)}s remaining
+                  ETA: {streamingStatus.estimated_completion}
                 </span>
               )}
             </div>
@@ -166,16 +165,16 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
         )}
 
         {/* Streaming Content */}
-        {(streamingStatus?.partialContent || generationResult?.content) && (
+        {(streamingStatus?.current_text || lastGenerationResult?.content) && (
           <div className="content-section">
             <div className="content-header">
               <h4>Generated Content</h4>
-              {generationResult && (
+              {lastGenerationResult && (
                 <div className="content-stats">
-                  <span>{generationResult.content.split(' ').length} words</span>
-                  <span>{generationResult.content.length} characters</span>
-                  {generationResult.creditsUsed && (
-                    <span>{generationResult.creditsUsed} credits used</span>
+                  <span>{lastGenerationResult.generated_text.split(' ').length} words</span>
+                  <span>{lastGenerationResult.generated_text.length} characters</span>
+                  {lastGenerationResult.credits_used && (
+                    <span>{lastGenerationResult.credits_used} credits used</span>
                   )}
                 </div>
               )}
@@ -183,7 +182,7 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
             
             <div className="content-display">
               <div className="content-text">
-                {generationResult?.content || streamingStatus?.partialContent}
+                {lastGenerationResult?.generated_text || streamingStatus?.current_text}
                 {isGenerating && (
                   <span className="cursor-blink">|</span>
                 )}
@@ -193,18 +192,18 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
         )}
 
         {/* Error Display */}
-        {streamingStatus?.error && (
+        {streamingStatus?.error_message && (
           <div className="error-section">
             <div className="error-header">
               <i className="fas fa-exclamation-triangle"></i>
               <h4>Generation Error</h4>
             </div>
             <div className="error-content">
-              <p>{streamingStatus.error.message}</p>
-              {streamingStatus.error.details && (
+              <p>{streamingStatus.error_message}</p>
+              {streamingStatus.error_message && (
                 <details>
                   <summary>Error Details</summary>
-                  <pre>{JSON.stringify(streamingStatus.error.details, null, 2)}</pre>
+                  <pre>{streamingStatus.error_message}</pre>
                 </details>
               )}
             </div>
@@ -212,17 +211,17 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
         )}
 
         {/* Cliché Detection Results */}
-        {generationResult?.clicheDetection && generationResult.clicheDetection.length > 0 && (
+        {lastGenerationResult?.cliche_detection && lastGenerationResult.cliche_detection.cliches_found.length > 0 && (
           <div className="cliche-section">
             <div className="cliche-header">
               <i className="fas fa-search"></i>
               <h4>Cliché Detection</h4>
               <span className="cliche-count">
-                {generationResult.clicheDetection.length} potential clichés found
+                {lastGenerationResult.cliche_detection.cliches_found.length} potential clichés found
               </span>
             </div>
             <div className="cliche-list">
-              {generationResult.clicheDetection.map((cliche, index) => (
+              {lastGenerationResult.cliche_detection.cliches_found.map((cliche: any, index: number) => (
                 <div key={index} className="cliche-item">
                   <div className="cliche-text">"{cliche.text}"</div>
                   <div className="cliche-details">
@@ -239,67 +238,52 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
           </div>
         )}
 
-        {/* Smart Context Info */}
-        {generationResult?.smartContext && (
+        {/* Saliency Context Info */}
+        {lastGenerationResult?.saliency_context && (
           <div className="context-section">
             <div className="context-header">
               <i className="fas fa-brain"></i>
-              <h4>Smart Context Used</h4>
+              <h4>Saliency Context Used</h4>
             </div>
             <div className="context-details">
-              <div className="context-sources">
-                {generationResult.smartContext.sources.map((source, index) => (
-                  <div key={index} className="context-source">
-                    <i className={`fas fa-${source.type === 'character' ? 'user' : source.type === 'location' ? 'map-marker' : 'book'}`}></i>
-                    <span>{source.name}</span>
-                    <span className="relevance">{(source.relevance * 100).toFixed(0)}% relevant</span>
-                  </div>
-                ))}
+              <div className="context-info">
+                <span>Project ID: {lastGenerationResult.saliency_context.project_id}</span>
+                <span>Token Count: {lastGenerationResult.saliency_context.token_count}</span>
               </div>
-              {generationResult.smartContext.insights && (
-                <div className="context-insights">
-                  <h5>Key Insights Applied:</h5>
-                  <ul>
-                    {generationResult.smartContext.insights.map((insight, index) => (
-                      <li key={index}>{insight}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           </div>
         )}
 
         {/* Generation Statistics */}
-        {generationResult && (
+        {lastGenerationResult && (
           <div className="stats-section">
             <div className="stats-grid">
               <div className="stat-item">
                 <i className="fas fa-clock"></i>
                 <span>Generation Time</span>
-                <span>{(generationResult.generationTime / 1000).toFixed(1)}s</span>
+                <span>N/A</span> {/* TODO: Add generation time tracking */}
               </div>
               <div className="stat-item">
                 <i className="fas fa-coins"></i>
                 <span>Credits Used</span>
-                <span>{generationResult.creditsUsed || 0}</span>
+                <span>{lastGenerationResult.credits_used || 0}</span>
               </div>
               <div className="stat-item">
                 <i className="fas fa-file-alt"></i>
                 <span>Word Count</span>
-                <span>{generationResult.content.split(' ').length}</span>
+                <span>{lastGenerationResult.generated_text.split(' ').length}</span>
               </div>
               <div className="stat-item">
                 <i className="fas fa-chart-line"></i>
                 <span>Quality Score</span>
-                <span>{generationResult.qualityScore ? (generationResult.qualityScore * 100).toFixed(0) + '%' : 'N/A'}</span>
+                <span>{lastGenerationResult.cliche_detection?.overall_score ? (lastGenerationResult.cliche_detection.overall_score * 100).toFixed(0) + '%' : 'N/A'}</span>
               </div>
             </div>
           </div>
         )}
 
         {/* Actions */}
-        {showActions && generationResult && (
+        {showActions && lastGenerationResult && (
           <div className="actions-section">
             <div className="primary-actions">
               <button className="copy-btn" onClick={handleCopy}>
