@@ -236,8 +236,8 @@ pub struct OutlineTemplate {
     pub name: String,
     pub description: String,
     pub template_type: OutlineTemplateType,
-    pub template_data: String, // JSON string of template structure
-    pub is_official: bool,
+    pub structure_data: String, // JSON string of template structure
+    pub is_builtin: bool,
     pub created_at: DateTime<Utc>,
 }
 

@@ -188,15 +188,19 @@ impl AIProvider for OpenAIProvider {
             .await
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
-        // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        // Get response text
+        let response_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        
+        if !is_success {
+            return Err(StoryWeaverError::ai_request("OpenAI", status_code, &response_text));
         }
         
         // Parse response
-        let completion: ChatCompletionResponse = response.json().await
+        let completion: ChatCompletionResponse = serde_json::from_str(&response_text)
             .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
@@ -249,11 +253,14 @@ impl AIProvider for OpenAIProvider {
             .await
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
-        // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        if !is_success {
+            // Get response text for error handling
+            let response_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(StoryWeaverError::ai_request("OpenAI", status_code, &response_text));
         }
         
         // Create a new TextStream
@@ -357,15 +364,21 @@ impl AIProvider for OpenAIProvider {
             .await
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
-        // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status_code, &error_text));
         }
         
+        // Get response text
+        let response_text = response.text().await
+            .map_err(|e| StoryWeaverError::network(format!("Failed to read response body: {}", e)))?;
+        
         // Parse response
-        let completion: ChatCompletionResponse = response.json().await
+        let completion: ChatCompletionResponse = serde_json::from_str(&response_text)
             .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
@@ -410,10 +423,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status_code = response.status();
+        let is_success = status_code.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status_code.as_u16(), &error_text));
         }
         
         // Parse response
@@ -514,10 +529,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Create a new TextStream
@@ -635,14 +652,16 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+        let status_code = response.status();
+        let is_success = status_code.is_success();
+        let response_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        
+        if !is_success {
+            return Err(StoryWeaverError::ai_request("OpenAI", status_code.as_u16(), &response_text));
         }
         
         // Parse response
-        let completion: ChatCompletionResponse = response.json().await
+        let completion: ChatCompletionResponse = serde_json::from_str(&response_text)
             .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
@@ -726,10 +745,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Create a new TextStream
@@ -877,14 +898,16 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+        let status_code = response.status();
+        let is_success = status_code.is_success();
+        let response_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        
+        if !is_success {
+            return Err(StoryWeaverError::ai_request("OpenAI", status_code.as_u16(), &response_text));
         }
         
         // Parse response
-        let completion: ChatCompletionResponse = response.json().await
+        let completion: ChatCompletionResponse = serde_json::from_str(&response_text)
             .map_err(|e| StoryWeaverError::deserialization(format!("Failed to parse OpenAI API response: {}", e)))?;
         
         // Update rate limiter with actual token usage
@@ -998,10 +1021,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Create a new TextStream
@@ -1116,10 +1141,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Parse response
@@ -1230,10 +1257,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Parse response
@@ -1306,10 +1335,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Parse response
@@ -1383,10 +1414,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Parse response
@@ -1460,10 +1493,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to OpenAI API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Create a new TextStream
@@ -1546,10 +1581,12 @@ impl AIProvider for OpenAIProvider {
             .map_err(|e| StoryWeaverError::network(format!("Failed to send request to DALL-E API: {}", e)))?;
         
         // Check for errors
-        if !response.status().is_success() {
-            let status = response.status();
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_default();
-            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), error_text));
+            return Err(StoryWeaverError::ai_request("OpenAI", status.as_u16(), &error_text));
         }
         
         // Parse response

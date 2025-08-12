@@ -566,7 +566,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         Ok(self.credit_tracker.get_project_usage(project_id))
     }
 
-    pub fn get_prose_modes(&self) -> &[ProseMode] {
+    pub fn get_prose_modes(&self) -> Vec<&ProseMode> {
         self.prose_manager.list_prose_modes()
     }
 
@@ -584,11 +584,13 @@ Focus on extracting concrete, usable story elements that would be valuable for a
     }
 
     pub fn rate_brainstorm_idea(&mut self, session_id: &str, idea_id: &str, rating: u32) -> Result<()> {
-        self.brainstorm_engine.rate_idea(session_id, idea_id, rating as i32)
+        self.brainstorm_engine.rate_idea(session_id, idea_id, rating as i32)?;
+        Ok(())
     }
 
     pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, is_keeper: bool) -> Result<()> {
-        Ok(self.brainstorm_engine.mark_as_keeper(session_id, idea_id, is_keeper)?)
+        self.brainstorm_engine.mark_as_keeper(session_id, idea_id)?;
+        Ok(())
     }
 
     pub async fn get_daily_usage(&self) -> Result<i32> {
@@ -600,7 +602,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
     }
 
     pub async fn build_saliency_context(
-        &self,
+        &mut self,
         project_id: &str,
         text_context: &str,
         story_bible: &StoryBibleElements,

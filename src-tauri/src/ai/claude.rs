@@ -174,19 +174,23 @@ impl AIProvider for ClaudeProvider {
                 message: format!("Failed to send request to Claude API: {}", e),
             })?;
         
-        // Check for errors
-        if !response.status().is_success() {
-            let status_code = response.status().as_u16();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        // Get response text
+        let response_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        
+        if !is_success {
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
                 status_code,
-                message: format!("Claude API error: {}", error_text),
+                message: format!("Claude API error: {}", response_text),
             });
         }
         
         // Parse response
-        let completion: ClaudeCompletionResponse = response.json().await
+        let completion: ClaudeCompletionResponse = serde_json::from_str(&response_text)
             .map_err(|e| StoryWeaverError::AIProvider {
                 provider: "claude".to_string(),
                 message: format!("Failed to parse Claude API response: {}", e),
@@ -260,12 +264,15 @@ impl AIProvider for ClaudeProvider {
                 message: format!("Failed to send request to Claude API: {}", e),
             })?;
         
-        // Check for errors
-        if !response.status().is_success() {
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
-                status_code: response.status().as_u16(),
+                status_code,
                 message: format!("Claude API error: {}", error_text),
             });
         }
@@ -372,11 +379,14 @@ impl AIProvider for ClaudeProvider {
             })?;
         
         // Check for errors
-        if !response.status().is_success() {
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
-                status_code: response.status().as_u16(),
+                status_code: status.as_u16(),
                 message: format!("Claude API error: {}", error_text),
             });
         }
@@ -500,11 +510,14 @@ impl AIProvider for ClaudeProvider {
             })?;
         
         // Check for errors
-        if !response.status().is_success() {
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
-                status_code: response.status().as_u16(),
+                status_code: status.as_u16(),
                 message: format!("Claude API error: {}", error_text),
             });
         }
@@ -628,11 +641,14 @@ impl AIProvider for ClaudeProvider {
             })?;
         
         // Check for errors
-        if !response.status().is_success() {
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
-                status_code: response.status().as_u16(),
+                status_code: status.as_u16(),
                 message: format!("Claude API error: {}", error_text),
             });
         }
@@ -778,11 +794,14 @@ impl AIProvider for ClaudeProvider {
             })?;
         
         // Check for errors
-        if !response.status().is_success() {
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
-                status_code: response.status().as_u16(),
+                status_code: status.as_u16(),
                 message: format!("Claude API error: {}", error_text),
             });
         }
@@ -908,11 +927,14 @@ impl AIProvider for ClaudeProvider {
             })?;
         
         // Check for errors
-        if !response.status().is_success() {
+        let status = response.status();
+        let is_success = status.is_success();
+        
+        if !is_success {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "claude".to_string(),
-                status_code: response.status().as_u16(),
+                status_code: status.as_u16(),
                 message: format!("Claude API error: {}", error_text),
             });
         }

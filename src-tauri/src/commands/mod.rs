@@ -41,6 +41,9 @@ pub mod canvas;
 // Phase 6 Polish & Optimization
 pub mod optimization_commands;
 
+// Export main commands
+// Functions are defined locally in this module
+
 /// Response wrapper for Tauri commands
 #[derive(Debug, Serialize)]
 pub struct CommandResponse<T> {
@@ -81,7 +84,7 @@ impl<T> From<Result<T>> for CommandResponse<T> {
 #[tauri::command]
 pub async fn health_check() -> CommandResponse<String> {
     match get_pool() {
-        Ok(&*pool) => {
+        Ok(pool) => {
             match sqlx::query("SELECT 1").execute(&*pool).await {
                 Ok(_) => CommandResponse::success("Database connection healthy".to_string()),
                 Err(e) => CommandResponse::error(format!("Database error: {}", e)),
@@ -151,10 +154,6 @@ pub async fn init_database() -> CommandResponse<String> {
 
 /// Test command for development
 #[tauri::command]
-pub async fn greet(name: &str) -> CommandResponse<String> {
-    async fn greet_inner(name: &str) -> Result<String> {
-        Ok(format!("Hello, {}! You've been greeted from Rust!", name))
-    }
-    
-    greet_inner(name).await.into()
+pub async fn greet(name: &str) -> Result<String> {
+    Ok(format!("Hello, {}! You've been greeted from Rust!", name))
 }

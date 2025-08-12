@@ -18,6 +18,7 @@ pub struct BrainstormSession {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum BrainstormCategory {
+    #[default]
     Characters,
     Plot,
     Worldbuilding,

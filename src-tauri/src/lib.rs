@@ -370,15 +370,16 @@ pub fn run() {
             app.manage(commands::advanced_ai_commands::AdvancedAIState::new(advanced_ai_manager));
             
             // Initialize background task manager
-            let background_task_manager = background::BackgroundTaskManager::new(3, 100);
+            let background_task_manager = Arc::new(background::BackgroundTaskManager::new(3, 100));
             
             // Register AI task processor
             let app_handle_clone = app.handle().clone();
             let ai_task_processor = Arc::new(background::ai_processor::AITaskProcessor::new(app_handle_clone));
             
+            let background_task_manager_clone = background_task_manager.clone();
             tauri::async_runtime::spawn(async move {
-                background_task_manager.register_processor(ai_task_processor).await;
-                if let Err(e) = background_task_manager.start().await {
+                background_task_manager_clone.register_processor(ai_task_processor).await;
+                if let Err(e) = background_task_manager_clone.start().await {
                     eprintln!("Failed to start background task manager: {}", e);
                 }
             });

@@ -4,7 +4,7 @@ use crate::database::models::collaboration::{
     CollaborationNotification, CollaborationSession, Comment, CommentRequest, CommentThread,
     CommentType, NotificationType, ShareSettings, ShareType, SharedDocument,
 };
-use crate::database::models::Document;
+use crate::database::models::{Document, DocumentType};
 use chrono::{DateTime, Utc};
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;

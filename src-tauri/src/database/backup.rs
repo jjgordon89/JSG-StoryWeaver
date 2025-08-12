@@ -25,6 +25,8 @@ impl BackupManager {
             .map_err(|e| StoryWeaverError::database(format!("Failed to create backups directory: {}", e)))?;
         
         // Source database path
+        let app_data_dir = app_handle.path().resolve("", BaseDirectory::AppData)
+            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
         let db_path = app_data_dir.join("storyweaver.db");
         
         // Generate backup filename
@@ -98,6 +100,8 @@ impl BackupManager {
         }
         
         // Target database path
+        let app_data_dir = app_handle.path().resolve("", BaseDirectory::AppData)
+            .map_err(|e| StoryWeaverError::database(format!("Failed to get app data dir: {}", e)))?;
         let db_path = app_data_dir.join("storyweaver.db");
         
         // Create a backup of the current database before restoring

@@ -423,25 +423,25 @@ pub async fn record_plugin_execution(
 
     let request_json = serde_json::to_string(&request).unwrap_or_default();
     let result_json = serde_json::to_string(&result).unwrap_or_default();
+    let naive_now = now.naive_utc();
 
     sqlx::query!(
         r#"
         INSERT INTO plugin_execution_history (
-            id, plugin_id, user_identifier, execution_request, execution_result,
-            credits_used, execution_time_ms, success, error_message, created_at
+            id, plugin_id, user_identifier, input_variables, output_result,
+            execution_time_ms, success, error_message, executed_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
         execution_id,
         request.plugin_id,
         "unknown_user", // user_identifier not available in current struct
         request_json,
         result_json,
-        result.credits_used,
         result.execution_time_ms,
         result.success,
         result.error_message,
-        now.naive_utc()
+        naive_now
     )
     .execute(&*pool)
     .await?;
@@ -460,6 +460,7 @@ pub async fn update_plugin_usage_stats(
 ) -> Result<(), sqlx::Error> {
     let now = Utc::now();
     let today = now.date_naive();
+    let naive_now = now.naive_utc();
     let successful_increment = if success { 1 } else { 0 };
     let failed_increment = if success { 0 } else { 1 };
 
@@ -477,8 +478,8 @@ pub async fn update_plugin_usage_stats(
         today,
         successful_increment,
         failed_increment,
-        now.naive_utc(),
-        now.naive_utc()
+        naive_now,
+        naive_now
     )
     .execute(&*pool)
     .await?;

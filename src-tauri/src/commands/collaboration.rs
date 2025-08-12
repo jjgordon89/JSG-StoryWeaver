@@ -12,7 +12,7 @@ use crate::database::{
     operations::collaboration as collaboration_ops,
 };
 use crate::error::{Result, StoryWeaverError};
-use bcrypt;
+use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
 use std::str::FromStr;
 

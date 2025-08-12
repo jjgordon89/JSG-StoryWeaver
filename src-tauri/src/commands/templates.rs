@@ -9,7 +9,7 @@ use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
-use uuid;
+use uuid::Uuid;
 
 /// Get all character templates
 #[tauri::command]
@@ -52,9 +52,9 @@ pub async fn apply_character_template(
 ) -> CommandResponse<String> {
     async fn apply(
         template_id: String,
-        project_id: String,
-        name: String,
-        description: Option<String>,
+        _project_id: String,
+        _name: String,
+        _description: Option<String>,
         trait_overrides: Option<HashMap<String, String>>,
     ) -> Result<String> {
         let pool = database::get_pool()?;
@@ -63,7 +63,7 @@ pub async fn apply_character_template(
         let character_id = uuid::Uuid::new_v4().to_string();
         
         let _traits = CharacterTemplateOps::apply_template_to_character(
-            pool,
+            &*pool,
             &template_id,
             &character_id,
             trait_overrides,

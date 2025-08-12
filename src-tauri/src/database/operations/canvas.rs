@@ -263,16 +263,17 @@ pub async fn create_outline_template(
     let now = Utc::now();
     let naive_now = now.naive_utc();
 
+    let template_type_str = template_type.to_string();
     let result = sqlx::query!(
         r#"
         INSERT INTO outline_templates (
-            name, description, template_type, template_data, is_official, created_at
+            name, description, template_type, structure_data, is_builtin, created_at
         )
         VALUES (?, ?, ?, ?, ?, ?)
         "#,
         name,
         description,
-        template_type.to_string(),
+        template_type_str,
         structure,
         is_official,
         naive_now
@@ -287,8 +288,8 @@ pub async fn create_outline_template(
         name: name.to_string(),
         description: description.to_string(),
         template_type,
-        template_data: structure.to_string(),
-        is_official,
+        structure_data: structure.to_string(),
+        is_builtin: is_official,
         created_at: now,
     })
 }
@@ -299,7 +300,7 @@ pub async fn get_outline_templates(
     template_type: Option<OutlineTemplateType>,
 ) -> Result<Vec<OutlineTemplate>, sqlx::Error> {
     let mut builder = sqlx::QueryBuilder::new(
-        "SELECT id, name, description, template_type, template_data, is_official, created_at FROM outline_templates",
+        "SELECT id, name, description, template_type, structure_data, is_builtin, created_at FROM outline_templates",
     );
 
     if let Some(t_type) = template_type {

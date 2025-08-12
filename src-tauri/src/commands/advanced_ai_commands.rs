@@ -30,7 +30,7 @@ pub struct ProseGenerationRequest {
     pub use_saliency_engine: bool,
     pub style_examples: Vec<String>,
     pub special_instructions: Option<String>,
-    pub story_bible: Option<StoryBibleElements>,
+    pub story_bible: Option<SaliencyStoryBible>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -153,7 +153,7 @@ pub async fn generate_image(
         project_id: request.project_id,
         source_text: request.text_content,
         style_preference: Some(request.style_preference),
-        resolution: ImageResolution::from_str(&request.resolution).unwrap_or_default(),
+        resolution: ImageResolution::from_str(&request.resolution).unwrap_or(ImageResolution::Square1024),
         enhance_prompt: request.enhance_prompt,
     };
 
@@ -256,7 +256,7 @@ pub async fn get_available_prose_modes(
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<Vec<ProseMode>> {
     let ai_manager = ai_state.lock().await;
-    Ok(ai_manager.get_prose_modes().to_vec())
+    Ok(ai_manager.get_prose_modes().into_iter().cloned().collect())
 }
 
 #[tauri::command]
@@ -267,7 +267,7 @@ pub async fn get_prose_mode_details(
     let ai_manager = ai_state.lock().await;
     Ok(ai_manager
         .get_prose_modes()
-        .iter()
+        .into_iter()
         .find(|mode| mode.name == mode_name)
         .cloned())
 }
@@ -316,7 +316,7 @@ pub async fn delete_generated_image(
 pub async fn build_saliency_context(
     project_id: String,
     text_context: String,
-    story_bible: StoryBibleElements,
+    story_bible: SaliencyStoryBible,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<SaliencyContext> {
     let mut ai_manager = ai_state.lock().await;

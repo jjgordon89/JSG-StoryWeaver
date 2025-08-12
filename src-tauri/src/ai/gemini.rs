@@ -256,19 +256,28 @@ impl AIProvider for GeminiProvider {
                 message: format!("Failed to send request to Gemini API: {}", e),
             })?;
         
-        // Check for errors
-        if !response.status().is_success() {
-            let status_code = response.status().as_u16();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        // Get response text
+        let response_text = response.text().await
+            .map_err(|e| StoryWeaverError::AIRequest {
+                provider: "gemini".to_string(),
+                status_code: 0,
+                message: format!("Failed to read response: {}", e),
+            })?;
+        
+        if !is_success {
             return Err(StoryWeaverError::AIRequest {
                 provider: "gemini".to_string(),
                 status_code,
-                message: format!("Gemini API error: {}", error_text),
+                message: format!("Gemini API error: {}", response_text),
             });
         }
         
         // Parse response
-        let gemini_response: GeminiResponse = response.json().await
+        let gemini_response: GeminiResponse = serde_json::from_str(&response_text)
             .map_err(|e| StoryWeaverError::AIProvider {
                 provider: "gemini".to_string(),
                 message: format!("Failed to parse Gemini API response: {}", e),
@@ -333,14 +342,17 @@ impl AIProvider for GeminiProvider {
                 message: format!("Failed to send request to Gemini API: {}", e),
             })?;
         
-        // Check for errors
-        if !response.status().is_success() {
-            let status_code = response.status().as_u16();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+        // Check for errors first
+        let status_code = response.status().as_u16();
+        let is_success = response.status().is_success();
+        
+        if !is_success {
+            // Only get response text if there's an error
+            let response_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
             return Err(StoryWeaverError::AIRequest {
                 provider: "gemini".to_string(),
                 status_code,
-                message: format!("Gemini API error: {}", error_text),
+                message: format!("Gemini API error: {}", response_text),
             });
         }
         
@@ -772,9 +784,7 @@ impl AIProvider for GeminiProvider {
         // Gemini doesn't directly support image generation
         // Return an error indicating this feature is not supported
         Err(StoryWeaverError::NotSupported {
-            operation: "generate_image".to_string(),
-            message: String::from("Image generation is not supported by Gemini"),
-            name: "gemini".to_string(),
+            operation: "generate_image - Image generation is not supported by Gemini".to_string(),
         })
     }
 }

@@ -40,6 +40,15 @@ impl ImageResolution {
         }
     }
 
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s {
+            "1024x1024" => Ok(ImageResolution::Square1024),
+            "1024x1792" => Ok(ImageResolution::Portrait1024),
+            "1792x1024" => Ok(ImageResolution::Landscape1792),
+            _ => Err(format!("Invalid resolution: {}", s)),
+        }
+    }
+
     pub fn get_credits_cost(&self) -> i32 {
         match self {
             ImageResolution::Square1024 => 2500,
