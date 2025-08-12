@@ -241,6 +241,7 @@ export interface StreamingStatus {
   current_text?: string;
   error_message?: string;
   estimated_completion?: string;
+  stream_id?: string;
 }
 
 // Smart Import Types
@@ -353,6 +354,11 @@ export interface AdvancedAIState {
   isGenerating: boolean;
   lastGenerationResult?: AdvancedGenerationResult;
   streamingStatus?: StreamingStatus;
+  activeStreamId?: string;
+  generationStartedAt?: string;
+  generationFinishedAt?: string;
+  streamingPollIntervalId?: number;
+  lastGenerationRequest?: ProseGenerationRequest;
   
   // Brainstorming
   activeBrainstormSessions: BrainstormSession[];

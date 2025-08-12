@@ -22,6 +22,7 @@ import { Slider } from '../ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/components/common';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { estimateTokensFromText, estimateExpectedOutputTokensForWrite, estimateExpectedOutputTokensForExpand, estimateOperationCredits, estimateOperationCreditsWithModel } from '../../utils/aiCost';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { useAI, useAIWriteStream, useAITextProcessor, useAICreative, useAISettings, useAICredits } from '../../hooks/useAI';
@@ -126,7 +127,7 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
   
   // Hooks
   const { autoWrite, guidedWrite } = useAI();
-  const { streaming } = useAIWriteStream();
+  const { streaming, startStreamingWrite, stopStreamingWrite } = useAIWriteStream();
   const { processText } = useAITextProcessor();
   const { generateIdeas, generateSceneDescription, generateVisualization } = useAICreative();
   const { settings, updateSettings } = useAISettings();
@@ -156,8 +157,15 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
       switch (activeTool) {
         case 'write':
           if (settings.write.prose_mode === 'streaming') {
-            // TODO: Implement streaming write functionality
-            console.log('Streaming write not yet implemented');
+            if (documentId) {
+              startStreamingWrite(parseInt(documentId, 10), 0)
+                .then((writeResult) => {
+                  handleStreamingComplete(writeResult.generated_text);
+                })
+                .catch((err) => {
+                  console.error('Streaming write failed:', err);
+                });
+            }
             return;
           } else {
             const writeResult = await autoWrite(
@@ -306,8 +314,52 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
     }
   };
   
-  // TODO: Implement credit estimation based on tool and input length
-    const estimatedCost = 0;
+  // Credit estimation based on tool, model, and input/output heuristics
+  const estimatedCost = (() => {
+    try {
+      let inputTokens = 0;
+      let outputTokens = 0;
+      switch (activeTool) {
+        case 'write': {
+          inputTokens = estimateTokensFromText(prompt);
+          outputTokens = estimateExpectedOutputTokensForWrite({
+            card_length: settings.write.card_length,
+            card_count: settings.write.card_count
+          });
+          break;
+        }
+        case 'rewrite': {
+          inputTokens = estimateTokensFromText(selectedText);
+          outputTokens = inputTokens; // similar size rewrite
+          break;
+        }
+        case 'expand': {
+          inputTokens = estimateTokensFromText(selectedText);
+          outputTokens = estimateExpectedOutputTokensForExpand(inputTokens, settings.expand.length_multiplier);
+          break;
+        }
+        case 'quickEdit': {
+          inputTokens = estimateTokensFromText(selectedText);
+          outputTokens = inputTokens; // minor edits roughly same size
+          break;
+        }
+        case 'brainstorm':
+        case 'describe':
+        case 'visualize':
+        case 'chat': {
+          inputTokens = estimateTokensFromText(prompt);
+          outputTokens = 200; // default heuristic for single-response ops
+          break;
+        }
+        default:
+          return 0;
+      }
+      const modelName = (settings as any)?.defaultModel || settings.write.prose_mode;
+      return estimateOperationCreditsWithModel(inputTokens, outputTokens, modelName);
+    } catch {
+      return 0;
+    }
+  })();
   
   return (
     <Card className={`w-full max-w-2xl ${className}`}>
@@ -403,16 +455,14 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Tone</label>
-                  <Select value={settings.write.tone} onValueChange={(value) => updateSettings.write({ tone: value })}>
+                  <label className="text-sm font-medium">Prose Mode</label>
+                  <Select value={settings.write.prose_mode || 'default'} onValueChange={(value) => updateSettings.write({ prose_mode: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="narrative">Narrative</SelectItem>
-                      <SelectItem value="descriptive">Descriptive</SelectItem>
-                      <SelectItem value="dialogue">Dialogue</SelectItem>
-                      <SelectItem value="expository">Expository</SelectItem>
+                      <SelectItem value="default">Default</SelectItem>
+                      <SelectItem value="streaming">Streaming</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

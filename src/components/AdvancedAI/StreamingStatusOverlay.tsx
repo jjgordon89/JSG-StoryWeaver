@@ -12,10 +12,16 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
   const {
     streamingStatus,
     lastGenerationResult,
-    isGenerating
+    isGenerating,
+    cancelGeneration,
+    copyGeneratedTextToClipboard,
+    saveGeneratedContent,
+    generationStartedAt,
+    generationFinishedAt,
+    lastGenerationRequest
   } = useAdvancedAIStore();
   
-  const { insertTextAtCursor, currentDocument } = useProjectStore();
+  const { insertTextAtCursor, currentDocument, currentProject } = useProjectStore();
   
   const [showActions, setShowActions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -39,23 +45,36 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
     }
   }, [lastGenerationResult]);
 
-  const handleCancel = () => {
-    if (isGenerating) {
-      // TODO: Implement cancelGeneration in advancedAIStore
-      console.log('Cancel generation requested');
+  // Helper to compute elapsed generation time
+  const getElapsed = () => {
+    if (generationStartedAt) {
+      const end = generationFinishedAt ? new Date(generationFinishedAt) : new Date();
+      const start = new Date(generationStartedAt);
+      const ms = Math.max(0, end.getTime() - start.getTime());
+      const secs = Math.floor(ms / 1000);
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${m}m ${s}s`;
     }
-    onClose();
+    return 'N/A';
+  };
+
+  const handleCancel = async () => {
+    try {
+      if (isGenerating) {
+        await cancelGeneration();
+      }
+      onClose();
+    } catch (e) {
+      console.error('Cancel generation failed:', e);
+    }
   };
 
   const handleCopy = async () => {
-    if (lastGenerationResult?.generated_text) {
-      try {
-        // TODO: Implement copyToClipboard in advancedAIStore
-         await navigator.clipboard.writeText(lastGenerationResult.generated_text);
-        // Show success feedback
-      } catch (error) {
-        console.error('Error copying to clipboard:', error);
-      }
+    try {
+      await copyGeneratedTextToClipboard();
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
     }
   };
 
@@ -67,24 +86,25 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
   };
 
   const handleSave = async () => {
-    if (!lastGenerationResult?.content) return;
+    if (!lastGenerationResult?.generated_text) return;
     
     setIsSaving(true);
     try {
-      const saveData = {
+      await saveGeneratedContent({
         content: lastGenerationResult.generated_text,
         location: saveLocation,
         title: saveLocation === 'snippet' ? snippetTitle : undefined,
         metadata: {
-          prompt: 'N/A', // TODO: Store original prompt
+          prompt: lastGenerationRequest?.text_context || 'N/A',
           timestamp: new Date().toISOString(),
           settings: lastGenerationResult.prose_mode_used,
-          credits: lastGenerationResult.credits_used
-        }
-      };
-      
-      // TODO: Implement saveGeneratedContent in advancedAIStore
-      console.log('Save data:', saveData);
+          credits: lastGenerationResult.credits_used,
+          startedAt: generationStartedAt,
+          finishedAt: generationFinishedAt
+        },
+        projectId: currentProject?.id,
+        documentId: currentDocument?.id
+      });
       setShowSaveOptions(false);
       onClose();
     } catch (error) {
@@ -165,7 +185,7 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
         )}
 
         {/* Streaming Content */}
-        {(streamingStatus?.current_text || lastGenerationResult?.content) && (
+        {(streamingStatus?.current_text || lastGenerationResult?.generated_text) && (
           <div className="content-section">
             <div className="content-header">
               <h4>Generated Content</h4>
@@ -261,7 +281,7 @@ const StreamingStatusOverlay: React.FC<StreamingStatusOverlayProps> = ({ isVisib
               <div className="stat-item">
                 <i className="fas fa-clock"></i>
                 <span>Generation Time</span>
-                <span>N/A</span> {/* TODO: Add generation time tracking */}
+                <span>{getElapsed()}</span>
               </div>
               <div className="stat-item">
                 <i className="fas fa-coins"></i>

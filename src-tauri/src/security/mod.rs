@@ -12,15 +12,19 @@ pub mod encryption;
 pub mod validation;
 pub mod audit;
 pub mod privacy;
+pub mod rate_limit;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod rate_limit_tests;
 
 pub use api_keys::*;
 pub use encryption::*;
 pub use validation::*;
 pub use audit::*;
 pub use privacy::*;
+pub use rate_limit::*;
 
 use crate::error::StoryWeaverError;
 use tauri::AppHandle;
@@ -37,4 +41,14 @@ pub async fn init(app_handle: &AppHandle) -> Result<(), StoryWeaverError> {
     audit::init().await?;
     
     Ok(())
+}
+
+/// Lightweight boolean wrapper used by various command handlers to quickly
+/// assess if an input string is considered safe. Internally delegates to the
+/// validation module and performs a null-byte check.
+pub fn is_safe_input(input: &str) -> bool {
+    if input.contains('\0') {
+        return false;
+    }
+    validation::validate_security_input(input).is_ok()
 }

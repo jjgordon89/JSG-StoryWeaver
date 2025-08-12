@@ -7,6 +7,8 @@ use crate::security::validation::{
     validate_document_name, validate_content_length, validate_security_input
 };
 use serde::{Deserialize, Serialize};
+use crate::security::rate_limit::{check_rate_limit, check_rate_limit_default, validate_request_body_size_default, validate_request_body_size};
+use std::time::Duration;
 
 /// Create document request
 #[derive(Debug, Deserialize)]
@@ -42,11 +44,14 @@ pub struct SearchDocumentsRequest {
 #[tauri::command]
 pub async fn create_document(request: CreateDocumentRequest) -> CommandResponse<Document> {
     async fn create(request: CreateDocumentRequest) -> Result<Document> {
+        // Rate limiting
+        check_rate_limit_default("create_document")?;
         // Input validation
         validate_security_input(&request.project_id)?;
         validate_document_name(&request.title)?;
         
         if let Some(ref content) = request.content {
+            validate_request_body_size_default(content)?; // 1MB default bytes
             validate_content_length(content, 1_000_000)?; // 1MB limit for document content
             validate_security_input(content)?;
         }
@@ -118,6 +123,8 @@ pub async fn get_document(id: String) -> CommandResponse<Option<Document>> {
 #[tauri::command]
 pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<()> {
     async fn update(request: UpdateDocumentRequest) -> Result<()> {
+        // Rate limiting
+        check_rate_limit(&format!("update_document:{}", &request.id), 120, Duration::from_secs(60))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -126,6 +133,7 @@ pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<
         }
         
         if let Some(ref content) = request.content {
+            validate_request_body_size_default(content)?; // 1MB default bytes
             validate_content_length(content, 1_000_000)?; // 1MB limit
             validate_security_input(content)?;
         }
@@ -143,6 +151,7 @@ pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<
         }
         
         if let Some(ref metadata) = request.metadata {
+            validate_request_body_size(metadata, 50_000)?; // 50KB bytes limit
             validate_content_length(metadata, 50000)?; // 50KB limit for metadata
             validate_security_input(metadata)?;
         }
@@ -184,8 +193,11 @@ pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<
 #[tauri::command]
 pub async fn save_document(id: String, content: String) -> CommandResponse<()> {
     async fn save(id: String, content: String) -> Result<()> {
+        // Rate limiting
+        check_rate_limit(&format!("save_document:{}", &id), 300, Duration::from_secs(60))?;
         // Input validation
         validate_security_input(&id)?;
+        validate_request_body_size_default(&content)?; // 1MB default bytes
         validate_content_length(&content, 1_000_000)?; // 1MB limit
         validate_security_input(&content)?;
         
@@ -223,8 +235,11 @@ pub async fn delete_document(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_documents(request: SearchDocumentsRequest) -> CommandResponse<Vec<Document>> {
     async fn search(request: SearchDocumentsRequest) -> Result<Vec<Document>> {
+        // Rate limiting
+        check_rate_limit(&format!("search_documents:{}", &request.project_id), 120, Duration::from_secs(60))?;
         // Input validation
         validate_security_input(&request.project_id)?;
+        validate_request_body_size(&request.query, 4_000)?; // Max ~4KB bytes
         validate_content_length(&request.query, 1000)?; // Limit search query length
         validate_security_input(&request.query)?;
         

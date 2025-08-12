@@ -15,6 +15,7 @@ declare global {
 
 // Check if we're running in Tauri environment
 const isTauri = typeof window !== 'undefined' && window.__TAURI__ !== undefined;
+const isProdBuild = typeof import.meta !== 'undefined' && (import.meta as any).env && Boolean((import.meta as any).env.PROD);
 
 // Get Tauri invoke function if available
 const getTauriInvoke = () => {
@@ -76,7 +77,11 @@ export async function invoke<T = any>(cmd: string, args?: Record<string, any>): 
   const tauriInvoke = getTauriInvoke();
   
   if (!tauriInvoke) {
-    // In web browser environment, return a mock response or throw an appropriate error
+    // In web browser environment
+    if (isProdBuild) {
+      // Disallow mock responses in production builds
+      throw new Error(`Tauri command '${cmd}' invoked without Tauri in production build. Mock responses are disabled in production.`);
+    }
     console.warn(`Tauri command '${cmd}' called in web environment. This is expected during development.`);
     
     // For development purposes, return a mock response based on the command
@@ -107,9 +112,19 @@ export async function invoke<T = any>(cmd: string, args?: Record<string, any>): 
           context_used: 'Mock context',
           model_used: 'mock-model'
         } as T;
+
+      // Advanced AI mock endpoints for local UI development
+      case 'start_streaming_generation':
+        return `mock_${Date.now()}` as unknown as T;
+      case 'get_stream_status':
+        return { status: 'completed', progress: 100, current_text: 'Mock streamed content' } as T;
+      case 'cancel_streaming_generation':
+        return undefined as T;
+      case 'save_generated_content':
+        return { success: true } as T;
       
       default:
-        // For unknown commands, return empty object or throw error based on needs
+        // For unknown commands, return empty object
         return {} as T;
     }
   }

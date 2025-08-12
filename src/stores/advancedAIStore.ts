@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { invoke } from '../utils/tauriSafe';
+import showToast from '../utils/toast';
 import type {
   AdvancedAIState,
   ProseGenerationRequest,
@@ -34,6 +35,18 @@ interface AdvancedAIActions {
   generateWithProseMode: (request: ProseGenerationRequest) => Promise<AdvancedGenerationResult>;
   startStreamingGeneration: (request: ProseGenerationRequest) => Promise<string>;
   pollStreamingStatus: (streamId: string) => Promise<void>;
+  
+  // Control streaming
+  cancelGeneration: () => Promise<void>;
+  copyGeneratedTextToClipboard: () => Promise<void>;
+  saveGeneratedContent: (options: {
+    content: string;
+    location: 'document' | 'snippet' | 'note';
+    title?: string;
+    metadata?: Record<string, any>;
+    projectId?: string;
+    documentId?: string;
+  }) => Promise<void>;
   
   // Image Generation
   generateImage: (request: ImageGenerationRequest) => Promise<GeneratedImage>;
@@ -88,6 +101,11 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
     isGenerating: false,
     lastGenerationResult: undefined,
     streamingStatus: undefined,
+    activeStreamId: undefined,
+    generationStartedAt: undefined,
+    generationFinishedAt: undefined,
+    streamingPollIntervalId: undefined,
+    lastGenerationRequest: undefined,
     
     // Brainstorming
     activeBrainstormSessions: [],
@@ -233,7 +251,7 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
 
     // Advanced Text Generation
     async generateWithProseMode(request: ProseGenerationRequest): Promise<AdvancedGenerationResult> {
-      set({ isGenerating: true });
+      set({ isGenerating: true, generationStartedAt: new Date().toISOString(), lastGenerationRequest: request });
       try {
         const response = await invoke<AdvancedGenerationResult>('generate_with_prose_mode', { request });
         set({ lastGenerationResult: response });
@@ -246,15 +264,16 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
         console.error('Failed to generate with prose mode:', error);
         throw error;
       } finally {
-        set({ isGenerating: false });
+        set({ isGenerating: false, generationFinishedAt: new Date().toISOString() });
       }
     },
 
     // Streaming Generation
     async startStreamingGeneration(request: ProseGenerationRequest): Promise<string> {
-      set({ isGenerating: true });
+      set({ isGenerating: true, generationStartedAt: new Date().toISOString(), lastGenerationRequest: request });
       try {
         const streamId = await invoke<string>('start_streaming_generation', { request });
+        set({ activeStreamId: streamId });
         set({ 
           streamingStatus: {
             status: 'pending',
@@ -275,6 +294,8 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
 
     async pollStreamingStatus(streamId: string) {
       const pollInterval = setInterval(async () => {
+        // store interval id so we can cancel externally
+        set({ streamingPollIntervalId: Number(pollInterval) });
         try {
           const status = await invoke<Record<string, any>>('get_stream_status', { streamId });
           
@@ -290,7 +311,12 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
           
           if (status.status === 'completed' || status.status === 'error') {
             clearInterval(pollInterval);
-            set({ isGenerating: false });
+            set({ 
+              isGenerating: false,
+              generationFinishedAt: new Date().toISOString(),
+              activeStreamId: undefined,
+              streamingPollIntervalId: undefined
+            });
             
             if (status.status === 'completed') {
               // Handle completion
@@ -709,6 +735,71 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
         clicheDetectionEnabled: enabled,
         settings: updatedSettings
       });
+    },
+
+    // Control streaming and utilities
+    async cancelGeneration() {
+      try {
+        const { activeStreamId, streamingPollIntervalId, streamingStatus } = get();
+        if (streamingPollIntervalId) {
+          clearInterval(streamingPollIntervalId as unknown as number);
+        }
+        if (activeStreamId) {
+          try {
+            await invoke('cancel_streaming_generation', { streamId: activeStreamId });
+          } catch (e) {
+            console.warn('cancel_streaming_generation not available or failed:', e);
+          }
+        }
+        set({ 
+          isGenerating: false,
+          activeStreamId: undefined,
+          streamingPollIntervalId: undefined,
+          generationFinishedAt: new Date().toISOString(),
+          streamingStatus: {
+            status: 'error',
+            progress: streamingStatus?.progress || 0,
+            error_message: 'Cancelled by user',
+            current_text: streamingStatus?.current_text
+          }
+        });
+      } catch (error) {
+        console.error('Failed to cancel generation:', error);
+      }
+    },
+
+    async copyGeneratedTextToClipboard() {
+      try {
+        const { lastGenerationResult } = get();
+        const text = lastGenerationResult?.generated_text || '';
+        if (!text) {
+          showToast.info('Nothing to copy');
+          return;
+        }
+        await navigator.clipboard.writeText(text);
+        showToast.success('Copied generated text');
+      } catch (error) {
+        console.error('Clipboard copy failed:', error);
+        showToast.error('Copy failed');
+      }
+    },
+
+    async saveGeneratedContent(options: {
+      content: string;
+      location: 'document' | 'snippet' | 'note';
+      title?: string;
+      metadata?: Record<string, any>;
+      projectId?: string;
+      documentId?: string;
+    }) {
+      try {
+        await invoke('save_generated_content', { data: options });
+        showToast.success('Content saved');
+      } catch (error) {
+        console.error('Failed to save generated content:', error);
+        showToast.error('Save failed');
+        throw error;
+      }
     },
 
     // Utility Methods

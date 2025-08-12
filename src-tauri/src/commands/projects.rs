@@ -7,6 +7,8 @@ use crate::security::validation::{
     validate_project_name, validate_content_length, validate_security_input
 };
 use serde::{Deserialize, Serialize};
+use crate::security::rate_limit::{check_rate_limit, check_rate_limit_default};
+use std::time::Duration;
 
 /// Create project request
 #[derive(Debug, Deserialize)]
@@ -33,6 +35,8 @@ pub struct UpdateProjectRequest {
 #[tauri::command]
 pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Project> {
     async fn create(request: CreateProjectRequest) -> Result<Project> {
+        // Rate limiting
+        check_rate_limit_default("create_project")?;
         // Input validation
         validate_project_name(&request.name)?;
         
@@ -101,6 +105,8 @@ pub async fn get_project(id: String) -> CommandResponse<Option<Project>> {
 #[tauri::command]
 pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()> {
     async fn update(request: UpdateProjectRequest) -> Result<()> {
+        // Rate limiting
+        check_rate_limit(&format!("update_project:{}", &request.id), 120, Duration::from_secs(60))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -168,6 +174,8 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
 #[tauri::command]
 pub async fn delete_project(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        check_rate_limit(&format!("delete_project:{}", &id), 30, Duration::from_secs(60))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -182,6 +190,8 @@ pub async fn delete_project(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn update_project_word_count(project_id: String) -> CommandResponse<()> {
     async fn update_count(project_id: String) -> Result<()> {
+        // Rate limiting
+        check_rate_limit(&format!("update_project_word_count:{}", &project_id), 120, Duration::from_secs(60))?;
         // Input validation
         validate_security_input(&project_id)?;
         
