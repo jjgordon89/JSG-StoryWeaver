@@ -7,7 +7,7 @@ use crate::security::validation::{
     validate_project_name, validate_content_length, validate_security_input
 };
 use serde::{Deserialize, Serialize};
-use crate::security::rate_limit::{check_rate_limit, check_rate_limit_default};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, rl_save, validate_request_body_size};
 use std::time::Duration;
 
 /// Create project request
@@ -36,16 +36,18 @@ pub struct UpdateProjectRequest {
 pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Project> {
     async fn create(request: CreateProjectRequest) -> Result<Project> {
         // Rate limiting
-        check_rate_limit_default("create_project")?;
+        rl_create("project", None)?;
         // Input validation
         validate_project_name(&request.name)?;
         
         if let Some(ref description) = request.description {
+            validate_request_body_size(description, 5_000)?;
             validate_content_length(description, 5000)?;
             validate_security_input(description)?;
         }
         
         if let Some(ref genre) = request.genre {
+            validate_request_body_size(genre, 100)?;
             validate_security_input(genre)?;
             validate_content_length(genre, 100)?;
         }
@@ -106,7 +108,7 @@ pub async fn get_project(id: String) -> CommandResponse<Option<Project>> {
 pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()> {
     async fn update(request: UpdateProjectRequest) -> Result<()> {
         // Rate limiting
-        check_rate_limit(&format!("update_project:{}", &request.id), 120, Duration::from_secs(60))?;
+        rl_update("project", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -115,11 +117,13 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
         }
         
         if let Some(ref description) = request.description {
+            validate_request_body_size(description, 5_000)?;
             validate_content_length(description, 5000)?;
             validate_security_input(description)?;
         }
         
         if let Some(ref genre) = request.genre {
+            validate_request_body_size(genre, 100)?;
             validate_security_input(genre)?;
             validate_content_length(genre, 100)?;
         }
@@ -133,6 +137,7 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
         }
         
         if let Some(ref settings) = request.settings {
+            validate_request_body_size(settings, 10_000)?;
             validate_content_length(settings, 10000)?;
             validate_security_input(settings)?;
         }
@@ -175,7 +180,7 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
 pub async fn delete_project(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
         // Rate limiting
-        check_rate_limit(&format!("delete_project:{}", &id), 30, Duration::from_secs(60))?;
+        rl_delete("project", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -191,7 +196,7 @@ pub async fn delete_project(id: String) -> CommandResponse<()> {
 pub async fn update_project_word_count(project_id: String) -> CommandResponse<()> {
     async fn update_count(project_id: String) -> Result<()> {
         // Rate limiting
-        check_rate_limit(&format!("update_project_word_count:{}", &project_id), 120, Duration::from_secs(60))?;
+        rl_update("project_word_count", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         

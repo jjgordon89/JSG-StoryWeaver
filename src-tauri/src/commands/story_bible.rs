@@ -4,6 +4,7 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::{Result, StoryWeaverError};
 use crate::security::validation::*;
+use crate::security::rate_limit::{validate_request_body_size, rl_update, rl_search};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -28,45 +29,55 @@ pub struct CreateOrUpdateStoryBibleRequest {
 #[tauri::command]
 pub async fn create_or_update_story_bible(request: CreateOrUpdateStoryBibleRequest) -> CommandResponse<StoryBible> {
     async fn create_or_update(request: CreateOrUpdateStoryBibleRequest) -> Result<StoryBible> {
+        // Rate limiting
+        rl_update("story_bible", Some(&request.project_id))?;
         // Input validation
         validate_security_input(&request.project_id)?;
         
         if let Some(ref braindump) = request.braindump {
+            validate_request_body_size(braindump, 50_000)?;
             validate_content_length(braindump, 50000)?;
             validate_security_input(braindump)?;
         }
         
         if let Some(ref synopsis) = request.synopsis {
+            validate_request_body_size(synopsis, 10_000)?;
             validate_content_length(synopsis, 10000)?;
             validate_security_input(synopsis)?;
         }
         
         if let Some(ref genre) = request.genre {
+            validate_request_body_size(genre, 500)?;
             validate_content_length(genre, 500)?;
             validate_security_input(genre)?;
         }
         
         if let Some(ref style) = request.style {
+            validate_request_body_size(style, 5_000)?;
             validate_content_length(style, 5000)?;
             validate_security_input(style)?;
         }
         
         if let Some(ref style_examples) = request.style_examples {
+            validate_request_body_size(style_examples, 20_000)?;
             validate_content_length(style_examples, 20000)?;
             validate_security_input(style_examples)?;
         }
         
         if let Some(ref pov_mode) = request.pov_mode {
+            validate_request_body_size(pov_mode, 100)?;
             validate_content_length(pov_mode, 100)?;
             validate_security_input(pov_mode)?;
         }
         
         if let Some(ref global_pov) = request.global_pov {
+            validate_request_body_size(global_pov, 100)?;
             validate_content_length(global_pov, 100)?;
             validate_security_input(global_pov)?;
         }
         
         if let Some(ref global_tense) = request.global_tense {
+            validate_request_body_size(global_tense, 100)?;
             validate_content_length(global_tense, 100)?;
             validate_security_input(global_tense)?;
         }
@@ -165,7 +176,7 @@ pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> Com
     async fn create(request: CreateCharacterTraitRequest) -> Result<CharacterTrait> {
         // Input validation
         validate_security_input(&request.character_id)?;
-        validate_safe_name(&request.trait_name)?;
+        validate_safe_name(&request.trait_name, "Name")?;
         validate_content_length(&request.trait_value, 5000)?;
         validate_security_input(&request.trait_value)?;
         
@@ -212,7 +223,7 @@ pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> Com
         validate_security_input(&request.id)?;
         
         if let Some(ref trait_name) = request.trait_name {
-            validate_safe_name(trait_name)?;
+            validate_safe_name(trait_name, "Name")?;
         }
         
         if let Some(ref trait_value) = request.trait_value {
@@ -288,8 +299,8 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
     async fn create(request: CreateWorldElementRequest) -> Result<WorldElement> {
         // Input validation
         validate_security_input(&request.project_id)?;
-        validate_safe_name(&request.name)?;
-        validate_safe_name(&request.element_type)?;
+        validate_safe_name(&request.name, "Name")?;
+        validate_safe_name(&request.element_type, "Name")?;
         
         if let Some(ref series_id) = request.series_id {
             validate_security_input(series_id)?;
@@ -302,7 +313,7 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
         
         if let Some(ref properties) = request.properties {
             for (key, value) in properties {
-                validate_safe_name(key)?;
+                validate_safe_name(key, "Name")?;
                 validate_content_length(value, 5000)?;
                 validate_security_input(value)?;
             }
@@ -366,7 +377,7 @@ pub async fn update_world_element(request: UpdateWorldElementRequest) -> Command
         validate_security_input(&request.id)?;
         
         if let Some(ref name) = request.name {
-            validate_safe_name(name)?;
+            validate_safe_name(name, "Name")?;
         }
         
         if let Some(ref description) = request.description {
@@ -375,12 +386,12 @@ pub async fn update_world_element(request: UpdateWorldElementRequest) -> Command
         }
         
         if let Some(ref element_type) = request.element_type {
-            validate_safe_name(element_type)?;
+            validate_safe_name(element_type, "Name")?;
         }
         
         if let Some(ref properties) = request.properties {
             for (key, value) in properties {
-                validate_safe_name(key)?;
+                validate_safe_name(key, "Name")?;
                 validate_content_length(value, 5000)?;
                 validate_security_input(value)?;
             }
@@ -436,8 +447,11 @@ pub async fn delete_world_element(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_world_elements(project_id: String, query: String) -> CommandResponse<Vec<WorldElement>> {
     async fn search(project_id: String, query: String) -> Result<Vec<WorldElement>> {
+        // Rate limiting
+        rl_search("world_elements", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
+        validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
         
@@ -489,21 +503,25 @@ pub async fn create_outline(request: CreateOutlineRequest) -> CommandResponse<Ou
         }
         
         if let Some(ref title) = request.title {
+            validate_request_body_size(title, 500)?;
             validate_content_length(title, 500)?;
             validate_security_input(title)?;
         }
         
         if let Some(ref summary) = request.summary {
+            validate_request_body_size(summary, 10_000)?;
             validate_content_length(summary, 10000)?;
             validate_security_input(summary)?;
         }
         
         if let Some(ref pov) = request.pov {
+            validate_request_body_size(pov, 100)?;
             validate_content_length(pov, 100)?;
             validate_security_input(pov)?;
         }
         
         if let Some(ref tense) = request.tense {
+            validate_request_body_size(tense, 100)?;
             validate_content_length(tense, 100)?;
             validate_security_input(tense)?;
         }
@@ -661,8 +679,11 @@ pub async fn delete_outline(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_outlines(project_id: String, query: String) -> CommandResponse<Vec<Outline>> {
     async fn search(project_id: String, query: String) -> Result<Vec<Outline>> {
+        // Rate limiting
+        rl_search("outlines", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
+        validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
         
@@ -720,26 +741,31 @@ pub async fn create_scene(request: CreateSceneRequest) -> CommandResponse<Scene>
         }
         
         if let Some(ref title) = request.title {
+            validate_request_body_size(title, 500)?;
             validate_content_length(title, 500)?;
             validate_security_input(title)?;
         }
         
         if let Some(ref summary) = request.summary {
+            validate_request_body_size(summary, 10_000)?;
             validate_content_length(summary, 10000)?;
             validate_security_input(summary)?;
         }
         
         if let Some(ref extra_instructions) = request.extra_instructions {
+            validate_request_body_size(extra_instructions, 5_000)?;
             validate_content_length(extra_instructions, 5000)?;
             validate_security_input(extra_instructions)?;
         }
         
         if let Some(ref pov) = request.pov {
+            validate_request_body_size(pov, 100)?;
             validate_content_length(pov, 100)?;
             validate_security_input(pov)?;
         }
         
         if let Some(ref tense) = request.tense {
+            validate_request_body_size(tense, 100)?;
             validate_content_length(tense, 100)?;
             validate_security_input(tense)?;
         }
@@ -920,8 +946,11 @@ pub async fn validate_scene(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn search_scenes(outline_id: String, query: String) -> CommandResponse<Vec<Scene>> {
     async fn search(outline_id: String, query: String) -> Result<Vec<Scene>> {
+        // Rate limiting
+        rl_search("scenes", Some(&outline_id))?;
         // Input validation
         validate_security_input(&outline_id)?;
+        validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
         

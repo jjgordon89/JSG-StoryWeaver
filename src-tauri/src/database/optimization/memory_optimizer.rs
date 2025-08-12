@@ -87,10 +87,19 @@ pub struct ProcessingResult {
 impl MemoryOptimizedProcessor {
     /// Create a new memory-optimized processor
     pub fn new(config: MemoryConfig) -> Self {
-        let document_cache_size = NonZeroUsize::new(config.max_document_cache_size)
-            .unwrap_or_else(|| NonZeroUsize::new(100).expect("Default cache size should be valid"));
-        let embedding_cache_size = NonZeroUsize::new(config.max_embedding_cache_size)
-            .unwrap_or_else(|| NonZeroUsize::new(500).expect("Default cache size should be valid"));
+        // Avoid unwrap/expect in production code; 100 and 500 are known non-zero defaults.
+        let document_cache_size = if let Some(nz) = NonZeroUsize::new(config.max_document_cache_size) {
+            nz
+        } else {
+            // Safety: 100 is a non-zero constant
+            unsafe { NonZeroUsize::new_unchecked(100) }
+        };
+        let embedding_cache_size = if let Some(nz) = NonZeroUsize::new(config.max_embedding_cache_size) {
+            nz
+        } else {
+            // Safety: 500 is a non-zero constant
+            unsafe { NonZeroUsize::new_unchecked(500) }
+        };
 
         Self {
             document_cache: Arc::new(RwLock::new(LruCache::new(document_cache_size))),

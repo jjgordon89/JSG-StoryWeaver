@@ -487,7 +487,7 @@ let base_prompt = self.build_generation_prompt(request)?;
 
     pub fn export_keepers_to_story_bible(&self, session_id: &str) -> Result<String, Box<dyn std::error::Error>> {
         let keepers = self.get_keepers(session_id)?;
-        let session = self.sessions.get(session_id).unwrap();
+        let session = self.sessions.get(session_id).ok_or("Session not found")?;
         
         let mut export = format!("# {} Ideas - Keepers\n\n", session.category.to_string());
         

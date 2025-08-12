@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
+
 // StoryWeaver - AI-Powered Creative Writing Assistant
 // Phase 1: Foundation Setup
 
@@ -5,8 +7,8 @@ use tauri::Manager;
 use std::sync::Arc;
 
 // Module declarations for Phase 1 foundation
-mod commands;
-mod database;
+pub mod commands;
+pub mod database;
 mod error;
 mod models;
 pub mod ai;
@@ -273,6 +275,8 @@ pub fn run() {
             commands::advanced_ai_commands::smart_import_content,
             commands::advanced_ai_commands::start_streaming_generation,
             commands::advanced_ai_commands::get_stream_status,
+            commands::advanced_ai_commands::save_generated_content,
+            commands::advanced_ai_commands::cancel_streaming_generation,
             
             // Phase 5 Collaboration commands
             commands::collaboration::create_shared_document_link,
@@ -408,5 +412,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|e| {
+            eprintln!("error while running tauri application: {}", e);
+        });
 }

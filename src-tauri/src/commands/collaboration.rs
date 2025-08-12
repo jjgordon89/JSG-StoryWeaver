@@ -30,8 +30,11 @@ pub async fn create_shared_document_link(
     let share_type_enum = ShareType::from_str(&share_type)
         .map_err(|_| StoryWeaverError::invalid_input("Invalid share type".to_string()))?;
 
+    // Safely hash password if provided; do not panic on failure
     let hashed_password = password
-        .map(|p| bcrypt::hash(p, bcrypt::DEFAULT_COST).unwrap());
+        .map(|p| bcrypt::hash(p, bcrypt::DEFAULT_COST))
+        .transpose()
+        .map_err(|_e| StoryWeaverError::security_error("Failed to hash password"))?;
 
     let settings = ShareSettings {
         allow_comments: true, // Default to allowing comments
@@ -71,10 +74,14 @@ pub async fn get_shared_document(
         if let Some(stored_hash) = &doc.password_hash {
             match password {
                 Some(provided_password) => {
-                    if !bcrypt::verify(&provided_password, stored_hash).unwrap_or(false) {
-                        return Err(StoryWeaverError::authentication(
-                            "Invalid password".to_string(),
-                        ));
+                    // Verify password without unwrap; treat errors as invalid credentials
+                    match bcrypt::verify(&provided_password, stored_hash) {
+                        Ok(true) => {}
+                        Ok(false) | Err(_) => {
+                            return Err(StoryWeaverError::authentication(
+                                "Invalid password".to_string(),
+                            ));
+                        }
                     }
                 }
                 None => {

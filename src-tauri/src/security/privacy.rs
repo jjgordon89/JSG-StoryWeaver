@@ -11,6 +11,13 @@ use crate::database::get_pool;
 use regex::Regex;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use lazy_static::lazy_static;
+
+#[allow(clippy::unwrap_used)]
+lazy_static! {
+    static ref PRIVACY_EMAIL_REGEX: Regex = Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
+    static ref PRIVACY_NAME_REGEX: Regex = Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap();
+}
 
 /// Privacy settings for the application
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -229,11 +236,10 @@ pub async fn save_privacy_settings(settings: &PrivacySettings) -> Result<(), Sto
 pub fn anonymize_data(data: &str) -> String {
     // Simple anonymization by replacing email addresses with [EMAIL]
     // and names with [NAME]
-    let email_regex = Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
-    let name_regex = Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap();
+    // Compiled once at startup for performance and safety (see PRIVACY_*_REGEX)
     
-    let data = email_regex.replace_all(data, "[EMAIL]");
-    let data = name_regex.replace_all(&data, "[NAME]");
+    let data = PRIVACY_EMAIL_REGEX.replace_all(data, "[EMAIL]");
+    let data = PRIVACY_NAME_REGEX.replace_all(&data, "[NAME]");
     
     data.to_string()
 }

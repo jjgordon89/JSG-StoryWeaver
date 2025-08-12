@@ -46,7 +46,7 @@ pub async fn create_shared_document(
     .await?;
 
     Ok(SharedDocument {
-        id: result.id.unwrap_or(0).try_into().unwrap(),
+        id: i32::try_from(result.id.unwrap_or(0)).unwrap_or(0),
         document_id: document_id.to_string(),
         project_id: project_id.to_string(),
         share_token,
@@ -284,7 +284,7 @@ pub async fn create_collaboration_session(
     .await?;
 
     Ok(CollaborationSession {
-        id: result.id.unwrap_or(0).try_into().unwrap(),
+        id: i32::try_from(result.id.unwrap_or(0)).unwrap_or(0),
         document_id: document_id.to_string(),
         session_token,
         is_active: true,
@@ -410,7 +410,7 @@ pub async fn duplicate_document_for_sharing(
             project_id: row.project_id.to_string(),
             title: row.title,
             content: row.content,
-            document_type: DocumentType::from_str(&row.document_type).unwrap(),
+            document_type: DocumentType::from_str(&row.document_type).unwrap_or(DocumentType::default()),
             order_index: row.order_index as i32,
             word_count: row.word_count as i32,
             parent_id: row.parent_id,
@@ -563,7 +563,7 @@ pub async fn create_notification(
     .await?;
 
     Ok(CollaborationNotification {
-        id: result.id.unwrap_or(0).try_into().unwrap(),
+        id: i32::try_from(result.id.unwrap_or(0)).unwrap_or(0),
         document_id: document_id.to_string(),
         notification_type,
         message: message.to_string(),
@@ -658,7 +658,7 @@ pub async fn get_unread_notification_count(
     .fetch_one(&*pool)
     .await?;
 
-    Ok(result.count.try_into().unwrap())
+    Ok(i32::try_from(result.count).unwrap_or(0))
 }
 
 /// Delete old notifications (cleanup)

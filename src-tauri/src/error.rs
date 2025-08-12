@@ -572,6 +572,33 @@ impl StoryWeaverError {
             resource: resource.into(),
         }
     }
+
+    /// Helper: map any database error-like value into a Database error
+    pub fn to_db_error<E: std::fmt::Display>(e: E) -> Self {
+        Self::Database {
+            message: e.to_string(),
+        }
+    }
+
+    /// Helper: map an IO failure into a FileOperation error with context
+    pub fn to_io_error<E: std::fmt::Display, S1: Into<String>, S2: Into<String>>(
+        operation: S1,
+        path: S2,
+        e: E,
+    ) -> Self {
+        Self::FileOperation {
+            operation: operation.into(),
+            path: path.into(),
+            message: e.to_string(),
+        }
+    }
+
+    /// Helper: map any parsing failure into a ParseError
+    pub fn to_parse_error<E: std::fmt::Display>(e: E) -> Self {
+        Self::ParseError {
+            message: e.to_string(),
+        }
+    }
     
     /// Check if the error is recoverable (can be retried)
     pub fn is_recoverable(&self) -> bool {

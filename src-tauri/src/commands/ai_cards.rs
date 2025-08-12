@@ -4,6 +4,7 @@ use crate::database::{get_pool, operations::ai_card_ops::AICardOps};
 use crate::error::Result;
 use crate::commands::CommandResponse;
 use crate::models::ai_card::{AIResponseCard, CreateAICardRequest, UpdateAICardRequest};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search};
 
 /// Create a new AI response card
 #[tauri::command]
@@ -11,6 +12,8 @@ pub async fn create_ai_response_card(
     request: CreateAICardRequest,
 ) -> CommandResponse<AIResponseCard> {
     async fn create(request: CreateAICardRequest) -> Result<AIResponseCard> {
+        // Rate limiting
+        rl_create("ai_response_card", Some(&request.project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&request.project_id)?;
         crate::security::validation::validate_security_input(&request.card_type)?;
@@ -42,6 +45,8 @@ pub async fn create_ai_response_card(
 #[tauri::command]
 pub async fn get_ai_response_card(id: String) -> CommandResponse<AIResponseCard> {
     async fn get(id: String) -> Result<AIResponseCard> {
+        // Rate limiting
+        rl_list("ai_response_card", Some(&id))?;
         // Input validation
         crate::security::validation::validate_security_input(&id)?;
         
@@ -56,6 +61,8 @@ pub async fn get_ai_response_card(id: String) -> CommandResponse<AIResponseCard>
 #[tauri::command]
 pub async fn get_ai_response_cards_by_project(project_id: String) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_project(project_id: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_list("ai_response_cards", Some(&project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         
@@ -73,6 +80,8 @@ pub async fn update_ai_response_card(
     request: UpdateAICardRequest,
 ) -> CommandResponse<AIResponseCard> {
     async fn update(id: String, request: UpdateAICardRequest) -> Result<AIResponseCard> {
+        // Rate limiting
+        rl_update("ai_response_card", Some(&id))?;
         // Input validation
         crate::security::validation::validate_security_input(&id)?;
         
@@ -106,6 +115,8 @@ pub async fn update_ai_response_card(
 #[tauri::command]
 pub async fn delete_ai_response_card(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("ai_response_card", Some(&id))?;
         // Input validation
         crate::security::validation::validate_security_input(&id)?;
         
@@ -120,6 +131,8 @@ pub async fn delete_ai_response_card(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn get_ai_response_cards_by_document(document_id: String) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_document(document_id: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_list("ai_response_cards_by_document", Some(&document_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&document_id)?;
         
@@ -137,6 +150,8 @@ pub async fn get_ai_response_cards_by_type(
     card_type: String,
 ) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_type(project_id: String, card_type: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_search("ai_response_cards_by_type", Some(&format!("{}:{}", &project_id, &card_type)))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         crate::security::validation::validate_security_input(&card_type)?;
@@ -155,6 +170,8 @@ pub async fn get_ai_response_cards_by_status(
     status: String,
 ) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_status(project_id: String, status: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_search("ai_response_cards_by_status", Some(&format!("{}:{}", &project_id, &status)))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         crate::security::validation::validate_security_input(&status)?;
@@ -174,6 +191,8 @@ pub async fn get_ai_response_cards_by_date_range(
     end_date: String,
 ) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_date_range(project_id: String, start_date: String, end_date: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_search("ai_response_cards_by_date_range", Some(&format!("{}:{}->{}", &project_id, &start_date, &end_date)))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         crate::security::validation::validate_security_input(&start_date)?;
@@ -193,6 +212,8 @@ pub async fn get_ai_response_cards_by_provider(
     provider: String,
 ) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_provider(project_id: String, provider: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_search("ai_response_cards_by_provider", Some(&format!("{}:{}", &project_id, &provider)))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         crate::security::validation::validate_content_length(&provider, 100)?;
@@ -212,6 +233,8 @@ pub async fn get_ai_response_cards_by_model(
     model: String,
 ) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_model(project_id: String, model: String) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_search("ai_response_cards_by_model", Some(&format!("{}:{}", &project_id, &model)))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         crate::security::validation::validate_content_length(&model, 100)?;
@@ -232,6 +255,8 @@ pub async fn get_ai_response_cards_by_cost_range(
     max_cost: f64,
 ) -> CommandResponse<Vec<AIResponseCard>> {
     async fn get_by_cost_range(project_id: String, min_cost: f64, max_cost: f64) -> Result<Vec<AIResponseCard>> {
+        // Rate limiting
+        rl_search("ai_response_cards_by_cost_range", Some(&format!("{}:{}-{}", &project_id, min_cost, max_cost)))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         

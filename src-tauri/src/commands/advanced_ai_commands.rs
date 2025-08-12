@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use tauri::State;
 use tokio::sync::Mutex;
 use std::str::FromStr;
+use crate::database::{get_pool, models::{Document, DocumentType}, operations::DocumentOps};
 
 use crate::ai::{
     advanced_ai_manager::StyleAnalysis, AdvancedAIManager, AdvancedGenerationRequest,
@@ -257,7 +258,7 @@ pub async fn get_brainstorm_session(
     crate::security::validation::validate_security_input(&session_id)?;
     
     let manager = ai_state.lock().await;
-    Ok(manager.get_brainstorm_session(&session_id))
+    Ok(manager.get_brainstorm_session(&session_id).cloned())
 }
 
 #[tauri::command]
@@ -519,12 +520,101 @@ pub async fn start_streaming_generation(
 
 #[tauri::command]
 pub async fn get_stream_status(
-    stream_id: String,
+    streamId: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<HashMap<String, serde_json::Value>> {
     // Input validation
-    crate::security::validation::validate_security_input(&stream_id)?;
+    crate::security::validation::validate_security_input(&streamId)?;
     
     let ai_manager = ai_state.lock().await;
-    ai_manager.get_stream_status(&stream_id).await
+    ai_manager.get_stream_status(&streamId).await
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SaveGeneratedContentRequest {
+    pub content: String,
+    pub location: String, // "document" | "snippet" | "note"
+    pub title: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    #[serde(rename = "projectId")]
+    pub project_id: Option<String>,
+    #[serde(rename = "documentId")]
+    pub document_id: Option<String>,
+}
+
+#[tauri::command]
+pub async fn save_generated_content(data: SaveGeneratedContentRequest) -> Result<()> {
+    // Basic validation
+    crate::security::validation::validate_content_length(&data.content, 1_000_000)?;
+    crate::security::validation::validate_security_input(&data.location)?;
+    if let Some(ref t) = data.title {
+        crate::security::validation::validate_content_length(t, 500)?;
+        crate::security::validation::validate_security_input(t)?;
+    }
+    if let Some(ref pid) = data.project_id {
+        crate::security::validation::validate_security_input(pid)?;
+    }
+    if let Some(ref did) = data.document_id {
+        crate::security::validation::validate_security_input(did)?;
+    }
+
+    let pool = get_pool()?;
+
+    match data.location.to_lowercase().as_str() {
+        "document" => {
+            let doc_id = data.document_id.clone()
+                .ok_or_else(|| StoryWeaverError::InvalidInput { message: "documentId required for location=document".to_string() })?;
+            let mut doc = DocumentOps::get_by_id(&pool, &doc_id)
+                .await?
+                .ok_or_else(|| StoryWeaverError::DocumentNotFound { id: doc_id.clone() })?;
+            if doc.content.is_empty() {
+                doc.content = data.content.clone();
+            } else {
+                doc.content.push_str("\n\n");
+                doc.content.push_str(&data.content);
+            }
+            // Optionally merge metadata if provided
+            if let Some(meta) = data.metadata.as_ref() {
+                let existing: serde_json::Value = serde_json::from_str(&doc.metadata).unwrap_or(serde_json::json!({}));
+                let mut merged = existing.as_object().cloned().unwrap_or_default();
+                if let Some(obj) = meta.as_object() {
+                    for (k, v) in obj {
+                        merged.insert(k.clone(), v.clone());
+                    }
+                } else {
+                    merged.insert("aiSave".to_string(), meta.clone());
+                }
+                doc.metadata = serde_json::Value::Object(merged).to_string();
+            }
+            DocumentOps::update(&pool, &doc).await?;
+            Ok(())
+        }
+        "snippet" | "note" => {
+            let project_id = data.project_id.clone()
+                .ok_or_else(|| StoryWeaverError::InvalidInput { message: "projectId required for location=snippet/note".to_string() })?;
+            let title = data.title.clone().unwrap_or_else(|| {
+                let ts = chrono::Utc::now().format("%Y-%m-%d %H:%M").to_string();
+                format!("AI Snippet {}", ts)
+            });
+            // Validate title text
+            crate::security::validation::validate_content_length(&title, 200)?;
+            crate::security::validation::validate_security_input(&title)?;
+            let mut new_doc = Document::new(project_id, title, DocumentType::Notes);
+            new_doc.content = data.content.clone();
+            if let Some(meta) = data.metadata {
+                new_doc.metadata = meta.to_string();
+            }
+            DocumentOps::create(&pool, new_doc).await?;
+            Ok(())
+        }
+        other => Err(StoryWeaverError::InvalidInput { message: format!("Unsupported save location: {}", other) }),
+    }
+}
+
+#[tauri::command]
+pub async fn cancel_streaming_generation(streamId: String, _ai_state: State<'_, AdvancedAIState>) -> Result<()> {
+    // Validate input and accept cancel in current placeholder implementation
+    crate::security::validation::validate_security_input(&streamId)?;
+    // In a future implementation, signal the running task to cancel.
+    Ok(())
 }

@@ -153,3 +153,31 @@ pub struct DatabaseStats {
     pub document_versions_count: u32,
     pub deleted_items_count: u32,
 }
+
+#[cfg(test)]
+/// Initialize an in-memory SQLite database for tests and set it as the global pool.
+/// Uses a single connection to ensure the ':memory:' database remains consistent across operations.
+pub async fn init_test_db() -> Result<()> {
+    // Build in-memory connection options with foreign keys enabled
+    let connect_options = sqlx::sqlite::SqliteConnectOptions::new()
+        .filename(":memory:")
+        .create_if_missing(true)
+        .foreign_keys(true);
+
+    // Use a single connection so the in-memory DB persists for the lifetime of the pool
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(connect_options)
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to connect to in-memory test database: {}", e)))?;
+
+    // Run schema migrations
+    migrations::run_migrations(&pool).await?;
+
+    // Install pool into the global slot
+    unsafe {
+        DB_POOL = Some(Arc::new(pool));
+    }
+
+    Ok(())
+}

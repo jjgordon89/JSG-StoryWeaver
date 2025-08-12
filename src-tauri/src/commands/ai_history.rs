@@ -4,6 +4,7 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::AIHistoryOps};
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
+use crate::security::rate_limit::{rl_create, rl_list, rl_delete};
 
 /// Create AI history record request
 #[derive(Debug, Deserialize)]
@@ -66,6 +67,8 @@ pub struct AIGenerationSummary {
 #[tauri::command]
 pub async fn create_ai_history(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
     async fn create(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
+        // Rate limiting
+        rl_create("ai_history", Some(&request.project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&request.project_id)?;
         crate::security::validation::validate_security_input(&request.generation_type)?;
@@ -136,6 +139,8 @@ pub async fn create_ai_history(request: CreateAIHistoryRequest) -> Result<AIGene
 #[tauri::command]
 pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
     async fn get_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
+        // Rate limiting
+        rl_list("ai_history", Some(&project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         
@@ -156,6 +161,8 @@ pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Ve
 #[tauri::command]
 pub async fn get_ai_usage_stats(project_id: String) -> Result<AIUsageStats> {
     async fn get_stats(project_id: String) -> Result<AIUsageStats> {
+        // Rate limiting
+        rl_list("ai_usage_stats", Some(&project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         
@@ -248,6 +255,8 @@ pub async fn get_ai_usage_stats(project_id: String) -> Result<AIUsageStats> {
 #[tauri::command]
 pub async fn get_ai_history_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
     async fn get_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
+        // Rate limiting
+        rl_list("ai_history_by_document", Some(&document_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&document_id)?;
         
@@ -271,6 +280,8 @@ pub async fn get_ai_history_by_document(document_id: String) -> Result<Vec<AIGen
 #[tauri::command]
 pub async fn delete_ai_history(id: String) -> Result<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("ai_history", Some(&id))?;
         // Input validation
         crate::security::validation::validate_security_input(&id)?;
         
@@ -292,6 +303,8 @@ pub async fn delete_ai_history(id: String) -> Result<()> {
 #[tauri::command]
 pub async fn clear_ai_history(project_id: String) -> Result<()> {
     async fn clear(project_id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("ai_history_by_project", Some(&project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         
@@ -416,6 +429,8 @@ pub async fn calculate_cost_estimate(
 #[tauri::command]
 pub async fn export_ai_history(project_id: String) -> Result<String> {
     async fn export(project_id: String) -> Result<String> {
+        // Rate limiting
+        rl_list("ai_history_export", Some(&project_id))?;
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         

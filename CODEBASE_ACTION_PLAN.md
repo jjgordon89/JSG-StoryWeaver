@@ -65,7 +65,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [x] Add cancelGeneration action into advancedAIStore to abort backend stream and mark status
 - [x] Provide store-based utility for clipboard copy (with toast)
 - [x] Plumb original prompt into generation metadata from calling site
-- [~] Implement saveGeneratedContent to chosen location (document/snippet/note) — front-end action added; backend command pending
+- [x] Implement saveGeneratedContent to chosen location (document/snippet/note) — front-end action added; backend command implemented (save_generated_content)
 - [x] Track generation start/end timestamps and compute elapsed time
 - Suggested approach:
   - Augment advancedAIStore with fields: startedAt, finishedAt, streamId
@@ -76,9 +76,11 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Effort: 2–3d
 - Dependencies: Backend endpoints for style examples or local persistence
 - Files:
-  - src/components/AdvancedAI/StyleManager.tsx (multiple TODOs: update, delete, bulk delete, generate)
-- [ ] Implement CRUD actions with optimistic UI
-- [ ] Wire “Generate from style” to Write/Rewrite pipeline with style constraints
+  - src/components/AdvancedAI/StyleManager.tsx (update ~101, delete ~120, bulk delete ~130, generate ~154)
+- [ ] Implement Update action with optimistic UI and persistence
+- [ ] Implement Delete action with optimistic UI and persistence
+- [ ] Implement Bulk delete with selection management and confirmation
+- [ ] Wire Generate-from-style to Write/Rewrite pipeline with style constraints
 - Suggested approach:
   - Introduce a /style_examples table or use existing templates subsystem (if scope fits)
   - Leverage react-query for caching and invalidations
@@ -88,7 +90,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Effort: 1–2d
 - Dependencies: story bible tables and operations
 - Files:
-  - src-tauri/src/ai/write_processor.rs (search: "TODO: Add Story Bible elements")
+  - src-tauri/src/ai/write_processor.rs (search: "TODO: Add Story Bible elements", ~240)
 - [ ] Query characters, locations, and key lore for project_id
 - [ ] Summarize into AIContext fields (characters, locations, lore)
 - [ ] Gate volume via token budget
@@ -101,7 +103,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Effort: 4–6h
 - Dependencies: AI provider interface
 - Files:
-  - src-tauri/src/ai/brainstorm.rs (search: "TODO: Use base_prompt with AI provider")
+  - src-tauri/src/ai/brainstorm.rs (search: "TODO: Use base_prompt with AI provider", ~233)
 - [ ] Replace placeholder returning all cards with real generation call
 - [ ] Save results as brainstorm cards
 
@@ -111,10 +113,10 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Dependencies: Query adjustments, indices
 - Files:
   - src-tauri/src/database/operations/ai_card_ops.rs (search tokens):
-    - "TODO: Implement actual date range filtering"
-    - "TODO: Implement actual provider filtering"
-    - "TODO: Add model filtering to AICardFilter"
-    - "TODO: Implement actual cost range filtering"
+    - "TODO: Implement actual date range filtering" (~85)
+    - "TODO: Implement actual provider filtering" (~92)
+    - "TODO: Add model filtering to AICardFilter" (~99)
+    - "TODO: Implement actual cost range filtering" (~106)
 - [ ] Add WHERE clauses to filter queries
 - [ ] Update filter type(s) and UI to pass parameters
 - Suggested approach:
@@ -126,9 +128,21 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Effort: 6–10h
 - Dependencies: cache structure (lru), background tasks
 - Files:
-  - src-tauri/src/database/optimization/mod.rs (search: "TODO: Implement time-based clearing in AIResponseCache")
+  - src-tauri/src/database/optimization/mod.rs (search: "TODO: Implement time-based clearing in AIResponseCache", ~171)
 - [ ] Add TTL per entry and background sweeper
 - [ ] Expose admin endpoint to trigger cleanup manually
+
+1.9 Extend credit/cost estimation to AIQuickTools
+- Priority: High
+- Effort: 2–3h
+- Dependencies: Token estimator (aiCost.ts), pricing table
+- Files:
+  - src/components/ai/AIQuickTools.tsx (search: "TODO: Implement credit estimation", ~404)
+- [ ] Integrate estimator to replace estimatedCost = 0
+- [ ] Display cost badge per action; factor provider/model/tool and selection or prompt length
+- Suggested approach:
+  - Reuse estimator from AIWritingPanel to ensure consistent pricing
+  - Add unit tests to verify badge rendering and disabled states when credits are insufficient
 
 ---
 
@@ -144,6 +158,13 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - src-tauri/src/lib.rs (expect on tauri application)
   - src-tauri/src/ai/brainstorm.rs (sessions.get(...).unwrap())
   - src-tauri/src/ai/token_counter.rs (unwrap in tests ok; production code must avoid)
+- Hotspots (non-test; approximate lines):
+  - src-tauri/src/security/encryption.rs:87 parent().unwrap()
+  - src-tauri/src/lib.rs:413 expect("error while running tauri application")
+  - src-tauri/src/commands/collaboration.rs:34 bcrypt::hash(...).unwrap()
+  - src-tauri/src/ai/brainstorm.rs:490 sessions.get(session_id).unwrap()
+  - src-tauri/src/background/mod.rs:273 tasks.remove(index).unwrap()
+  - src-tauri/src/database/operations/collaboration.rs:49, 287, 414, 566, 661 unwrap/unwrap_or chains
 - [ ] Replace unwrap/expect with ? and map_err to StoryWeaverError
 - [ ] Standardize error envelope returned to UI
 - Suggested approach:
@@ -285,6 +306,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [ ] Add tests for hooks: useAI, useAIWriteStream, useAICreative, useAISettings, useAICredits
 - [ ] Add tests for AIWritingPanel basic flows (prompt entry, button disabled states, insert/replace callback)
 - [ ] Add tests for StreamingStatusOverlay behaviors
+- [ ] Add tests for AIQuickTools cost estimation badge and disable rules
 
 5.2 Backend integration tests for commands
 - Priority: High
@@ -349,11 +371,14 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [x] [High] Credit/cost estimation display and calculation
   - Effort: 3–5h
   - File: src/components/ai/AIWritingPanel.tsx
-- [~] [High] Overlay cancel/copy/save/time tracking
+- [x] [High] Overlay cancel/copy/save/time tracking
   - Effort: 1–2d
   - File: src/components/AdvancedAI/StreamingStatusOverlay.tsx
 - [ ] [High] Backend integration tests for key commands
   - Effort: 3–5d
+- [ ] [High] Extend cost estimation to AIQuickTools
+  - Effort: 2–3h
+  - File: src/components/ai/AIQuickTools.tsx
 - [ ] [Medium] WriteProcessor Story Bible enrichment
   - Effort: 1–2d
   - File: src-tauri/src/ai/write_processor.rs
@@ -390,32 +415,41 @@ Frontend
   - Search: "TODO: Implement streaming write functionality"
   - Search: "TODO: Implement credit estimation"
   - Note: Two “Tone” selectors; consolidated on 2025-08-12
+- src/components/ai/AIQuickTools.tsx
+  - Search: "TODO: Implement credit estimation" at ~404
+- src/components/AdvancedAI/StyleManager.tsx
+  - TODOs: update (~101), delete (~120), bulk delete (~130), generate (~154)
 - src/components/AdvancedAI/StreamingStatusOverlay.tsx
   - Implemented: cancelGeneration wired via advancedAIStore.cancelGeneration
   - Implemented: central copy via advancedAIStore.copyGeneratedTextToClipboard
   - Implemented: original prompt plumbed via lastGenerationRequest in store
-  - Partial: saveGeneratedContent implemented in store; backend command pending
+  - Implemented: saveGeneratedContent implemented in store and backend (save_generated_content Tauri command)
   - Implemented: generation time tracking (elapsed) displayed
 - src/utils/tauriSafe.ts
   - Mock responses for guided_write_stream and default generation path
 
 Backend
 - src-tauri/src/ai/write_processor.rs
-  - Search: "TODO: Add Story Bible elements"
+  - Search: "TODO: Add Story Bible elements" at ~240
 - src-tauri/src/ai/brainstorm.rs
-  - Search: "TODO: Use base_prompt with AI provider"
+  - Search: "TODO: Use base_prompt with AI provider" at ~233
 - src-tauri/src/database/operations/ai_card_ops.rs
-  - Search: "TODO: Implement actual date range filtering"
-  - Search: "TODO: Implement actual provider filtering"
-  - Search: "TODO: Add model filtering to AICardFilter"
-  - Search: "TODO: Implement actual cost range filtering"
+  - Date range TODO at ~85
+  - Provider TODO at ~92
+  - Model filtering TODO at ~99
+  - Cost range TODO at ~106
 - src-tauri/src/database/optimization/mod.rs
-  - Search: "TODO: Implement time-based clearing in AIResponseCache"
+  - Search: "TODO: Implement time-based clearing in AIResponseCache" at ~171
+- src-tauri/src/commands/advanced_ai_commands.rs
+  - Implemented: save_generated_content Tauri command
+  - Implemented: cancel_streaming_generation Tauri command
+- src-tauri/src/lib.rs
+  - Handlers registered for save_generated_content and cancel_streaming_generation
 - Backend unwrap/expect hotspots (examples)
-  - src-tauri/src/database/operations/collaboration.rs
-  - src-tauri/src/security/encryption.rs
-  - src-tauri/src/lib.rs
-  - src-tauri/src/ai/brainstorm.rs
+  - src-tauri/src/database/operations/collaboration.rs: unwraps at 49, 287, 414, 566, 661
+  - src-tauri/src/security/encryption.rs: parent().unwrap() at 87
+  - src-tauri/src/lib.rs: expect(...) at 413
+  - src-tauri/src/ai/brainstorm.rs: sessions.get(...).unwrap() at 490
 
 ---
 

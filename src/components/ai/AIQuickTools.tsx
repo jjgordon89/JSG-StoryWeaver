@@ -18,7 +18,15 @@ import { Input } from '../../ui/components/common';
 import { Card, CardContent } from '../../ui/components/common';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { useAI, useAITextProcessor, useAICreative, useAIQuickTools, useAICredits } from '../../hooks/useAI';
+import { useAI, useAITextProcessor, useAICreative, useAIQuickTools, useAICredits, useAISettings } from '../../hooks/useAI';
+
+// Cost estimation utilities
+import {
+  estimateTokensFromText,
+  estimateExpectedOutputTokensForWrite,
+  estimateExpectedOutputTokensForExpand,
+  estimateOperationCreditsWithModel
+} from '../../utils/aiCost';
 
 interface AIQuickToolsProps {
   selectedText?: string;
@@ -133,6 +141,7 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
   const { generateIdeas, generateSceneDescription } = useAICreative();
   const { quickEdit } = useAIQuickTools();
   const { creditsRemaining } = useAICredits();
+  const { settings } = useAISettings();
   
   const hasSelection = selectedText.length > 0;
   const availableActions = quickActions.filter(action => 
@@ -401,7 +410,57 @@ export const AIQuickTools: React.FC<AIQuickToolsProps> = ({
                 {availableActions.map((action) => {
                   const Icon = action.icon;
                   const isDisabled = isExecuting || (action.requiresSelection && !hasSelection);
-                  const estimatedCost = 0; // TODO: Implement credit estimation
+
+                  // Per-action credit estimate
+                  const modelName = (settings as any)?.defaultModel || settings?.write?.prose_mode;
+                  let inputTokens = 0;
+                  let outputTokens = 0;
+
+                  switch (action.id) {
+                    case 'continue': {
+                      // Heuristic: write one medium card when continuing
+                      inputTokens = 0;
+                      outputTokens = estimateExpectedOutputTokensForWrite({
+                        card_length: settings?.write?.card_length ?? 'medium',
+                        card_count: 1
+                      });
+                      break;
+                    }
+                    case 'improve':
+                    case 'rewrite': {
+                      inputTokens = estimateTokensFromText(selectedText);
+                      outputTokens = inputTokens; // similar size rewrite
+                      break;
+                    }
+                    case 'expand': {
+                      inputTokens = estimateTokensFromText(selectedText);
+                      const lm = (settings as any)?.expand?.length_multiplier ?? 2;
+                      outputTokens = estimateExpectedOutputTokensForExpand(inputTokens, lm);
+                      break;
+                    }
+                    case 'summarize': {
+                      inputTokens = estimateTokensFromText(selectedText);
+                      outputTokens = Math.ceil(inputTokens * 0.5);
+                      break;
+                    }
+                    case 'brainstorm':
+                    case 'describe': {
+                      inputTokens = estimateTokensFromText(prompt);
+                      outputTokens = 200; // single-response heuristic
+                      break;
+                    }
+                    case 'quickEdit': {
+                      inputTokens = estimateTokensFromText(selectedText) + estimateTokensFromText(prompt);
+                      outputTokens = estimateTokensFromText(selectedText);
+                      break;
+                    }
+                    default: {
+                      inputTokens = 0;
+                      outputTokens = 0;
+                    }
+                  }
+
+                  const estimatedCost = estimateOperationCreditsWithModel(inputTokens, outputTokens, modelName);
                   
                   return (
                     <motion.div

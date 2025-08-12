@@ -4,6 +4,7 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 
 /// Create folder request
 #[derive(Debug, Deserialize)]
@@ -34,6 +35,8 @@ pub struct MoveItemsToFolderRequest {
 #[tauri::command]
 pub async fn create_folder(request: CreateFolderRequest) -> CommandResponse<Folder> {
     async fn create(request: CreateFolderRequest) -> Result<Folder> {
+        // Rate limiting
+        rl_create("folder", request.parent_folder_id.as_deref())?;
         // Input validation
         if request.name.trim().is_empty() {
             return Err(crate::error::StoryWeaverError::validation("Folder name cannot be empty".to_string()));
@@ -80,6 +83,8 @@ pub async fn get_folder(id: String) -> CommandResponse<Option<Folder>> {
 #[tauri::command]
 pub async fn get_root_folders() -> CommandResponse<Vec<Folder>> {
     async fn get_roots() -> Result<Vec<Folder>> {
+        // Rate limiting
+        rl_list("folders_root", None)?;
         let pool = get_pool()?;
         FolderOps::get_root_folders(&pool).await
     }
@@ -91,6 +96,8 @@ pub async fn get_root_folders() -> CommandResponse<Vec<Folder>> {
 #[tauri::command]
 pub async fn get_child_folders(parent_id: String) -> CommandResponse<Vec<Folder>> {
     async fn get_children(parent_id: String) -> Result<Vec<Folder>> {
+        // Rate limiting
+        rl_list("folders_children", Some(&parent_id))?;
         // Input validation
         crate::security::validate_security_input(&parent_id)?;
 
@@ -105,6 +112,8 @@ pub async fn get_child_folders(parent_id: String) -> CommandResponse<Vec<Folder>
 #[tauri::command]
 pub async fn get_all_folders() -> CommandResponse<Vec<Folder>> {
     async fn get_all() -> Result<Vec<Folder>> {
+        // Rate limiting
+        rl_list("folders_all", None)?;
         let pool = get_pool()?;
         FolderOps::get_all(&pool).await
     }
@@ -116,6 +125,8 @@ pub async fn get_all_folders() -> CommandResponse<Vec<Folder>> {
 #[tauri::command]
 pub async fn update_folder(request: UpdateFolderRequest) -> CommandResponse<()> {
     async fn update(request: UpdateFolderRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("folder", Some(&request.id))?;
         // Input validation
         crate::security::validate_security_input(&request.id)?;
         if let Some(ref name) = request.name {
@@ -159,6 +170,8 @@ pub async fn update_folder(request: UpdateFolderRequest) -> CommandResponse<()> 
 #[tauri::command]
 pub async fn delete_folder(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("folder", Some(&id))?;
         // Input validation
         if !crate::security::is_safe_input(&id) {
             return Err(crate::error::StoryWeaverError::validation("Invalid folder id".to_string()));
@@ -175,6 +188,8 @@ pub async fn delete_folder(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn move_items_to_folder(request: MoveItemsToFolderRequest) -> CommandResponse<()> {
     async fn move_items(request: MoveItemsToFolderRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("folder_move_items", Some(&request.folder_id))?;
         // Input validation
         crate::security::validate_security_input(&request.folder_id)?;
         for project_id in &request.project_ids {
@@ -186,9 +201,9 @@ pub async fn move_items_to_folder(request: MoveItemsToFolderRequest) -> CommandR
 
         let pool = get_pool()?;
         FolderOps::move_items_to_folder(
-            &pool, 
-            &request.folder_id, 
-            &request.project_ids, 
+            &pool,
+            &request.folder_id,
+            &request.project_ids,
             &request.document_ids
         ).await
     }

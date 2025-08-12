@@ -77,7 +77,7 @@ impl RateLimiter {
 
 static RATE_LIMITER: Lazy<RateLimiter> = Lazy::new(|| RateLimiter::new());
 
-/// Check rate limit with custom parameters
+//// Check rate limit with custom parameters
 pub fn check_rate_limit(key: &str, max_requests: usize, per: Duration) -> Result<(), StoryWeaverError> {
     RATE_LIMITER.check(key, max_requests, per)
 }
@@ -85,6 +85,96 @@ pub fn check_rate_limit(key: &str, max_requests: usize, per: Duration) -> Result
 /// Convenience: 60 requests per minute per key
 pub fn check_rate_limit_default(key: &str) -> Result<(), StoryWeaverError> {
     check_rate_limit(key, DEFAULT_MAX_REQUESTS_PER_MINUTE, Duration::from_secs(60))
+}
+
+/// Standardized rate limit configuration (60-second window)
+pub const RL_WINDOW_SECS: u64 = 60;
+pub const RL_CREATE_RPM: usize = 60;
+pub const RL_UPDATE_RPM: usize = 120;
+pub const RL_DELETE_RPM: usize = 60;
+pub const RL_SEARCH_RPM: usize = 120;
+pub const RL_LIST_RPM: usize = 180;
+pub const RL_SAVE_RPM: usize = 300;
+
+/// Build a standardized key using the schema:
+/// "{action}:{entity}" or "{action}:{entity}:{scope}"
+/// If env var RL_NAMESPACE is set, append ":ns={value}" to isolate tests/runs.
+fn build_rate_key(action: &str, entity: &str, scope: Option<&str>) -> String {
+    let mut key = if let Some(scope_val) = scope {
+        format!("{}:{}:{}", action, entity, scope_val)
+    } else {
+        format!("{}:{}", action, entity)
+    };
+    if let Ok(ns) = std::env::var("RL_NAMESPACE") {
+        if !ns.is_empty() {
+            key.push(':');
+            key.push_str(&format!("ns={}", ns));
+        }
+    }
+    key
+}
+
+fn env_override_usize(var: &str) -> Option<usize> {
+    std::env::var(var).ok().and_then(|v| v.parse::<usize>().ok())
+}
+
+fn env_override_u64(var: &str) -> Option<u64> {
+    std::env::var(var).ok().and_then(|v| v.parse::<u64>().ok())
+}
+
+/// Standardized helpers for consistent limits across endpoints
+
+/// Create operations (e.g., create_project, create_document, create_*).
+pub fn rl_create(entity: &str, scope: Option<&str>) -> Result<(), StoryWeaverError> {
+    let key = build_rate_key("create", entity, scope);
+    let limit = env_override_usize("RL_CREATE_RPM").unwrap_or(RL_CREATE_RPM);
+    let window = env_override_u64("RL_WINDOW_SECS").unwrap_or(RL_WINDOW_SECS);
+    check_rate_limit(&key, limit, Duration::from_secs(window))
+}
+
+/// Update operations (e.g., update_project, update_document, update_*).
+pub fn rl_update(entity: &str, scope: Option<&str>) -> Result<(), StoryWeaverError> {
+    let key = build_rate_key("update", entity, scope);
+    let limit = env_override_usize("RL_UPDATE_RPM").unwrap_or(RL_UPDATE_RPM);
+    let window = env_override_u64("RL_WINDOW_SECS").unwrap_or(RL_WINDOW_SECS);
+    check_rate_limit(&key, limit, Duration::from_secs(window))
+}
+
+/// Delete operations.
+pub fn rl_delete(entity: &str, scope: Option<&str>) -> Result<(), StoryWeaverError> {
+    let key = build_rate_key("delete", entity, scope);
+    let limit = env_override_usize("RL_DELETE_RPM").unwrap_or(RL_DELETE_RPM);
+    let window = env_override_u64("RL_WINDOW_SECS").unwrap_or(RL_WINDOW_SECS);
+    check_rate_limit(&key, limit, Duration::from_secs(window))
+}
+
+/// Search/query operations (free-text or param-based "search").
+pub fn rl_search(entity: &str, scope: Option<&str>) -> Result<(), StoryWeaverError> {
+    let key = build_rate_key("search", entity, scope);
+    let limit = env_override_usize("RL_SEARCH_RPM").unwrap_or(RL_SEARCH_RPM);
+    let window = env_override_u64("RL_WINDOW_SECS").unwrap_or(RL_WINDOW_SECS);
+    check_rate_limit(&key, limit, Duration::from_secs(window))
+}
+
+/// List/browse operations (e.g., get_* collections).
+pub fn rl_list(entity: &str, scope: Option<&str>) -> Result<(), StoryWeaverError> {
+    let key = build_rate_key("list", entity, scope);
+    let limit = env_override_usize("RL_LIST_RPM").unwrap_or(RL_LIST_RPM);
+    let window = env_override_u64("RL_WINDOW_SECS").unwrap_or(RL_WINDOW_SECS);
+    check_rate_limit(&key, limit, Duration::from_secs(window))
+}
+
+/// High-frequency save operations.
+pub fn rl_save(entity: &str, scope: Option<&str>) -> Result<(), StoryWeaverError> {
+    let key = build_rate_key("save", entity, scope);
+    let limit = env_override_usize("RL_SAVE_RPM").unwrap_or(RL_SAVE_RPM);
+    let window = env_override_u64("RL_WINDOW_SECS").unwrap_or(RL_WINDOW_SECS);
+    check_rate_limit(&key, limit, Duration::from_secs(window))
+}
+
+#[cfg(test)]
+pub fn reset_rate_limits_for_test() {
+    RATE_LIMITER.buckets.clear();
 }
 
 /// Validate raw request size against a specified byte limit

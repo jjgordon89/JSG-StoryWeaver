@@ -270,7 +270,9 @@ impl TaskQueue {
         });
         
         if let Some(index) = task_index {
-            let task = tasks.remove(index).unwrap();
+            let task = tasks
+                .remove(index)
+                .ok_or_else(|| StoryWeaverError::internal(format!("Task index {} invalid in queue", index)))?;
             
             {
                 let mut task_lock = task.lock().await;

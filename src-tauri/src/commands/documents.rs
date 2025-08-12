@@ -7,8 +7,7 @@ use crate::security::validation::{
     validate_document_name, validate_content_length, validate_security_input
 };
 use serde::{Deserialize, Serialize};
-use crate::security::rate_limit::{check_rate_limit, check_rate_limit_default, validate_request_body_size_default, validate_request_body_size};
-use std::time::Duration;
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, rl_save, validate_request_body_size_default, validate_request_body_size};
 
 /// Create document request
 #[derive(Debug, Deserialize)]
@@ -45,7 +44,7 @@ pub struct SearchDocumentsRequest {
 pub async fn create_document(request: CreateDocumentRequest) -> CommandResponse<Document> {
     async fn create(request: CreateDocumentRequest) -> Result<Document> {
         // Rate limiting
-        check_rate_limit_default("create_document")?;
+        rl_create("document", Some(&request.project_id))?;
         // Input validation
         validate_security_input(&request.project_id)?;
         validate_document_name(&request.title)?;
@@ -124,7 +123,7 @@ pub async fn get_document(id: String) -> CommandResponse<Option<Document>> {
 pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<()> {
     async fn update(request: UpdateDocumentRequest) -> Result<()> {
         // Rate limiting
-        check_rate_limit(&format!("update_document:{}", &request.id), 120, Duration::from_secs(60))?;
+        rl_update("document", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -194,7 +193,7 @@ pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<
 pub async fn save_document(id: String, content: String) -> CommandResponse<()> {
     async fn save(id: String, content: String) -> Result<()> {
         // Rate limiting
-        check_rate_limit(&format!("save_document:{}", &id), 300, Duration::from_secs(60))?;
+        rl_save("document", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         validate_request_body_size_default(&content)?; // 1MB default bytes
@@ -236,7 +235,7 @@ pub async fn delete_document(id: String) -> CommandResponse<()> {
 pub async fn search_documents(request: SearchDocumentsRequest) -> CommandResponse<Vec<Document>> {
     async fn search(request: SearchDocumentsRequest) -> Result<Vec<Document>> {
         // Rate limiting
-        check_rate_limit(&format!("search_documents:{}", &request.project_id), 120, Duration::from_secs(60))?;
+        rl_search("documents", Some(&request.project_id))?;
         // Input validation
         validate_security_input(&request.project_id)?;
         validate_request_body_size(&request.query, 4_000)?; // Max ~4KB bytes

@@ -7,6 +7,7 @@ use crate::security::validation::{
     validate_safe_name, validate_content_length, validate_security_input
 };
 use serde::{Deserialize, Serialize};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 
 /// Create character request
 #[derive(Debug, Deserialize)]
@@ -45,9 +46,11 @@ pub struct UpdateCharacterRequest {
 #[tauri::command]
 pub async fn create_character(request: CreateCharacterRequest) -> CommandResponse<Character> {
     async fn create(request: CreateCharacterRequest) -> Result<Character> {
+        // Rate limiting
+        rl_create("character", Some(&request.project_id))?;
         // Input validation
         validate_security_input(&request.project_id)?;
-        validate_safe_name(&request.name)?;
+        validate_safe_name(&request.name, "Character name")?;
         
         if let Some(ref description) = request.description {
             validate_content_length(description, 5000)?;
@@ -119,6 +122,8 @@ pub async fn create_character(request: CreateCharacterRequest) -> CommandRespons
 #[tauri::command]
 pub async fn get_characters(project_id: String) -> CommandResponse<Vec<Character>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Character>> {
+        // Rate limiting
+        rl_list("characters", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -154,11 +159,13 @@ pub async fn get_character(id: String) -> CommandResponse<Option<Character>> {
 #[tauri::command]
 pub async fn update_character(request: UpdateCharacterRequest) -> CommandResponse<()> {
     async fn update(request: UpdateCharacterRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("character", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
         if let Some(ref name) = request.name {
-            validate_safe_name(name)?;
+            validate_safe_name(name, "Character name")?;
         }
         
         if let Some(ref description) = request.description {
@@ -259,6 +266,8 @@ pub async fn update_character(request: UpdateCharacterRequest) -> CommandRespons
 #[tauri::command]
 pub async fn delete_character(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("character", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -283,6 +292,8 @@ pub struct CharacterSummary {
 #[tauri::command]
 pub async fn get_character_summaries(project_id: String) -> CommandResponse<Vec<CharacterSummary>> {
     async fn get_summaries(project_id: String) -> Result<Vec<CharacterSummary>> {
+        // Rate limiting
+        rl_list("character_summaries", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -357,6 +368,8 @@ pub struct CharacterRelationship {
 #[tauri::command]
 pub async fn get_character_relationships(project_id: String) -> CommandResponse<Vec<CharacterRelationship>> {
     async fn get_relationships(project_id: String) -> Result<Vec<CharacterRelationship>> {
+        // Rate limiting
+        rl_list("character_relationships", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -473,6 +486,8 @@ pub async fn get_character_stats(project_id: String) -> CommandResponse<Characte
 #[tauri::command]
 pub async fn get_characters_by_series(series_id: String) -> CommandResponse<Vec<Character>> {
     async fn get_by_series(series_id: String) -> Result<Vec<Character>> {
+        // Rate limiting
+        rl_list("characters_by_series", Some(&series_id))?;
         // Input validation
         validate_security_input(&series_id)?;
         
@@ -487,6 +502,11 @@ pub async fn get_characters_by_series(series_id: String) -> CommandResponse<Vec<
 #[tauri::command]
 pub async fn get_visible_characters(project_id: String, series_id: Option<String>) -> CommandResponse<Vec<Character>> {
     async fn get_visible(project_id: String, series_id: Option<String>) -> Result<Vec<Character>> {
+        // Rate limiting
+        rl_list(
+            "visible_characters",
+            Some(&format!("{}:{}", &project_id, series_id.as_deref().unwrap_or("none")))
+        )?;
         // Input validation
         validate_security_input(&project_id)?;
         if let Some(ref series_id) = series_id {
@@ -504,6 +524,8 @@ pub async fn get_visible_characters(project_id: String, series_id: Option<String
 #[tauri::command]
 pub async fn share_character_to_series(character_id: String, series_id: String) -> CommandResponse<()> {
     async fn share_to_series(character_id: String, series_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("character_share_to_series", Some(&format!("{}:{}", &character_id, &series_id)))?;
         // Input validation
         validate_security_input(&character_id)?;
         validate_security_input(&series_id)?;
@@ -519,6 +541,8 @@ pub async fn share_character_to_series(character_id: String, series_id: String) 
 #[tauri::command]
 pub async fn unshare_character_from_series(character_id: String) -> CommandResponse<()> {
     async fn unshare_from_series(character_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("character_unshare_from_series", Some(&character_id))?;
         // Input validation
         validate_security_input(&character_id)?;
         

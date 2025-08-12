@@ -162,12 +162,16 @@ impl AdvancedAIManager {
             .ok_or_else(|| StoryWeaverError::invalid_input("Invalid prose mode".to_string()))?;
 
         // Build saliency context if requested
-        let saliency_context = if request.use_saliency_engine && story_bible.is_some() {
-            Some(self.saliency_engine.build_context(
-                &request.project_id,
-                &request.text_context,
-                &story_bible.unwrap(),
-            ).map_err(|e| StoryWeaverError::SaliencyEngineError { message: e.to_string() })?)
+        let saliency_context = if request.use_saliency_engine {
+            if let Some(sb) = story_bible.as_ref() {
+                Some(self.saliency_engine.build_context(
+                    &request.project_id,
+                    &request.text_context,
+                    sb,
+                ).map_err(|e| StoryWeaverError::SaliencyEngineError { message: e.to_string() })?)
+            } else {
+                None
+            }
         } else {
             None
         };

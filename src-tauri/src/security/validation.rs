@@ -8,6 +8,7 @@ use regex::Regex;
 use lazy_static::lazy_static;
 use std::path::Path;
 
+#[allow(clippy::unwrap_used)]
 lazy_static! {
     // Enhanced regex patterns for validation
     static ref EMAIL_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
@@ -127,8 +128,10 @@ pub fn validate_api_key(api_key: &str) -> Result<(), StoryWeaverError> {
     }
     
     // Check for common weak patterns
-    if api_key.chars().all(|c| c == api_key.chars().next().unwrap()) {
-        return Err(StoryWeaverError::validation("API key appears to be a repeated character pattern"));
+    if let Some(first) = api_key.chars().next() {
+        if api_key.chars().all(|c| c == first) {
+            return Err(StoryWeaverError::validation("API key appears to be a repeated character pattern"));
+        }
     }
     
     // Check for obvious test/placeholder values

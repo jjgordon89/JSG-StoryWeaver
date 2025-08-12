@@ -84,7 +84,11 @@ fn get_key_path(app_handle: &AppHandle) -> Result<PathBuf, StoryWeaverError> {
     let app_data_dir = app_handle.path().resolve("keys", BaseDirectory::AppData)
         .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to get app data directory: {}", e) })?;
     
-    let key_dir = app_data_dir.parent().unwrap().join("keys");
+    // Avoid unwrap on parent; fall back to app_data_dir if no parent
+    let key_dir = match app_data_dir.parent() {
+        Some(parent) => parent.join("keys"),
+        None => app_data_dir.join("keys"),
+    };
     fs::create_dir_all(&key_dir)
         .map_err(|e| StoryWeaverError::SecurityError{ message: format!("Failed to create key directory: {}", e) })?;
     
