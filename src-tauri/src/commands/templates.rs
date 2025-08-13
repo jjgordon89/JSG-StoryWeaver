@@ -73,7 +73,7 @@ pub async fn apply_character_template(
         rl_create("character_template", Some(&project_id))?;
         // Input validation
         validate_security_input(&template_id)?;
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         validate_safe_name(&name, "Name")?;
         
         if let Some(ref desc) = description {
@@ -166,8 +166,8 @@ pub async fn apply_worldbuilding_template(
         // Rate limiting
         rl_create("worldbuilding_template", Some(&project_id))?;
         // Input validation
-        validate_security_input(&template_id)?
-        validate_security_input(&project_id)?;
+        validate_security_input(&template_id)?;
+        validate_security_input(&project_id.to_string())?;
         validate_safe_name(&name, "Name")?;
         
         if let Some(ref desc) = description {

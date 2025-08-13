@@ -29,7 +29,7 @@ pub async fn create_shared_document_link(
 ) -> Result<SharedDocument> {
     // Input validation
     validate_security_input(&document_id)?;
-    validate_security_input(&project_id)?;
+    validate_security_input(&project_id.to_string())?;
     validate_security_input(&share_type)?;
     validate_content_length(&share_type, 50)?;
     if let Some(hours) = expires_in_hours {
@@ -379,7 +379,7 @@ pub async fn republish_shared_document(share_token: String) -> Result<()> {
 #[tauri::command]
 pub async fn get_project_shared_documents(project_id: String) -> Result<Vec<SharedDocument>> {
     // Input validation
-    validate_security_input(&project_id)?;
+    validate_security_input(&project_id.to_string())?;
 
     let pool = get_pool()?;
 

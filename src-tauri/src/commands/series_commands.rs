@@ -123,7 +123,7 @@ pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> 
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&request.id)?;
-        crate::security::validation::validate_content_length(&request.id, 255)?;;
+        crate::security::validation::validate_content_length(&request.id, 255)?;
         
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
@@ -222,7 +222,7 @@ pub async fn add_project_to_series(series_id: String, project_id: String) -> Com
         }
         crate::security::validation::validate_security_input(&series_id)?;
         crate::security::validation::validate_content_length(&series_id, 255)?;
-        crate::security::validation::validate_security_input(&project_id)?;
+        crate::security::validation::validate_security_input(&project_id.to_string())?;
         crate::security::validation::validate_content_length(&project_id, 255)?;
         
         let pool = get_pool()?;
@@ -242,7 +242,7 @@ pub async fn remove_project_from_series(project_id: String) -> CommandResponse<(
         if project_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Project ID cannot be empty"));
         }
-        crate::security::validation::validate_security_input(&project_id)?;
+        crate::security::validation::validate_security_input(&project_id.to_string())?;
         crate::security::validation::validate_content_length(&project_id, 255)?;
         
         let pool = get_pool()?;

@@ -97,7 +97,7 @@ pub async fn get_documents(project_id: String) -> CommandResponse<Vec<Document>>
         rl_list("documents", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         DocumentOps::get_by_project(&pool, &project_id).await
@@ -275,7 +275,7 @@ pub async fn get_document_tree(project_id: String) -> CommandResponse<Vec<Docume
         rl_list("document_tree", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         let documents = DocumentOps::get_by_project(&pool, &project_id).await?;

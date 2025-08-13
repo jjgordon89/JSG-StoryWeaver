@@ -202,7 +202,7 @@ pub async fn update_project_word_count(project_id: String) -> CommandResponse<()
         // Rate limiting
         rl_update("project_word_count", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         ProjectOps::update_word_count(&pool, &project_id).await
@@ -236,7 +236,7 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
         rl_list("project_summary", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         

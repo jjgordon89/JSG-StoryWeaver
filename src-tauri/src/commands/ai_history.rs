@@ -354,7 +354,7 @@ pub async fn clear_ai_history(project_id: String) -> Result<()> {
         }
         
         // Input validation
-        crate::security::validation::validate_security_input(&project_id)?
+        crate::security::validation::validate_security_input(&project_id)?;
         
         let pool = get_pool()?;
         

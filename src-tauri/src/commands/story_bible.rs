@@ -119,7 +119,7 @@ pub async fn get_story_bible(project_id: String) -> CommandResponse<Option<Story
         // Rate limiting
         rl_list("story_bible", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         match StoryBibleOps::get_by_project(&pool, &project_id).await {
@@ -476,7 +476,7 @@ pub async fn search_world_elements(project_id: String, query: String) -> Command
         // Rate limiting
         rl_search("world_element", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?
+        validate_security_input(&project_id)?;
         validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
@@ -720,7 +720,7 @@ pub async fn search_outlines(project_id: String, query: String) -> CommandRespon
         // Rate limiting
         rl_search("outline", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?
+        validate_security_input(&project_id)?;
         validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
@@ -999,7 +999,7 @@ pub async fn search_scenes(outline_id: String, query: String) -> CommandResponse
         // Rate limiting
         rl_search("scene", Some(&outline_id))?;
         // Input validation
-        validate_security_input(&outline_id)?
+        validate_security_input(&outline_id)?;
         validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;

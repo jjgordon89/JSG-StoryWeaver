@@ -81,7 +81,7 @@ pub async fn get_style_examples_by_project(
     project_id: String,
 ) -> Result<Vec<StyleExampleResponse>> {
     // Input validation
-    crate::security::validate_security_input(&project_id)?;
+    crate::security::validate_security_input(&project_id.to_string())?;
 
     let pool = get_pool()?;
     
@@ -95,7 +95,7 @@ pub async fn get_analyzed_style_examples(
     project_id: String,
 ) -> Result<Vec<StyleExampleResponse>> {
     // Input validation
-    crate::security::validate_security_input(&project_id)?;
+    crate::security::validate_security_input(&project_id.to_string())?;
 
     let pool = get_pool()?;
     

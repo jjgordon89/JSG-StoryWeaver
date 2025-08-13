@@ -131,7 +131,7 @@ pub async fn get_characters(project_id: String) -> CommandResponse<Vec<Character
         // Rate limiting
         rl_list("characters", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         CharacterOps::get_by_project(&pool, &project_id).await
@@ -310,7 +310,7 @@ pub async fn get_character_summaries(project_id: String) -> CommandResponse<Vec<
         // Rate limiting
         rl_list("character_summaries", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         let characters = CharacterOps::get_by_project(&pool, &project_id).await?;
@@ -386,7 +386,7 @@ pub async fn get_character_relationships(project_id: String) -> CommandResponse<
         // Rate limiting
         rl_list("character_relationships", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         let characters = CharacterOps::get_by_project(&pool, &project_id).await?;
@@ -452,7 +452,7 @@ pub async fn get_character_stats(project_id: String) -> CommandResponse<Characte
         rl_list("character_stats", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         let characters = CharacterOps::get_by_project(&pool, &project_id).await?;
@@ -525,7 +525,7 @@ pub async fn get_visible_characters(project_id: String, series_id: Option<String
             Some(&format!("{}:{}", &project_id, series_id.as_deref().unwrap_or("none")))
         )?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         if let Some(ref series_id) = series_id {
             validate_security_input(series_id)?;
         }

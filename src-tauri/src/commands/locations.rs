@@ -130,7 +130,7 @@ pub async fn get_locations(project_id: String) -> CommandResponse<Vec<Location>>
         // Rate limiting
         rl_list("locations", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         LocationOps::get_by_project(&pool, &project_id).await
@@ -307,7 +307,7 @@ pub async fn get_location_summaries(project_id: String) -> CommandResponse<Vec<L
         // Rate limiting
         rl_list("location_summaries", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         let locations = LocationOps::get_by_project(&pool, &project_id).await?;
@@ -502,7 +502,7 @@ pub async fn get_location_stats(project_id: String) -> CommandResponse<LocationS
         // Rate limiting
         rl_list("location_stats", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id.to_string())?;
         
         let pool = get_pool()?;
         let locations = LocationOps::get_by_project(&pool, &project_id).await?;

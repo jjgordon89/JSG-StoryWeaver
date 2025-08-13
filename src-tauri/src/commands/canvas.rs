@@ -18,7 +18,7 @@ pub async fn create_canvas(
     // Rate limiting
     rl_create("canvas", Some(&project_id))?;
     // Input validation
-    crate::security::validation::validate_security_input(&project_id)?;
+    crate::security::validation::validate_security_input(&project_id.to_string())?;
     crate::security::validation::validate_security_input(&name)?;
     crate::security::validation::validate_content_length(&name, 255)?;
     if name.trim().is_empty() {
@@ -61,7 +61,7 @@ pub async fn get_project_canvases(
     // Rate limiting
     rl_list("canvases", Some(&project_id))?;
     // Input validation
-    crate::security::validation::validate_security_input(&project_id)?;
+    crate::security::validation::validate_security_input(&project_id.to_string())?;
     
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
     canvas_ops::get_project_canvases(&pool, &project_id)
