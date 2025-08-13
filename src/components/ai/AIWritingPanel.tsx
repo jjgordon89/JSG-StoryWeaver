@@ -25,7 +25,7 @@ import { Separator } from '../ui/separator';
 import { estimateTokensFromText, estimateExpectedOutputTokensForWrite, estimateExpectedOutputTokensForExpand, estimateOperationCredits, estimateOperationCreditsWithModel } from '../../utils/aiCost';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
-import { useAI, useAIWriteStream, useAITextProcessor, useAICreative, useAISettings, useAICredits } from '../../hooks/useAI';
+import { useAI, useAIWriteStream, useAITextProcessor, useAICreative, useAISettings, useAICredits, useAIStreaming } from '../../hooks/useAI';
 import { StreamingText } from './StreamingText';
 import { useCards } from '../../hooks/useCards';
 
@@ -128,6 +128,7 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
   // Hooks
   const { autoWrite, guidedWrite } = useAI();
   const { streaming, startStreamingWrite, stopStreamingWrite } = useAIWriteStream();
+  const { pauseStreaming, resumeStreaming, stopStreaming } = useAIStreaming();
   const { processText } = useAITextProcessor();
   const { generateIdeas, generateSceneDescription, generateVisualization } = useAICreative();
   const { settings, updateSettings } = useAISettings();
@@ -579,8 +580,16 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
             text={streaming.currentText}
             isStreaming={streaming.isStreaming}
             isPaused={streaming.isPaused}
+            onPause={pauseStreaming}
+            onResume={resumeStreaming}
+            onStop={() => {
+              stopStreaming();
+              stopStreamingWrite();
+            }}
             onComplete={handleStreamingComplete}
             className="border rounded-lg p-4"
+            showControls={true}
+            showProgress={true}
           />
         )}
         

@@ -26,6 +26,8 @@ While completing the final Phase 1 tasks, we've also **begun initial work on Pha
 - Comprehensive input validation coverage for all Tauri command handlers, with size, length, sanitization, and numeric-bounds enforcement via validate_security_input, validate_content_length, and validate_request_body_size
 - Comprehensive error handling standardization across backend codebase, replacing unsafe unwrap/expect patterns with proper error handling, logging, and data validation in collaboration.rs, brainstorm_session_ops.rs, and other critical files
 - Complete framework consolidation: Successfully migrated all Svelte components to React, achieving unified React-only architecture
+- AI card filtering system: Full implementation in AIResponseCard::get_filtered with support for project_id, document_id, feature_type, is_stacked, is_starred, date_start, date_end, provider, model_used, cost_min, cost_max, limit, and offset
+- AIResponseCache time-based clearing: Complete implementation with TTL per entry, background sweeper (start_background_sweeper), manual cleanup (clear_expired_entries), and comprehensive test coverage
 ### Frontend & Integration
 - Three-column responsive UI layout
 - Project management interface with project cards

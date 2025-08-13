@@ -1,3 +1,22 @@
+# Consolidated Learnings: StoryWeaver
+
+## Key Insights and Patterns
+
+### Action Plan Audit Pattern (2025-01-14)
+**Discovery:** Action plans can become outdated as development progresses. Two items marked as incomplete in CODEBASE_ACTION_PLAN.md were actually fully implemented:
+- AI card filter implementations: Complete in `AIResponseCard::get_filtered` with comprehensive filtering
+- AIResponseCache time-based clearing: Complete with TTL, background sweeper, and manual cleanup
+
+**Learning:** Always verify current implementation status before starting work on action plan items. Code analysis should precede implementation to avoid duplicate work.
+
+**Pattern:** When auditing action plans:
+1. Search for existing implementations in the codebase
+2. Examine test coverage to understand feature completeness
+3. Update action plan documentation with current status
+4. Focus efforts on genuinely incomplete items
+
+---
+
 # Rust Error Handling and API Patterns (2025-08-11)
 
 ### Standard Patterns for StoryWeaver Rust/Tauri Backend

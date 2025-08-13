@@ -33,7 +33,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Files:
   - src/components/ai/AIWritingPanel.tsx (search: "TODO: Implement streaming write functionality")
 - [x] Implement streaming branch in "write" case (when settings.write.prose_mode === 'streaming') — wired to useAIWriteStream.startStreamingWrite in AIWritingPanel
-- [~] Wire to useAIWriteStream hook to start/pause/stop subscriptions — start wired; pause/stop UI controls pending
+- [x] Wire to useAIWriteStream hook to start/pause/stop subscriptions — start wired; pause/resume/stop UI controls now connected to useAIStreaming
 - [x] Forward streaming segments into StreamingText component and cards — StreamingText consumes store updates; onComplete persists card
 - Suggested approach:
   - Create a startWriteStream(documentId, cursorPosition, settings) that requests a stream_id from backend
@@ -127,14 +127,15 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Add composite indexes on (project_id, created_at), (project_id, provider, model_used)
   - Ensure pagination with filters
 
-1.8 AIResponseCache time-based clearing
+1.8 AIResponseCache time-based clearing — COMPLETED
 - Priority: Medium
 - Effort: 6–10h
 - Dependencies: cache structure (lru), background tasks
 - Files:
-  - src-tauri/src/database/optimization/mod.rs (search: "TODO: Implement time-based clearing in AIResponseCache", ~171)
-- [x] Add TTL per entry and background sweeper
-- [x] Expose admin endpoint to trigger cleanup manually
+  - src-tauri/src/database/optimization/ai_response_cache.rs
+- [x] Add TTL per entry and background sweeper — COMPLETED: Implemented with CacheConfig.ttl_hours, start_background_sweeper with hourly interval, and sweep_expired_entries
+- [x] Expose admin endpoint to trigger cleanup manually — COMPLETED: clear_expired_entries method available for manual cleanup
+- Status: FULLY IMPLEMENTED with comprehensive test coverage including test_time_based_clearing
 
 1.9 Extend credit/cost estimation to AIQuickTools
 - Priority: High
@@ -409,12 +410,14 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [x] [Medium] Brainstorm use base_prompt with provider
   - Effort: 4–6h
   - File: src-tauri/src/ai/brainstorm.rs
-- [ ] [Medium] AI card filter implementations (date/provider/model/cost)
+- [x] [Medium] AI card filter implementations (date/provider/model/cost)
   - Effort: 2–4d
   - File: src-tauri/src/database/operations/ai_card_ops.rs
-- [ ] [Medium] AIResponseCache time-based clearing
+  - Status: COMPLETED - Full filtering implementation exists in AIResponseCard::get_filtered with support for project_id, document_id, feature_type, is_stacked, is_starred, date_start, date_end, provider, model_used, cost_min, cost_max, limit, and offset
+- [x] [Medium] AIResponseCache time-based clearing
   - Effort: 6–10h
   - File: src-tauri/src/database/optimization/mod.rs
+  - Status: COMPLETED - Full time-based clearing implemented with TTL per entry, background sweeper (start_background_sweeper), manual cleanup (clear_expired_entries), and comprehensive test coverage
 - [x] [Medium] Tone controls duplication cleanup
   - Effort: 1–2h
   - File: src/components/ai/AIWritingPanel.tsx
