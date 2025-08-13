@@ -3,6 +3,7 @@ use crate::database::DbPool;
 use crate::error::StoryWeaverError;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use crate::security::validation::{validate_security_input, validate_content_length};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptimizationConfig {
@@ -117,6 +118,27 @@ pub async fn create_index(
     columns: Vec<String>,
     index_type: Option<String>,
 ) -> Result<String, StoryWeaverError> {
+    // Input validation
+    if table_name.trim().is_empty() {
+        return Err(StoryWeaverError::validation("table_name cannot be empty"));
+    }
+    validate_content_length(&table_name, 128)?;
+    validate_security_input(&table_name)?;
+    if columns.is_empty() {
+        return Err(StoryWeaverError::validation("columns must contain at least one column"));
+    }
+    for col in &columns {
+        if col.trim().is_empty() {
+            return Err(StoryWeaverError::validation("column names cannot be empty"));
+        }
+        validate_content_length(col, 128)?;
+        validate_security_input(col)?;
+    }
+    if let Some(ref idx_ty) = index_type {
+        validate_content_length(idx_ty, 64)?;
+        validate_security_input(idx_ty)?;
+    }
+
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -139,6 +161,9 @@ pub async fn drop_unused_indexes(
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let threshold = min_usage_threshold.unwrap_or(0.1); // 10% default threshold
+    if !(0.0..=1.0).contains(&threshold) {
+        return Err(StoryWeaverError::validation("min_usage_threshold must be between 0.0 and 1.0 inclusive"));
+    }
     
     let dropped_indexes = optimization_manager
         .cleanup_unused_indexes(threshold)
@@ -177,6 +202,9 @@ pub async fn optimize_memory_usage(
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
     
     let target = target_mb.unwrap_or(256); // Default to 256MB
+    if target < 16 || target > 65536 {
+        return Err(StoryWeaverError::validation("target_mb must be between 16 and 65536"));
+    }
     
     optimization_manager
         .optimize_memory_usage(target)
@@ -226,6 +254,18 @@ pub async fn schedule_maintenance(
     maintenance_type: String,
     schedule_cron: String,
 ) -> Result<String, StoryWeaverError> {
+    // Input validation
+    if maintenance_type.trim().is_empty() {
+        return Err(StoryWeaverError::validation("maintenance_type cannot be empty"));
+    }
+    validate_content_length(&maintenance_type, 50)?;
+    validate_security_input(&maintenance_type)?;
+    if schedule_cron.trim().is_empty() {
+        return Err(StoryWeaverError::validation("schedule_cron cannot be empty"));
+    }
+    validate_content_length(&schedule_cron, 200)?;
+    validate_security_input(&schedule_cron)?;
+
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;

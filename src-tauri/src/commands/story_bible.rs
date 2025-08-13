@@ -177,6 +177,7 @@ pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> Com
         // Input validation
         validate_security_input(&request.character_id)?;
         validate_safe_name(&request.trait_name, "Name")?;
+        validate_request_body_size(&request.trait_value, 5_000)?;
         validate_content_length(&request.trait_value, 5000)?;
         validate_security_input(&request.trait_value)?;
         
@@ -227,6 +228,7 @@ pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> Com
         }
         
         if let Some(ref trait_value) = request.trait_value {
+            validate_request_body_size(trait_value, 5_000)?;
             validate_content_length(trait_value, 5000)?;
             validate_security_input(trait_value)?;
         }
@@ -307,6 +309,7 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
         }
         
         if let Some(ref description) = request.description {
+            validate_request_body_size(description, 10_000)?;
             validate_content_length(description, 10000)?;
             validate_security_input(description)?;
         }
@@ -314,6 +317,7 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
         if let Some(ref properties) = request.properties {
             for (key, value) in properties {
                 validate_safe_name(key, "Name")?;
+                validate_request_body_size(value, 5_000)?;
                 validate_content_length(value, 5000)?;
                 validate_security_input(value)?;
             }
@@ -381,6 +385,7 @@ pub async fn update_world_element(request: UpdateWorldElementRequest) -> Command
         }
         
         if let Some(ref description) = request.description {
+            validate_request_body_size(description, 10_000)?;
             validate_content_length(description, 10000)?;
             validate_security_input(description)?;
         }
@@ -392,6 +397,7 @@ pub async fn update_world_element(request: UpdateWorldElementRequest) -> Command
         if let Some(ref properties) = request.properties {
             for (key, value) in properties {
                 validate_safe_name(key, "Name")?;
+                validate_request_body_size(value, 5_000)?;
                 validate_content_length(value, 5000)?;
                 validate_security_input(value)?;
             }

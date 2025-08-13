@@ -23,6 +23,7 @@ While completing the final Phase 1 tasks, we've also **begun initial work on Pha
 - Backend commands for settings management and persistence
 - Performance monitoring system with metrics collection, memory tracking, and bottleneck detection
 
+- Comprehensive input validation coverage for all Tauri command handlers, with size, length, sanitization, and numeric-bounds enforcement via validate_security_input, validate_content_length, and validate_request_body_size
 ### Frontend & Integration
 - Three-column responsive UI layout
 - Project management interface with project cards
@@ -40,6 +41,7 @@ While completing the final Phase 1 tasks, we've also **begun initial work on Pha
 - State persistence layer with local storage and backend synchronization
 - Performance dashboard with real-time metrics visualization
 - Performance monitoring hook for component-level tracking
+- AdvancedAI Style Manager: update, delete, bulk delete implemented with optimistic UI and local persistence; Generate-from-style wired to generate_with_prose_mode using selected style constraints
 
 ## What's Left to Complete in Phase 1
 1. **Final Integration Tasks** (Critical)
@@ -98,6 +100,7 @@ The following items have been intentionally deferred to Phase 2:
 - ⏳ Build Rewrite tool with multiple styles (Rephrase, Shorter, More Descriptive, etc.)
 - ⏳ Create Expand and Describe features with sensory detail toggles
 - ⏳ Add configurable creativity levels (1-10) and Key Details for project-level context
+- ✅ Generate-from-style action wired to Write path with style constraints
 
 ### UI Components
 - ✅ Card Stacking System: Implement the UI for organizing AI responses into collapsible, stackable cards

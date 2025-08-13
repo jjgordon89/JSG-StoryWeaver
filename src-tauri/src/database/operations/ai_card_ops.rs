@@ -25,6 +25,12 @@ impl AICardOps {
             feature_type: None,
             is_stacked: None,
             is_starred: None,
+            date_start: None,
+            date_end: None,
+            provider: None,
+            model_used: None,
+            cost_min: None,
+            cost_max: None,
             limit: None,
             offset: None,
         };
@@ -39,6 +45,12 @@ impl AICardOps {
             feature_type: None,
             is_stacked: None,
             is_starred: None,
+            date_start: None,
+            date_end: None,
+            provider: None,
+            model_used: None,
+            cost_min: None,
+            cost_max: None,
             limit: None,
             offset: None,
         };
@@ -53,6 +65,12 @@ impl AICardOps {
             feature_type: Some(card_type.to_string()),
             is_stacked: None,
             is_starred: None,
+            date_start: None,
+            date_end: None,
+            provider: None,
+            model_used: None,
+            cost_min: None,
+            cost_max: None,
             limit: None,
             offset: None,
         };
@@ -73,6 +91,12 @@ impl AICardOps {
             feature_type: None,
             is_stacked,
             is_starred,
+            date_start: None,
+            date_end: None,
+            provider: None,
+            model_used: None,
+            cost_min: None,
+            cost_max: None,
             limit: None,
             offset: None,
         };
@@ -80,31 +104,83 @@ impl AICardOps {
     }
     
     /// Get AI cards by date range
-    pub async fn get_by_date_range(pool: &Pool<Sqlite>, project_id: &str, _start_date: &str, _end_date: &str) -> Result<Vec<AIResponseCard>> {
-        // For now, just return all cards for the project
-        // TODO: Implement actual date range filtering
-        Self::get_by_project(&*pool, project_id).await
+    pub async fn get_by_date_range(pool: &Pool<Sqlite>, project_id: &str, start_date: &str, end_date: &str) -> Result<Vec<AIResponseCard>> {
+        let filter = AICardFilter {
+            project_id: Some(project_id.to_string()),
+            document_id: None,
+            feature_type: None,
+            is_stacked: None,
+            is_starred: None,
+            date_start: Some(start_date.to_string()),
+            date_end: Some(end_date.to_string()),
+            provider: None,
+            model_used: None,
+            cost_min: None,
+            cost_max: None,
+            limit: None,
+            offset: None,
+        };
+        AIResponseCard::get_filtered(&*pool, filter).await
     }
     
     /// Get AI cards by provider
-    pub async fn get_by_provider(pool: &Pool<Sqlite>, project_id: &str, _provider: &str) -> Result<Vec<AIResponseCard>> {
-        // For now, just return all cards for the project
-        // TODO: Implement actual provider filtering based on model_used field
-        Self::get_by_project(&*pool, project_id).await
+    pub async fn get_by_provider(pool: &Pool<Sqlite>, project_id: &str, provider: &str) -> Result<Vec<AIResponseCard>> {
+        let filter = AICardFilter {
+            project_id: Some(project_id.to_string()),
+            document_id: None,
+            feature_type: None,
+            is_stacked: None,
+            is_starred: None,
+            date_start: None,
+            date_end: None,
+            provider: Some(provider.to_string()),
+            model_used: None,
+            cost_min: None,
+            cost_max: None,
+            limit: None,
+            offset: None,
+        };
+        AIResponseCard::get_filtered(&*pool, filter).await
     }
     
     /// Get AI cards by model
     pub async fn get_by_model(pool: &Pool<Sqlite>, project_id: &str, model: &str) -> Result<Vec<AIResponseCard>> {
-        // This would require a more complex filter, for now return all for project
-        // TODO: Add model filtering to AICardFilter
-        Self::get_by_project(&*pool, project_id).await
+        let filter = AICardFilter {
+            project_id: Some(project_id.to_string()),
+            document_id: None,
+            feature_type: None,
+            is_stacked: None,
+            is_starred: None,
+            date_start: None,
+            date_end: None,
+            provider: None,
+            model_used: Some(model.to_string()),
+            cost_min: None,
+            cost_max: None,
+            limit: None,
+            offset: None,
+        };
+        AIResponseCard::get_filtered(&*pool, filter).await
     }
     
     /// Get AI cards by cost range
-    pub async fn get_by_cost_range(pool: &Pool<Sqlite>, project_id: &str, _min_cost: f64, _max_cost: f64) -> Result<Vec<AIResponseCard>> {
-        // For now, just return all cards for the project
-        // TODO: Implement actual cost range filtering
-        Self::get_by_project(&*pool, project_id).await
+    pub async fn get_by_cost_range(pool: &Pool<Sqlite>, project_id: &str, min_cost: f64, max_cost: f64) -> Result<Vec<AIResponseCard>> {
+        let filter = AICardFilter {
+            project_id: Some(project_id.to_string()),
+            document_id: None,
+            feature_type: None,
+            is_stacked: None,
+            is_starred: None,
+            date_start: None,
+            date_end: None,
+            provider: None,
+            model_used: None,
+            cost_min: Some(min_cost),
+            cost_max: Some(max_cost),
+            limit: None,
+            offset: None,
+        };
+        AIResponseCard::get_filtered(&*pool, filter).await
     }
     
     /// Update AI card

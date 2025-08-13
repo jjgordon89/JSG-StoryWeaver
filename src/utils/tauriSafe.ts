@@ -123,6 +123,15 @@ export async function invoke<T = any>(cmd: string, args?: Record<string, any>): 
       case 'save_generated_content':
         return { success: true } as T;
       
+      case 'get_version_statistics':
+        return {
+          totalVersions: 42,
+          documentsWithVersions: 15,
+          oldestVersion: '2025-05-01T12:00:00Z',
+          newestVersion: '2025-08-05T15:30:00Z',
+          averageVersionsPerDocument: 2.8
+        } as T;
+      
       default:
         // For unknown commands, return empty object
         return {} as T;

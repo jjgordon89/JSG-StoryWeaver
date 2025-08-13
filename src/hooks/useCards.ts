@@ -1,14 +1,66 @@
 import { useEffect } from 'react';
 import { useCardStore } from '../stores/cardStore';
 
+/**
+ * Configuration options for the useCards hook.
+ */
 interface UseCardsOptions {
+  /** The project ID to fetch cards for */
   projectId: number;
+  /** Optional document ID to filter cards by specific document */
   documentId?: number;
+  /** Filter cards by feature type (e.g., 'write', 'rewrite', 'brainstorm') */
   filterType?: string | null;
+  /** Show only starred cards when true */
   showStarredOnly?: boolean;
+  /** Sort order for cards within each stack */
   sortOrder?: 'newest' | 'oldest';
 }
 
+/**
+ * Hook for managing AI cards with filtering, sorting, and grouping functionality.
+ * 
+ * Provides a comprehensive interface for working with AI-generated cards, including
+ * automatic fetching, filtering by type and starred status, sorting, and grouping
+ * by feature type for stacked display.
+ * 
+ * @param {UseCardsOptions} options - Configuration options for card management
+ * @returns {Object} Card management interface
+ * @returns {Array} cards - All cards for the project/document
+ * @returns {Object} cardsByFeatureType - Cards grouped by feature type for stacking
+ * @returns {string[]} featureTypes - Unique feature types available for filtering
+ * @returns {boolean} loading - Whether cards are currently being fetched
+ * @returns {string|null} error - Current error state, if any
+ * @returns {Function} toggleCollapse - Toggle collapse state of a card
+ * @returns {Function} toggleStar - Toggle starred state of a card
+ * @returns {Function} deleteCard - Delete a card
+ * @returns {Function} addCard - Add a new card
+ * @returns {Function} setFilterType - Update the filter type
+ * @returns {Function} setShowStarredOnly - Update starred-only filter
+ * @returns {Function} setSortOrder - Update sort order
+ * 
+ * @example
+ * ```tsx
+ * const {
+ *   cardsByFeatureType,
+ *   featureTypes,
+ *   loading,
+ *   toggleStar,
+ *   setFilterType
+ * } = useCards({
+ *   projectId: 1,
+ *   documentId: 5,
+ *   filterType: 'write',
+ *   showStarredOnly: false,
+ *   sortOrder: 'newest'
+ * });
+ * 
+ * // Display cards grouped by feature type
+ * Object.entries(cardsByFeatureType).map(([featureType, cards]) => (
+ *   <CardStack key={featureType} type={featureType} cards={cards} />
+ * ));
+ * ```
+ */
 export const useCards = ({
   projectId,
   documentId,

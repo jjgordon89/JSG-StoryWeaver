@@ -1,20 +1,58 @@
 import { useEffect, useRef } from 'react';
 import { usePerformanceStore } from '../stores/performanceStore';
 
+/**
+ * Configuration options for performance monitoring.
+ */
 interface PerformanceOptions {
+  /** Component category for grouping metrics */
   component: string;
+  /** Whether monitoring is enabled for this component */
   enabled?: boolean;
+  /** Track component render times */
   trackRender?: boolean;
+  /** Track memory usage (Chrome only) */
   trackMemory?: boolean;
+  /** Enable custom event tracking */
   trackEvents?: boolean;
-  sampleRate?: number; // 0-1, percentage of renders to track
+  /** Sample rate (0-1) for render tracking to reduce overhead */
+  sampleRate?: number;
 }
 
 /**
- * Hook for monitoring component performance
+ * Hook for monitoring component performance and collecting metrics.
  * 
- * @param componentName Name of the component to monitor
- * @param options Performance monitoring options
+ * Provides comprehensive performance monitoring for React components including
+ * render times, memory usage, and custom event tracking. Uses sampling to
+ * minimize performance impact while collecting useful metrics.
+ * 
+ * @param {string} componentName - Name of the component to monitor
+ * @param {PerformanceOptions} [options] - Performance monitoring configuration
+ * @returns {Object} Performance tracking interface
+ * @returns {Function} trackEvent - Track custom event durations
+ * @returns {Function} trackMetric - Track custom metric values
+ * 
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { trackEvent, trackMetric } = usePerformanceMonitoring('MyComponent', {
+ *     component: 'ui',
+ *     trackRender: true,
+ *     trackMemory: true,
+ *     sampleRate: 0.1 // Track 10% of renders
+ *   });
+ * 
+ *   const handleClick = async () => {
+ *     trackEvent('button_click', true); // Start timing
+ *     await performExpensiveOperation();
+ *     trackEvent('button_click', false); // End timing
+ *     
+ *     trackMetric('items_processed', 42, 'count');
+ *   };
+ * 
+ *   return <button onClick={handleClick}>Process</button>;
+ * }
+ * ```
  */
 export function usePerformanceMonitoring(
   componentName: string,
@@ -123,9 +161,24 @@ export function usePerformanceMonitoring(
   // Return functions to track custom events
   return {
     /**
-     * Track a custom event's duration
-     * @param eventName Name of the event to track
-     * @param startEvent Whether to start or end the event timing
+     * Track a custom event's duration with start/end timing.
+     * 
+     * Call with startEvent=true to begin timing, then call with startEvent=false
+     * to end timing and record the duration metric.
+     * 
+     * @param {string} eventName - Name of the event to track
+     * @param {boolean} [startEvent=true] - Whether to start (true) or end (false) timing
+     * 
+     * @example
+     * ```tsx
+     * // Start timing an operation
+     * trackEvent('data_fetch', true);
+     * 
+     * // ... perform operation ...
+     * 
+     * // End timing and record duration
+     * trackEvent('data_fetch', false);
+     * ```
      */
     trackEvent: (eventName: string, startEvent: boolean = true) => {
       if (!monitoringEnabled || !enabled || !trackEvents) {
@@ -152,10 +205,22 @@ export function usePerformanceMonitoring(
     },
     
     /**
-     * Track a custom value metric
-     * @param metricName Name of the metric to track
-     * @param value Value to record
-     * @param unit Optional unit of measurement
+     * Track a custom value metric.
+     * 
+     * Records a specific numeric value with optional unit for custom metrics
+     * like counts, sizes, or other measurable values.
+     * 
+     * @param {string} metricName - Name of the metric to track
+     * @param {number} value - Numeric value to record
+     * @param {string} [unit] - Optional unit of measurement (e.g., 'ms', 'MB', 'count')
+     * 
+     * @example
+     * ```tsx
+     * // Track various metrics
+     * trackMetric('items_loaded', 150, 'count');
+     * trackMetric('response_size', 2.5, 'MB');
+     * trackMetric('user_score', 95, 'points');
+     * ```
      */
     trackMetric: (metricName: string, value: number, unit?: string) => {
       if (!monitoringEnabled || !enabled) {

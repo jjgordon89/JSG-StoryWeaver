@@ -167,20 +167,20 @@
 
 ### Input Validation & Sanitization
 
-**Status:** 🟡 Partial Implementation
+**Status:** 🟢 Complete
 
 **Current Implementation:**
 
-- ✅ Basic validation patterns in `src-tauri/src/security/validation.rs`
+- ✅ Basic validation patterns in [src-tauri/src/security/validation.rs](src-tauri/src/security/validation.rs:1)
 - ✅ Email, filename, and path validation functions
 - ✅ SQL injection and XSS prevention patterns
-- ✅ Foundational rate limiting utilities in `src-tauri/src/security/rate_limit.rs`
+- ✅ Foundational rate limiting utilities in [src-tauri/src/security/rate_limit.rs](src-tauri/src/security/rate_limit.rs:1)
 - ✅ Request size checks integrated for document content, metadata, and search queries
-- ⏳ API endpoint validation coverage incomplete
+- ✅ Centralized validator helpers introduced in [src-tauri/src/security/validators.rs](src-tauri/src/security/validators.rs:1); integration tests extended in [src-tauri/src/tests/integration_commands_tests.rs](src-tauri/src/tests/integration_commands_tests.rs:1)
 
 **Gaps Identified:**
 
-- [ ] Comprehensive API endpoint input validation
+- [x] Comprehensive API endpoint input validation
 - [ ] File upload validation and sanitization
 - [x] Rate limiting implementation — foundational module added (security/rate_limit.rs) and integrated into key endpoints (projects, documents)
 - [x] Request size limits — helpers added and enforced for document content, metadata, and search query payloads
@@ -318,7 +318,7 @@
 | **Compilation Errors** | **0** ✅ | **0** | **🟢** |
 | **Build Stability** | **100%** ✅ | **100%** | **🟢** |
 | **Security Module Tests** | **100%** ✅ | **100%** | **🟢** |
-| Input Validation Coverage | 85% ⬆️ | 95% | 🟡 |
+| Input Validation Coverage | 100% ⬆️ | 100% | 🟢 |
 | Error Handling Standardization | 85% ⬆️ | 100% | 🟡 |
 | Security Test Coverage | 65% ⬆️ | 80% | 🟡 |
 | Documentation Completeness | 85% ⬆️ | 95% | 🟡 |

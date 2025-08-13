@@ -411,3 +411,25 @@ INSERT OR IGNORE INTO migrations (name) VALUES ('003_ai_history_table');
 INSERT OR IGNORE INTO migrations (name) VALUES ('007_backup_recovery_versioning');
 INSERT OR IGNORE INTO migrations (name) VALUES ('010_ai_response_cards');
 INSERT OR IGNORE INTO migrations (name) VALUES ('011_story_bible_core');
+INSERT OR IGNORE INTO migrations (name) VALUES ('012_ai_card_indexes');
+
+-- Migration 012: Add composite indexes for AI card filtering performance
+-- Index for project-based queries with date filtering
+CREATE INDEX IF NOT EXISTS idx_ai_cards_project_date 
+ON ai_response_cards(project_id, created_at DESC);
+
+-- Index for project-based queries with provider/model filtering
+CREATE INDEX IF NOT EXISTS idx_ai_cards_project_provider_model 
+ON ai_response_cards(project_id, model_used);
+
+-- Index for cost-based filtering
+CREATE INDEX IF NOT EXISTS idx_ai_cards_project_cost 
+ON ai_response_cards(project_id, cost_estimate);
+
+-- Index for feature type filtering
+CREATE INDEX IF NOT EXISTS idx_ai_cards_project_feature 
+ON ai_response_cards(project_id, feature_type);
+
+-- Index for document-based queries
+CREATE INDEX IF NOT EXISTS idx_ai_cards_document_date 
+ON ai_response_cards(document_id, created_at DESC);

@@ -40,7 +40,6 @@ pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<()> {
         ("011_story_bible_core", |pool| Box::pin(migration_011_story_bible_core(&*pool))),
         ("012_style_examples", |pool| Box::pin(migration_012_style_examples(&*pool))),
         ("013_character_series_support", |pool| Box::pin(migration_013_character_series_support(&*pool))),
-        ("014_create_document_links_table", |pool| Box::pin(migration_014_create_document_links_table(&*pool))),
         ("015_phase4_advanced_ai", |pool| Box::pin(phase4_advanced_ai::up(&*pool))),
         ("016_fix_credit_usage_schema", |pool| Box::pin(fix_credit_usage_schema::up(&*pool))),
         ("017_phase5_collaboration_plugins", |pool| Box::pin(phase5_collaboration_plugins::up(&*pool))),

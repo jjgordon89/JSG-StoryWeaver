@@ -272,7 +272,7 @@ export interface StoryBibleState {
   scenesError: string | null;
   
   // UI state
-  activeTab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes';
+  activeTab: 'braindump' | 'style-examples' | 'characters' | 'worldbuilding' | 'outline' | 'scenes';
   selectedCharacterId: string | null;
   selectedOutlineId: string | null;
   
@@ -296,6 +296,10 @@ export interface UseStoryBibleReturn {
   // Data
   storyBible: StoryBible | null;
   characters: Character[];
+  characterTraitFilter: {
+    visibility?: 'always' | 'chapter' | 'never';
+    traitType?: string;
+  };
   characterTraits: CharacterTrait[];
   worldElements: WorldElement[];
   filteredWorldElements: WorldElement[];
@@ -370,7 +374,7 @@ export interface UseStoryBibleReturn {
   
   // Utility
   clearError: () => void;
-  setActiveTab: (tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => void;
+  setActiveTab: (tab: 'braindump' | 'style-examples' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => void;
   setSelectedCharacterId: (characterId: string | null) => void;
   setSelectedOutlineId: (outlineId: string | null) => void;
   setCharacterTraitFilter: (filter: { visibility?: 'always' | 'chapter' | 'never'; traitType?: string; }) => void;

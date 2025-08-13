@@ -277,19 +277,19 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
                   
                   <div className="example-actions">
                     {!example.analysis_result && (
-                      <Button 
-                        variant="secondary" 
-                        size="small" 
-                        onClick={() => analyzeStyleExample(example)}
-                        disabled={isAnalyzing}
-                      >
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={() => analyzeStyleExample(example)}
+                      disabled={isAnalyzing}
+                    >
                         {isAnalyzing ? '🔄' : '🔍'} Analyze
                       </Button>
                     )}
                     
                     <Button 
                       variant="ghost" 
-                      size="small" 
+                      size="sm" 
                       onClick={() => openViewModal(example)}
                     >
                       👁️ View
@@ -297,7 +297,7 @@ const StyleExamplesManager: React.FC<StyleExamplesManagerProps> = ({
                     
                     <Button 
                       variant="ghost" 
-                      size="small" 
+                      size="sm" 
                       onClick={() => deleteStyleExample(example)}
                       className="delete-btn"
                     >

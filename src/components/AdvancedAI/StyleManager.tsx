@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
 import { useAdvancedAIStore } from '../../stores/advancedAIStore';
-import type { StyleExample } from '../../types/advancedAI';
+import { useProjectStore } from '../../stores/projectStore';
+import type { StyleExample, ProseGenerationRequest } from '../../types/advancedAI';
 import StyleExampleModal from './StyleExampleModal';
 
 const StyleManager: React.FC = () => {
   const {
     styleExamples,
     addStyleExample,
-    analyzeTextStyle
+    analyzeTextStyle,
+    updateStyleExample,
+    deleteStyleExample,
+    deleteStyleExamples,
+    generateWithProseMode,
+    currentProseMode,
+    settings
   } = useAdvancedAIStore();
+
+  const { currentProject, currentDocument } = useProjectStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -98,16 +107,22 @@ const StyleManager: React.FC = () => {
   const handleSaveExample = async (example: Partial<StyleExample>) => {
     try {
       if (editingExample) {
-        // TODO: Implement update functionality
-        console.log('Update style example:', editingExample.id, example);
+        await updateStyleExample({
+          id: editingExample.id,
+          name: example.name ?? editingExample.name,
+          content: example.content ?? editingExample.content,
+          is_active: editingExample.is_active,
+          project_id: editingExample.project_id,
+          analysis_result: editingExample.analysis_result
+        });
       } else {
-          await addStyleExample({
-            project_id: example.project_id || '',
-            name: example.name || 'Untitled',
-            content: example.content || '',
-            word_count: example.word_count || 0
-          });
-        }
+        await addStyleExample({
+          project_id: example.project_id || currentProject?.id || '',
+          name: example.name || 'Untitled',
+          content: example.content || '',
+          is_active: true
+        });
+      }
       setShowModal(false);
       setEditingExample(null);
     } catch (error) {
@@ -117,8 +132,7 @@ const StyleManager: React.FC = () => {
 
   const handleDeleteExample = async (id: string) => {
     try {
-      // TODO: Implement delete functionality
-      console.log('Delete style example:', id);
+      await deleteStyleExample(id);
       setSelectedExamples(prev => prev.filter(selectedId => selectedId !== id));
     } catch (error) {
       console.error('Error deleting style example:', error);
@@ -127,8 +141,8 @@ const StyleManager: React.FC = () => {
 
   const handleBulkDelete = async () => {
     try {
-      // TODO: Implement bulk delete functionality
-      console.log('Bulk delete style examples:', selectedExamples);
+      if (selectedExamples.length === 0) return;
+      await deleteStyleExamples(selectedExamples);
       setSelectedExamples([]);
       setShowDeleteConfirm(false);
     } catch (error) {
@@ -149,10 +163,25 @@ const StyleManager: React.FC = () => {
 
   const handleGenerateFromStyle = async () => {
     if (!selectedStyleForGenerate || !generatePrompt.trim()) return;
-    
+    if (!currentProject?.id) {
+      console.error('Cannot generate without an active project');
+      return;
+    }
     try {
-      // TODO: Implement generation from style
-      console.log('Generate from style:', selectedStyleForGenerate.id, generatePrompt);
+      const req: ProseGenerationRequest = {
+        project_id: currentProject.id,
+        document_id: currentDocument?.id,
+        prose_mode: currentProseMode,
+        text_context: generatePrompt,
+        generation_type: 'write',
+        max_words: settings.generation.maxWords,
+        ultra_creative: settings.general.ultraCreativeMode,
+        use_saliency_engine: settings.saliencyEngine.enabled,
+        style_examples: [selectedStyleForGenerate.id],
+        special_instructions:
+          "Emulate the selected style example's tone, sentence structure, and vocabulary. Maintain consistency with the detected style characteristics."
+      };
+      await generateWithProseMode(req);
       setShowGenerateModal(false);
       setGeneratePrompt('');
       setSelectedStyleForGenerate(null);

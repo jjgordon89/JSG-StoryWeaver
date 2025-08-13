@@ -6,6 +6,10 @@ We've made significant progress on Phase 1 of the StoryWeaver project, establish
 While completing the final Phase 1 tasks, we've also begun initial work on Phase 2 (Core Writing Features). We've implemented the foundation of the AI provider system with support for OpenAI, Claude, and Gemini, created a basic WriteProcessor with multiple writing modes, and developed the frontend Card System UI for displaying AI responses. An updated Phase 2 plan has been created to reflect the current progress and remaining tasks.
 
 ## Recent Events (Last 10)
+- **2025-08-12:** **Framework Migration Phase 1 COMPLETED:** Successfully migrated all high-priority Svelte components to React: SeriesConsistencyReport.tsx, SeriesConsistencyWidget.tsx, TemplateSelector.tsx, TemplateApplicationDialog.tsx; updated SeriesConsistencyIntegration.tsx to use React components directly; Phase 1 of React-only consolidation strategy complete.
+- **2025-08-12:** Completed AdvancedAI StyleManager actions: update/delete/bulk delete with optimistic UI and local persistence; wired Generate-from-style to Write/Rewrite via generate_with_prose_mode using selected style constraints.
+- **2025-08-12:** Completed comprehensive input validation coverage across Tauri command handlers; added length, size, sanitization, and numeric-bounds checks; updated related modules accordingly.
+- **2025-08-12:** Updated action tracking in [CODEBASE_ACTION_PLAN.md](CODEBASE_ACTION_PLAN.md) to mark validation coverage as completed and adjusted Milestone A.
 - **2025-08-06:** Implemented proper streaming support for OpenAI and Claude AI providers, replacing placeholder implementations with full streaming functionality for all writing features.
 - **2025-08-06:** Created updated Phase 2 Core Writing Features plan to reflect current progress and remaining tasks.
 - **2025-08-06:** Updated Phase 1 plan and progress documentation to reflect completion status (~99% complete).
@@ -46,9 +50,15 @@ While completing the final Phase 1 tasks, we've also begun initial work on Phase
    - Connect Card System to Backend
    - Add Collaboration Features
 
-3. **Update Documentation:**
+3. **Stabilization and Security:**
+   - Standardize backend error handling (replace unwrap/expect, adopt StoryWeaverError consistently)
+   - Expand unit and integration tests for command validation paths and rate limiting behavior
+   - Evaluate rate limit coverage expansion and sensible defaults
+
+4. **Update Documentation:**
    - Keep the Phase 2 plan updated as implementation progresses
    - Document new AI features and their usage
+   - Reflect completed input validation coverage in security documentation and onboarding notes
 
 ## Active Decisions & Considerations
 - We've implemented a modular AI Provider system with a trait-based abstraction layer, allowing easy integration of different AI services.

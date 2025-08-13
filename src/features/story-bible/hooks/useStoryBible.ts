@@ -1,15 +1,25 @@
 import { useState, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
-// Tauri response type
+/**
+ * Standard Tauri response wrapper for all backend operations.
+ */
 interface TauriResponse<T = any> {
+  /** Whether the operation was successful */
   success: boolean;
+  /** The response data if successful */
   data?: T;
+  /** Error message if unsuccessful */
   error?: string;
 }
 
+/**
+ * Response from scene validation operations.
+ */
 interface ValidationResponse {
+  /** Whether the scene passed validation */
   is_validated: boolean;
+  /** Description of validation issues if any */
   validation_issues?: string;
 }
 
@@ -83,10 +93,85 @@ const initialState: StoryBibleState = {
   outlineFilter: {}
 };
 
+/**
+ * Comprehensive hook for managing Story Bible functionality in StoryWeaver.
+ * 
+ * The Story Bible is a central system for organizing all story-related information
+ * including characters, world-building elements, outlines, and scenes. This hook
+ * provides a complete interface for CRUD operations, AI generation, search, and
+ * state management for all Story Bible components.
+ * 
+ * @returns {UseStoryBibleReturn} Complete Story Bible management interface
+ * 
+ * @example
+ * ```tsx
+ * function StoryBibleManager({ projectId }: { projectId: string }) {
+ *   const {
+ *     storyBible,
+ *     characters,
+ *     worldElements,
+ *     outlines,
+ *     scenes,
+ *     isLoading,
+ *     loadStoryBible,
+ *     createCharacter,
+ *     generateWorldElement,
+ *     setActiveTab
+ *   } = useStoryBible();
+ * 
+ *   useEffect(() => {
+ *     loadStoryBible(projectId);
+ *   }, [projectId, loadStoryBible]);
+ * 
+ *   const handleCreateCharacter = async () => {
+ *     await createCharacter({
+ *       project_id: projectId,
+ *       name: "New Character",
+ *       description: "Character description"
+ *     });
+ *   };
+ * 
+ *   return (
+ *     <div>
+ *       {isLoading ? <Spinner /> : (
+ *         <StoryBibleTabs
+ *           characters={characters}
+ *           worldElements={worldElements}
+ *           onCreateCharacter={handleCreateCharacter}
+ *         />
+ *       )}
+ *     </div>
+ *   );
+ * }
+ * ```
+ * 
+ * @remarks
+ * This hook manages complex state for multiple Story Bible entities:
+ * - **Story Bible**: Core project story information and settings
+ * - **Characters**: Character profiles with traits and relationships
+ * - **World Elements**: Locations, cultures, magic systems, etc.
+ * - **Outlines**: Story structure and plot organization
+ * - **Scenes**: Individual story scenes with validation
+ * - **AI Generation**: AI-powered content creation for all entities
+ * 
+ * The hook includes:
+ * - Comprehensive error handling with specific error states per entity type
+ * - Loading states for each operation type
+ * - Filtering and search capabilities
+ * - AI generation integration
+ * - Optimistic UI updates
+ * - Memoized filtered data for performance
+ */
 export const useStoryBible = (): UseStoryBibleReturn => {
   const [state, setState] = useState<StoryBibleState>(initialState);
 
-  // Helper function to handle errors
+  /**
+   * Centralized error handler for all Story Bible operations.
+   * 
+   * @param {any} error - The error object or message
+   * @param {keyof StoryBibleState} errorType - Which error state to update
+   * @returns {string} The formatted error message
+   */
   const handleError = useCallback((error: any, errorType: keyof StoryBibleState): string => {
     console.error(`Story Bible ${errorType}:`, error);
     const message = error?.message || error?.toString() || 'An unknown error occurred';
@@ -105,7 +190,12 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     return message;
   }, []);
 
-  // Core Story Bible operations
+  /**
+   * Create a new Story Bible or update an existing one.
+   * 
+   * @param {CreateStoryBibleRequest | UpdateStoryBibleRequest} request - Story Bible data
+   * @throws {Error} When the operation fails
+   */
   const createOrUpdateStoryBible = useCallback(async (request: CreateStoryBibleRequest | UpdateStoryBibleRequest): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoading: true, error: null }));
     
@@ -127,6 +217,12 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
+  /**
+   * Load the Story Bible for a specific project.
+   * 
+   * @param {string} projectId - The project ID to load Story Bible for
+   * @throws {Error} When loading fails
+   */
   const loadStoryBible = useCallback(async (projectId: string): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoading: true, error: null }));
     
@@ -148,7 +244,12 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
-  // Character operations
+  /**
+   * Load all characters for a specific project.
+   * 
+   * @param {string} projectId - The project ID to load characters for
+   * @throws {Error} When loading fails
+   */
   const loadCharacters = useCallback(async (projectId: string): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoadingCharacters: true, charactersError: null }));
     
@@ -170,6 +271,12 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
+  /**
+   * Create a new character in the Story Bible.
+   * 
+   * @param {CreateCharacterRequest} request - Character creation data
+   * @throws {Error} When creation fails
+   */
   const createCharacter = useCallback(async (request: CreateCharacterRequest): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoadingCharacters: true, charactersError: null }));
     
@@ -592,7 +699,13 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
-  // AI Generation operations
+  /**
+   * Generate a story synopsis using AI.
+   * 
+   * @param {GenerateSynopsisRequest} request - Synopsis generation parameters
+   * @returns {Promise<AIGenerationResponse | null>} Generated synopsis or null if failed
+   * @throws {Error} When generation fails
+   */
   const generateSynopsis = useCallback(async (request: GenerateSynopsisRequest): Promise<AIGenerationResponse | null> => {
     setState(prevState => ({ ...prevState, isLoading: true, error: null }));
     
@@ -612,6 +725,13 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
+  /**
+   * Generate character traits using AI.
+   * 
+   * @param {GenerateCharacterTraitsRequest} request - Character trait generation parameters
+   * @returns {Promise<AIGenerationResponse | null>} Generated traits or null if failed
+   * @throws {Error} When generation fails
+   */
   const generateCharacterTraits = useCallback(async (request: GenerateCharacterTraitsRequest): Promise<AIGenerationResponse | null> => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
     
@@ -631,6 +751,13 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
+  /**
+   * Generate world-building elements using AI.
+   * 
+   * @param {GenerateWorldElementRequest} request - World element generation parameters
+   * @returns {Promise<AIGenerationResponse | null>} Generated world element or null if failed
+   * @throws {Error} When generation fails
+   */
   const generateWorldElement = useCallback(async (request: GenerateWorldElementRequest): Promise<AIGenerationResponse | null> => {
     setState(prevState => ({ ...prevState, isLoadingWorldElements: true, worldElementsError: null }));
     
@@ -732,15 +859,29 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }
   }, [handleError]);
 
-  // UI state management
-  const setActiveTab = useCallback((tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes'): void => {
+  /**
+   * Set the active tab in the Story Bible interface.
+   * 
+   * @param {string} tab - The tab to activate
+   */
+  const setActiveTab = useCallback((tab: 'braindump' | 'style-examples' | 'characters' | 'worldbuilding' | 'outline' | 'scenes'): void => {
     setState(prevState => ({ ...prevState, activeTab: tab }));
   }, []);
 
+  /**
+   * Set the currently selected character for detailed view.
+   * 
+   * @param {string | null} characterId - Character ID to select, or null to deselect
+   */
   const setSelectedCharacterId = useCallback((characterId: string | null): void => {
     setState(prevState => ({ ...prevState, selectedCharacterId: characterId }));
   }, []);
 
+  /**
+   * Set the currently selected outline for scene management.
+   * 
+   * @param {string | null} outlineId - Outline ID to select, or null to deselect
+   */
   const setSelectedOutlineId = useCallback((outlineId: string | null): void => {
     setState(prevState => ({ ...prevState, selectedOutlineId: outlineId }));
   }, []);
@@ -766,7 +907,9 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     }));
   }, []);
 
-  // Error management
+  /**
+   * Clear all error states across all Story Bible entities.
+   */
   const clearError = useCallback((): void => {
     setState(prevState => ({
       ...prevState,
@@ -821,6 +964,7 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     // Data
     storyBible: state.storyBible,
     characters: state.characters,
+    characterTraitFilter: state.characterTraitFilter,
     characterTraits: filteredCharacterTraits,
     worldElements: filteredWorldElements,
     filteredWorldElements,

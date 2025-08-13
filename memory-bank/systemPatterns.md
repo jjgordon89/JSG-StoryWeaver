@@ -18,3 +18,20 @@ StoryWeaver uses a hybrid desktop application architecture powered by **Tauri 2.
     - **Connection Pooling:** A database connection pool is used to manage concurrent database access efficiently.
 - **AI Abstraction:** An AI provider abstraction layer (trait/interface) is planned. This will allow for swapping out different AI models or services (e.g., OpenAI, Anthropic) with minimal changes to the core application logic.
 - **Project Management:** The project management interface is implemented with a three-column layout, allowing writers to organize their projects with ease.
+
+## AdvancedAI Style Manager Patterns
+- **Optimistic UI + Local Persistence (Style Examples):**
+  - The `advancedAIStore` manages `styleExamples` with optimistic updates for update/delete/bulk-delete operations.
+  - Local fallback persistence via `localStorage` is used to hydrate and persist `styleExamples` across sessions under key `sw_style_examples_v1`.
+  - On initialization, the store hydrates from local storage before loading other data to avoid UI flicker.
+
+- **Backend Layering and Compatibility:**
+  - Adding and analyzing style examples uses Tauri commands in `advanced_ai_commands.rs`:
+    - `add_style_example` (returns `StyleExample` with string `id`, analysis computed in Rust `AdvancedAIManager`)
+    - `analyze_text_style` (computes `StyleAnalysis` on-demand)
+  - There is a separate DB-backed style_examples subsystem (`src-tauri/src/commands/style_examples.rs`) with numeric IDs and different shapes. The UI currently standardizes on the AdvancedAIManager path to avoid ID/type mismatches. A future migration can unify on one subsystem.
+
+- **Generation Constraints Pipeline (Generate-from-style):**
+  - The Style Manager’s “Generate” action constructs a `ProseGenerationRequest` and calls `generate_with_prose_mode`.
+  - The request sets `style_examples` to an array of selected style example IDs. The backend (`AdvancedAIManager`) inlines matched examples into the enhanced AI context to constrain tone, sentence structure, and vocabulary.
+  - Additional request fields (e.g., `ultra_creative`, `max_words`, `use_saliency_engine`) are sourced from store settings to keep behavior consistent across tools.

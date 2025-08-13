@@ -642,8 +642,8 @@ const TimelineManager: React.FC<TimelineManagerProps> = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={(e?: any) => {
+                                  e?.stopPropagation();
                                   setEditingEvent(event);
                                 }}
                               >
@@ -652,8 +652,8 @@ const TimelineManager: React.FC<TimelineManagerProps> = ({
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={(e?: any) => {
+                                  e?.stopPropagation();
                                   handleDeleteEvent(event.id);
                                 }}
                               >
@@ -740,8 +740,8 @@ const TimelineManager: React.FC<TimelineManagerProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={(e?: any) => {
+                              e?.stopPropagation();
                               setEditingEvent(event);
                             }}
                           >
@@ -750,8 +750,8 @@ const TimelineManager: React.FC<TimelineManagerProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={(e?: any) => {
+                              e?.stopPropagation();
                               handleDeleteEvent(event.id);
                             }}
                           >

@@ -21,6 +21,7 @@ import type {
   SmartImportRequest,
   SmartImportResult
 } from '../types/advancedAI';
+const STYLE_EXAMPLES_KEY = 'sw_style_examples_v1';
 
 interface AdvancedAIActions {
   // Initialize the store
@@ -64,6 +65,9 @@ interface AdvancedAIActions {
   addStyleExample: (request: StyleExampleRequest) => Promise<StyleExample>;
   analyzeTextStyle: (content: string) => Promise<StyleAnalysis>;
   toggleStyleExample: (exampleId: string, active: boolean) => void;
+  updateStyleExample: (update: Partial<StyleExample> & { id: string }) => Promise<StyleExample>;
+  deleteStyleExample: (id: string) => Promise<void>;
+  deleteStyleExamples: (ids: string[]) => Promise<void>;
   
   // Credits and Usage
   updateCreditUsage: (projectId: string) => Promise<void>;
@@ -214,6 +218,19 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
     // Initialize the store
     async initialize() {
       try {
+        // Hydrate locally persisted style examples (optimistic persistence fallback)
+        try {
+          const raw = localStorage.getItem(STYLE_EXAMPLES_KEY);
+          if (raw) {
+            const saved = JSON.parse(raw) as StyleExample[];
+            if (Array.isArray(saved) && saved.length > 0) {
+              set({ styleExamples: saved });
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load persisted style examples:', e);
+        }
+
         await get().loadAvailableProseModes();
         // Load other initial data as needed
       } catch (error) {
@@ -474,10 +491,18 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
         const response = await invoke<StyleExample>('add_style_example', { request });
         const { styleExamples, activeStyleExamples } = get();
         
-        set({ styleExamples: [response, ...styleExamples] });
+        const newExamples = [response, ...styleExamples];
+        set({ styleExamples: newExamples });
         
         if (response.is_active) {
           set({ activeStyleExamples: [...activeStyleExamples, response.id] });
+        }
+
+        // Persist locally
+        try {
+          localStorage.setItem(STYLE_EXAMPLES_KEY, JSON.stringify(newExamples));
+        } catch (e) {
+          console.error('Failed to persist style examples:', e);
         }
         
         return response;
@@ -511,6 +536,64 @@ export const useAdvancedAIStore = create<AdvancedAIState & AdvancedAIActions>()(
         example.id === exampleId ? { ...example, is_active: active } : example
       );
       set({ styleExamples: updatedExamples });
+    },
+
+    async updateStyleExample(update: Partial<StyleExample> & { id: string }): Promise<StyleExample> {
+      const { styleExamples } = get();
+      const existing = styleExamples.find(se => se.id === update.id);
+      if (!existing) {
+        throw new Error('Style example not found');
+      }
+      const merged: StyleExample = {
+        ...existing,
+        ...update,
+        word_count: (update.content ?? existing.content).split(/\s+/).filter(Boolean).length
+      };
+      const updated = styleExamples.map(se => (se.id === merged.id ? merged : se));
+      set({
+        styleExamples: updated
+      });
+      // Persist locally
+      try {
+        localStorage.setItem(STYLE_EXAMPLES_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to persist style examples:', e);
+      }
+      // TODO: Persist to backend when dedicated endpoints exist
+      return merged;
+    },
+
+    async deleteStyleExample(id: string): Promise<void> {
+      const { styleExamples, activeStyleExamples } = get();
+      const nextExamples = styleExamples.filter(se => se.id !== id);
+      set({
+        styleExamples: nextExamples,
+        activeStyleExamples: activeStyleExamples.filter(aid => aid !== id)
+      });
+      // Persist locally
+      try {
+        localStorage.setItem(STYLE_EXAMPLES_KEY, JSON.stringify(nextExamples));
+      } catch (e) {
+        console.error('Failed to persist style examples:', e);
+      }
+      // TODO: Persist deletion to backend when dedicated endpoints exist
+    },
+
+    async deleteStyleExamples(ids: string[]): Promise<void> {
+      const { styleExamples, activeStyleExamples } = get();
+      const idsSet = new Set(ids);
+      const nextExamples = styleExamples.filter(se => !idsSet.has(se.id));
+      set({
+        styleExamples: nextExamples,
+        activeStyleExamples: activeStyleExamples.filter(aid => !idsSet.has(aid))
+      });
+      // Persist locally
+      try {
+        localStorage.setItem(STYLE_EXAMPLES_KEY, JSON.stringify(nextExamples));
+      } catch (e) {
+        console.error('Failed to persist style examples:', e);
+      }
+      // TODO: Persist bulk deletion to backend when dedicated endpoints exist
     },
 
     // Credit Management

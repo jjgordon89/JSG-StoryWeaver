@@ -258,12 +258,80 @@ impl SimilarityIndex {
 impl AIResponseCache {
     /// Create a new AI response cache
     pub fn new(config: CacheConfig) -> Self {
-        Self {
+        let cache = Self {
             cache: Arc::new(DashMap::new()),
             similarity_index: Arc::new(RwLock::new(SimilarityIndex::new())),
             config,
             stats: Arc::new(RwLock::new(CacheStatistics::default())),
+        };
+        
+        // Start background sweeper task
+        cache.start_background_sweeper();
+        
+        cache
+    }
+    
+    /// Start background sweeper for time-based cleanup
+    fn start_background_sweeper(&self) {
+        let cache_ref = Arc::new(DashMap::clone(&self.cache));
+        let similarity_index_ref = Arc::clone(&self.similarity_index);
+        let ttl_hours = self.config.ttl_hours;
+        
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600)); // Run every hour
+            
+            loop {
+                interval.tick().await;
+                
+                if let Err(e) = Self::sweep_expired_entries(
+                    &cache_ref,
+                    &similarity_index_ref,
+                    ttl_hours,
+                ).await {
+                    tracing::warn!("Background cache sweep failed: {}", e);
+                }
+            }
+        });
+    }
+    
+    /// Sweep expired entries from cache
+    async fn sweep_expired_entries(
+        cache: &Arc<DashMap<String, CachedAIResponse>>,
+        similarity_index: &Arc<RwLock<SimilarityIndex>>,
+        ttl_hours: u64,
+    ) -> Result<usize> {
+        let now = chrono::Utc::now();
+        let ttl_duration = chrono::Duration::hours(ttl_hours as i64);
+        let mut expired_keys = Vec::new();
+        
+        // Collect expired entries
+        for entry in cache.iter() {
+            let (key, cached_response) = (entry.key(), entry.value());
+            
+            // Check if entry has expired based on last access time
+            let age = now.signed_duration_since(cached_response.last_accessed);
+            if age > ttl_duration {
+                expired_keys.push(key.clone());
+            }
         }
+        
+        // Remove expired entries
+        let mut removed_count = 0;
+        for key in &expired_keys {
+            if cache.remove(key).is_some() {
+                removed_count += 1;
+                
+                // Remove from similarity index
+                let mut index = similarity_index.write().await;
+                index.remove_entry(key);
+            }
+        }
+        
+        if removed_count > 0 {
+            tracing::info!("Background sweep removed {} expired cache entries", removed_count);
+        }
+        
+        Ok(removed_count)
     }
     
     /// Generate a cache key for an AI request
@@ -547,6 +615,42 @@ impl AIResponseCache {
         Ok(())
     }
     
+    /// Clear expired entries based on TTL
+    pub async fn clear_expired_entries(&self, older_than_hours: u64) -> Result<usize> {
+        let now = chrono::Utc::now();
+        let ttl_duration = chrono::Duration::hours(older_than_hours as i64);
+        let mut expired_keys = Vec::new();
+        
+        // Collect expired entries
+        for entry in self.cache.iter() {
+            let (key, cached_response) = (entry.key(), entry.value());
+            
+            // Check if entry has expired based on last access time
+            let age = now.signed_duration_since(cached_response.last_accessed);
+            if age > ttl_duration {
+                expired_keys.push(key.clone());
+            }
+        }
+        
+        // Remove expired entries
+        let mut removed_count = 0;
+        for key in &expired_keys {
+            if self.cache.remove(key).is_some() {
+                removed_count += 1;
+                
+                // Remove from similarity index
+                let mut index = self.similarity_index.write().await;
+                index.remove_entry(key);
+            }
+        }
+        
+        if removed_count > 0 {
+            info!("Manually cleared {} expired cache entries (older than {} hours)", removed_count, older_than_hours);
+        }
+        
+        Ok(removed_count)
+    }
+    
     /// Export cache statistics for analysis
     pub async fn export_analytics(&self) -> Result<CacheAnalytics> {
         let stats = self.get_statistics().await;
@@ -758,5 +862,50 @@ mod tests {
         assert_eq!(stats.cache_hits, 1);
         assert_eq!(stats.cache_misses, 1);
         assert_eq!(stats.exact_matches, 1);
+    }
+    
+    #[tokio::test]
+    async fn test_time_based_clearing() {
+        let mut config = CacheConfig::default();
+        config.ttl_hours = 1; // 1 hour TTL for testing
+        
+        let cache = AIResponseCache::new(config);
+        
+        let request = AIRequest {
+            text: "Test request for TTL".to_string(),
+            provider: "openai".to_string(),
+            model: "gpt-4".to_string(),
+            parameters: HashMap::new(),
+            context: None,
+        };
+        
+        let response = AIResponse {
+            text: "Test response for TTL".to_string(),
+            tokens_used: Some(50),
+            cost_estimate: Some(0.005),
+            metadata: HashMap::new(),
+        };
+        
+        // Cache the response
+        cache.cache_response(&request, &response).await
+            .expect("Failed to cache response for TTL test");
+        
+        // Verify it's cached
+        let cached = cache.get_response(&request).await
+            .expect("Failed to get response from cache");
+        assert!(cached.is_some());
+        
+        // Clear entries older than 0 hours (should clear everything)
+        let cleared_count = cache.clear_expired_entries(0).await
+            .expect("Failed to clear expired entries");
+        assert_eq!(cleared_count, 1);
+        
+        // Verify cache is now empty
+        let cached_after_clear = cache.get_response(&request).await
+            .expect("Failed to get response from cache after clear");
+        assert!(cached_after_clear.is_none());
+        
+        let cache_info = cache.get_cache_info().await;
+        assert_eq!(cache_info.current_size, 0);
     }
 }

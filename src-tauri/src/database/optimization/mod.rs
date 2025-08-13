@@ -165,16 +165,12 @@ impl OptimizationManager {
 
     pub async fn clear_ai_cache(
         &self,
-        _older_than_hours: u64,
+        older_than_hours: u64,
     ) -> Result<usize> {
-        // For now, clear all cache entries
-        // TODO: Implement time-based clearing in AIResponseCache
-        let stats_before = self.ai_cache.get_statistics().await;
-        let entries_before = stats_before.total_requests as usize;
+        // Use the new time-based clearing functionality
+        let cleared_count = self.ai_cache.clear_expired_entries(older_than_hours).await?;
         
-        self.ai_cache.clear_cache().await?;
-        
-        Ok(entries_before)
+        Ok(cleared_count)
     }
 }
 

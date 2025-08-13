@@ -1,91 +1,44 @@
-import React, { useEffect, useRef } from 'react';
-import SeriesConsistencyWidget from './SeriesConsistencyWidget.svelte';
-import SeriesConsistencyReport from './SeriesConsistencyReport.svelte';
+import React from 'react';
+import SeriesConsistencyWidget from './SeriesConsistencyWidget';
+import SeriesConsistencyReportComponent from './SeriesConsistencyReport';
 
 interface SeriesConsistencyWidgetProps {
   seriesId: string;
-  size?: 'small' | 'medium' | 'large';
+  size?: 'sm' | 'md' | 'lg';
+  showDetails?: boolean;
   onViewReport?: () => void;
 }
 
 interface SeriesConsistencyReportProps {
   seriesId: string;
+  seriesName?: string;
 }
 
-// React wrapper for Svelte SeriesConsistencyWidget
+// Direct React component exports (no longer wrappers)
 export const SeriesConsistencyWidgetReact: React.FC<SeriesConsistencyWidgetProps> = ({
   seriesId,
-  size = 'medium',
+  size = 'md',
+  showDetails = true,
   onViewReport
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const componentRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (containerRef.current && !componentRef.current) {
-      componentRef.current = new SeriesConsistencyWidget({
-        target: containerRef.current,
-        props: {
-          seriesId,
-          size,
-          onViewReport
-        }
-      });
-    }
-
-    return () => {
-      if (componentRef.current) {
-        componentRef.current.$destroy();
-        componentRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (componentRef.current) {
-      componentRef.current.$set({
-        seriesId,
-        size,
-        onViewReport
-      });
-    }
-  }, [seriesId, size, onViewReport]);
-
-  return <div ref={containerRef} />;
+  return (
+    <SeriesConsistencyWidget
+      seriesId={seriesId}
+      size={size}
+      showDetails={showDetails}
+      onViewReport={onViewReport}
+    />
+  );
 };
 
-// React wrapper for Svelte SeriesConsistencyReport
 export const SeriesConsistencyReportReact: React.FC<SeriesConsistencyReportProps> = ({
-  seriesId
+  seriesId,
+  seriesName
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const componentRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (containerRef.current && !componentRef.current) {
-      componentRef.current = new SeriesConsistencyReport({
-        target: containerRef.current,
-        props: {
-          seriesId
-        }
-      });
-    }
-
-    return () => {
-      if (componentRef.current) {
-        componentRef.current.$destroy();
-        componentRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (componentRef.current) {
-      componentRef.current.$set({
-        seriesId
-      });
-    }
-  }, [seriesId]);
-
-  return <div ref={containerRef} />;
+  return (
+    <SeriesConsistencyReportComponent
+      seriesId={seriesId}
+      seriesName={seriesName}
+    />
+  );
 };

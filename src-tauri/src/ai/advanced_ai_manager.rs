@@ -12,6 +12,8 @@ use super::{
 };
 use crate::error::{Result, StoryWeaverError};
 use crate::database::models::ai::{BrainstormCategory, ImageResolution};
+use crate::database::{get_pool, operations::ai_card_ops::AICardOps};
+use crate::models::ai_card::CreateAICardRequest;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdvancedGenerationRequest {
@@ -273,8 +275,62 @@ impl AdvancedAIManager {
     ) -> Result<String> {
         let session_id = self.brainstorm_engine.create_session(request.clone())?;
         
-        // Generate initial ideas
-        self.brainstorm_engine.generate_ideas(&session_id, &request)?;
+        // Build the base prompt for context
+        let base_prompt = self.brainstorm_engine
+            .build_generation_prompt(&request)
+            .map_err(|e| StoryWeaverError::internal(format!("Failed to build brainstorm prompt: {}", e)))?;
+        
+        // Select an AI provider (prefer openai -> claude -> gemini -> any)
+        let provider_name = if self.ai_providers.contains_key("openai") {
+            "openai".to_string()
+        } else if self.ai_providers.contains_key("claude") {
+            "claude".to_string()
+        } else if self.ai_providers.contains_key("gemini") {
+            "gemini".to_string()
+        } else {
+            self.ai_providers
+                .keys()
+                .next()
+                .cloned()
+                .ok_or_else(|| StoryWeaverError::ResourceUnavailable { resource: "AI provider".to_string() })?
+        };
+        let provider = self
+            .ai_providers
+            .get_mut(&provider_name)
+            .ok_or_else(|| StoryWeaverError::ResourceUnavailable { resource: "AI provider".to_string() })?;
+        
+        // Generate initial ideas using the AI provider
+        let ideas = self
+            .brainstorm_engine
+            .generate_ideas(&session_id, &request, Some(provider.as_ref()))
+            .await
+            .map_err(|e| StoryWeaverError::AIGenerationError { message: e.to_string() })?;
+        
+        // Persist generated ideas as AI response cards
+        if !ideas.is_empty() {
+            let pool = get_pool()?;
+            let model_name = provider.get_model_name().to_string();
+            for idea in &ideas {
+                let tags_str = if idea.tags.is_empty() {
+                    None
+                } else {
+                    Some(idea.tags.join(", "))
+                };
+                let card_request = CreateAICardRequest {
+                    project_id: request.project_id.clone(),
+                    document_id: None,
+                    feature_type: "brainstorm".to_string(),
+                    prompt_context: base_prompt.clone(),
+                    response_text: idea.content.clone(),
+                    model_used: Some(model_name.clone()),
+                    token_count: None,
+                    cost_estimate: None,
+                    tags: tags_str,
+                };
+                // Best-effort create; if it fails, bubble up for now to surface errors
+                let _ = AICardOps::create(&pool, card_request).await?;
+            }
+        }
         
         // Track credit usage for brainstorming
         let credits_used = self.calculate_brainstorm_credits(&request);

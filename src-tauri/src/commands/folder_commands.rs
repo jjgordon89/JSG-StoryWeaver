@@ -4,7 +4,8 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
+use crate::security::validation::{validate_security_input, validate_content_length};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, validate_request_body_size};
 
 /// Create folder request
 #[derive(Debug, Deserialize)]
@@ -44,9 +45,11 @@ pub async fn create_folder(request: CreateFolderRequest) -> CommandResponse<Fold
         if request.name.len() > 255 {
             return Err(crate::error::StoryWeaverError::validation("Folder name too long (max 255 characters)".to_string()));
         }
-        crate::security::validate_security_input(&request.name)?;
+        validate_request_body_size(&request.name, 255)?;
+        validate_content_length(&request.name, 255)?;
+        validate_security_input(&request.name)?;
         if let Some(ref parent_id) = request.parent_folder_id {
-            crate::security::validate_security_input(parent_id)?;
+            validate_security_input(parent_id)?;
         }
 
         let pool = get_pool()?;
@@ -128,7 +131,7 @@ pub async fn update_folder(request: UpdateFolderRequest) -> CommandResponse<()> 
         // Rate limiting
         rl_update("folder", Some(&request.id))?;
         // Input validation
-        crate::security::validate_security_input(&request.id)?;
+        validate_security_input(&request.id)?;
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
                 return Err(crate::error::StoryWeaverError::validation("Folder name cannot be empty".to_string()));
@@ -136,10 +139,12 @@ pub async fn update_folder(request: UpdateFolderRequest) -> CommandResponse<()> 
             if name.len() > 255 {
                 return Err(crate::error::StoryWeaverError::validation("Folder name too long (max 255 characters)".to_string()));
             }
-            crate::security::validate_security_input(name)?;
+            validate_request_body_size(name, 255)?;
+            validate_content_length(name, 255)?;
+            validate_security_input(name)?;
         }
         if let Some(ref parent_id) = request.parent_folder_id {
-            crate::security::validate_security_input(parent_id)?;
+            validate_security_input(parent_id)?;
         }
 
         let pool = get_pool()?;
@@ -173,9 +178,7 @@ pub async fn delete_folder(id: String) -> CommandResponse<()> {
         // Rate limiting
         rl_delete("folder", Some(&id))?;
         // Input validation
-        if !crate::security::is_safe_input(&id) {
-            return Err(crate::error::StoryWeaverError::validation("Invalid folder id".to_string()));
-        }
+        validate_security_input(&id)?;
 
         let pool = get_pool()?;
         FolderOps::delete(&pool, &id).await

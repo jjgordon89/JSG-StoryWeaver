@@ -7,7 +7,7 @@ use crate::security::validation::{
     validate_safe_name, validate_content_length, validate_security_input
 };
 use serde::{Deserialize, Serialize};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, validate_request_body_size};
 
 /// Create character request
 #[derive(Debug, Deserialize)]
@@ -53,6 +53,7 @@ pub async fn create_character(request: CreateCharacterRequest) -> CommandRespons
         validate_safe_name(&request.name, "Character name")?;
         
         if let Some(ref description) = request.description {
+            validate_request_body_size(description, 5_000)?;
             validate_content_length(description, 5000)?;
             validate_security_input(description)?;
         }
@@ -66,26 +67,31 @@ pub async fn create_character(request: CreateCharacterRequest) -> CommandRespons
         }
         
         if let Some(ref appearance) = request.appearance {
+            validate_request_body_size(appearance, 5_000)?;
             validate_content_length(appearance, 5000)?;
             validate_security_input(appearance)?;
         }
         
         if let Some(ref personality) = request.personality {
+            validate_request_body_size(personality, 5_000)?;
             validate_content_length(personality, 5000)?;
             validate_security_input(personality)?;
         }
         
         if let Some(ref background) = request.background {
+            validate_request_body_size(background, 10_000)?;
             validate_content_length(background, 10000)?;
             validate_security_input(background)?;
         }
         
         if let Some(ref goals) = request.goals {
+            validate_request_body_size(goals, 5_000)?;
             validate_content_length(goals, 5000)?;
             validate_security_input(goals)?;
         }
         
         if let Some(ref relationships) = request.relationships {
+            validate_request_body_size(relationships, 10_000)?;
             validate_content_length(relationships, 10000)?;
             validate_security_input(relationships)?;
         }
@@ -169,6 +175,7 @@ pub async fn update_character(request: UpdateCharacterRequest) -> CommandRespons
         }
         
         if let Some(ref description) = request.description {
+            validate_request_body_size(description, 5_000)?;
             validate_content_length(description, 5000)?;
             validate_security_input(description)?;
         }
@@ -182,31 +189,37 @@ pub async fn update_character(request: UpdateCharacterRequest) -> CommandRespons
         }
         
         if let Some(ref appearance) = request.appearance {
+            validate_request_body_size(appearance, 5_000)?;
             validate_content_length(appearance, 5000)?;
             validate_security_input(appearance)?;
         }
         
         if let Some(ref personality) = request.personality {
+            validate_request_body_size(personality, 5_000)?;
             validate_content_length(personality, 5000)?;
             validate_security_input(personality)?;
         }
         
         if let Some(ref background) = request.background {
+            validate_request_body_size(background, 10_000)?;
             validate_content_length(background, 10000)?;
             validate_security_input(background)?;
         }
         
         if let Some(ref goals) = request.goals {
+            validate_request_body_size(goals, 5_000)?;
             validate_content_length(goals, 5000)?;
             validate_security_input(goals)?;
         }
         
         if let Some(ref relationships) = request.relationships {
+            validate_request_body_size(relationships, 10_000)?;
             validate_content_length(relationships, 10000)?;
             validate_security_input(relationships)?;
         }
         
         if let Some(ref metadata) = request.metadata {
+            validate_request_body_size(metadata, 5_000)?;
             validate_content_length(metadata, 5000)?;
             validate_security_input(metadata)?;
         }

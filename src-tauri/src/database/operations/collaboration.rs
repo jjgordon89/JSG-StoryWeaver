@@ -45,8 +45,12 @@ pub async fn create_shared_document(
     .fetch_one(&*pool)
     .await?;
 
+    let id = result.id
+        .and_then(|id| i32::try_from(id).ok())
+        .unwrap_or(0);
+
     Ok(SharedDocument {
-        id: i32::try_from(result.id.unwrap_or(0)).unwrap_or(0),
+        id,
         document_id: document_id.to_string(),
         project_id: project_id.to_string(),
         share_token,
@@ -80,12 +84,15 @@ pub async fn get_shared_document_by_token(
     .await?;
 
     if let Some(row) = row {
+        let share_type = ShareType::from_str(&row.share_type.unwrap_or_default())
+            .unwrap_or(ShareType::ReadOnly); // Default to ReadOnly if parsing fails
+        
         Ok(Some(SharedDocument {
             id: row.id.map(|id| id as i32).unwrap_or(0),
             document_id: row.document_id.to_string(),
             project_id: row.project_id.to_string(),
             share_token: row.share_token,
-            share_type: ShareType::from_str(&row.share_type.unwrap_or_default()).unwrap_or_default(),
+            share_type,
             password_hash: row.password_hash,
             expires_at: row.expires_at.map(|dt| dt.and_utc()),
             current_uses: row.current_uses.unwrap_or(0) as i32,
@@ -154,8 +161,12 @@ pub async fn create_comment(
     .fetch_one(&*pool)
     .await?;
 
+    let id = result.id
+        .and_then(|id| i64::try_from(id).ok())
+        .unwrap_or(0) as i32;
+
     Ok(Comment {
-        id: result.id.unwrap_or(0) as i32,
+        id,
         document_id: request.document_id,
         parent_comment_id: request.parent_comment_id,
         author_name: request.author_name,
@@ -283,8 +294,12 @@ pub async fn create_collaboration_session(
     .fetch_one(&*pool)
     .await?;
 
+    let id = result.id
+        .and_then(|id| i32::try_from(id).ok())
+        .unwrap_or(0);
+
     Ok(CollaborationSession {
-        id: i32::try_from(result.id.unwrap_or(0)).unwrap_or(0),
+        id,
         document_id: document_id.to_string(),
         session_token,
         is_active: true,
@@ -405,12 +420,15 @@ pub async fn duplicate_document_for_sharing(
     .fetch_one(&*pool)
     .await?;
     
+    let document_type = DocumentType::from_str(&row.document_type)
+        .unwrap_or(DocumentType::Chapter); // Default to Chapter if parsing fails
+    
     let original = Document {
             id: row.id.unwrap_or_default(),
             project_id: row.project_id.to_string(),
             title: row.title,
             content: row.content,
-            document_type: DocumentType::from_str(&row.document_type).unwrap_or(DocumentType::default()),
+            document_type,
             order_index: row.order_index as i32,
             word_count: row.word_count as i32,
             parent_id: row.parent_id,

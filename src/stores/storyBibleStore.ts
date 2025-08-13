@@ -69,7 +69,7 @@ interface StoryBibleActions {
   generateWorldElement: (request: GenerateWorldElementRequest) => Promise<void>;
   
   // UI state operations
-  setActiveTab: (tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => void;
+  setActiveTab: (tab: 'braindump' | 'style-examples' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => void;
   setSelectedCharacterId: (id: string | null) => void;
   setSelectedOutlineId: (id: string | null) => void;
   setCharacterTraitFilter: (filter: any) => void;
@@ -237,7 +237,7 @@ export const useStoryBibleStore = create<StoryBibleStore>()(devtools(
           if (response.success && response.data) {
             set((state) => ({
               ...state,
-              characterTraits: [...state.characterTraits, response.data],
+            characterTraits: [...state.characterTraits, response.data!],
               isLoadingTraits: false
             }));
           } else {
@@ -363,7 +363,7 @@ export const useStoryBibleStore = create<StoryBibleStore>()(devtools(
           if (response.success && response.data) {
             set((state) => ({
               ...state,
-              worldElements: [...state.worldElements, response.data],
+              worldElements: [...state.worldElements, response.data!],
               isLoadingWorldElements: false
             }));
           } else {
@@ -520,7 +520,7 @@ export const useStoryBibleStore = create<StoryBibleStore>()(devtools(
           if (response.success && response.data) {
             set((state) => ({
               ...state,
-              outlines: [...state.outlines, response.data],
+              outlines: [...state.outlines, response.data!],
               isLoadingOutlines: false
             }));
           } else {
@@ -876,7 +876,7 @@ export const useStoryBibleStore = create<StoryBibleStore>()(devtools(
       },
 
       // UI state operations
-      setActiveTab: (tab: 'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => {
+      setActiveTab: (tab: 'braindump' | 'style-examples' | 'characters' | 'worldbuilding' | 'outline' | 'scenes') => {
         set((state) => ({ ...state, activeTab: tab }));
       },
 

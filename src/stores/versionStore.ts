@@ -205,18 +205,7 @@ export const useVersionStore = create<VersionState>((set, get) => ({
   fetchVersionStatistics: async () => {
     set({ isLoadingStatistics: true, error: null });
     try {
-      // In a real implementation, this would call a Tauri command
-      // For now, we'll simulate the API call with a delay and mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const statistics: VersionStatistics = {
-        totalVersions: 42,
-        documentsWithVersions: 15,
-        oldestVersion: '2025-05-01T12:00:00Z',
-        newestVersion: '2025-08-05T15:30:00Z',
-        averageVersionsPerDocument: 2.8
-      };
-      
+      const statistics = await invoke<VersionStatistics>('get_version_statistics');
       set({ versionStatistics: statistics, isLoadingStatistics: false });
       return statistics;
     } catch (error) {

@@ -65,7 +65,7 @@ pub async fn apply_character_template(
         // Input validation
         validate_security_input(&template_id)?;
         validate_security_input(&_project_id)?;
-        validate_safe_name(&_name)?;
+        validate_safe_name(&_name, "Name")?;
         
         if let Some(ref desc) = _description {
             validate_content_length(desc, 5000)?;
@@ -151,7 +151,7 @@ pub async fn apply_worldbuilding_template(
         // Input validation
         validate_security_input(&template_id)?;
         validate_security_input(&project_id)?;
-        validate_safe_name(&name)?;
+        validate_safe_name(&name, "Name")?;
         
         if let Some(ref desc) = description {
             validate_content_length(desc, 5000)?;

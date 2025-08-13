@@ -5,6 +5,7 @@ use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
+use crate::security::validation::validate_security_input;
 
 /// Create document link request
 #[derive(Debug, Deserialize)]
@@ -32,6 +33,17 @@ pub async fn create_document_link(request: CreateDocumentLinkRequest) -> Command
             "document_link",
             Some(&format!("{}->{}", &request.from_document_id, &request.to_document_id))
         )?;
+        // Input validation
+        validate_security_input(&request.from_document_id)?;
+        validate_security_input(&request.to_document_id)?;
+        if let Some(order) = request.link_order {
+            if order < 1 || order > 10_000 {
+                return Err(crate::error::StoryWeaverError::ValidationError {
+                    message: "link_order must be between 1 and 10,000".to_string()
+                });
+            }
+        }
+
         let pool = get_pool()?;
         
         let link = DocumentLink {
@@ -54,6 +66,8 @@ pub async fn get_document_link(id: String) -> CommandResponse<Option<DocumentLin
     async fn get(id: String) -> Result<Option<DocumentLink>> {
         // Rate limiting
         rl_list("document_link", Some(&id))?;
+        // Input validation
+        validate_security_input(&id)?;
         let pool = get_pool()?;
         DocumentLinkOps::get_by_id(&pool, &id).await
     }
@@ -67,6 +81,8 @@ pub async fn get_outgoing_links(document_id: String) -> CommandResponse<Vec<Docu
     async fn get_links(document_id: String) -> Result<Vec<DocumentLink>> {
         // Rate limiting
         rl_list("document_links_outgoing", Some(&document_id))?;
+        // Input validation
+        validate_security_input(&document_id)?;
         let pool = get_pool()?;
         DocumentLinkOps::get_outgoing_links(&pool, &document_id).await
     }
@@ -80,6 +96,8 @@ pub async fn get_incoming_links(document_id: String) -> CommandResponse<Vec<Docu
     async fn get_links(document_id: String) -> Result<Vec<DocumentLink>> {
         // Rate limiting
         rl_list("document_links_incoming", Some(&document_id))?;
+        // Input validation
+        validate_security_input(&document_id)?;
         let pool = get_pool()?;
         DocumentLinkOps::get_incoming_links(&pool, &document_id).await
     }
@@ -93,6 +111,8 @@ pub async fn get_all_links_for_document(document_id: String) -> CommandResponse<
     async fn get_links(document_id: String) -> Result<Vec<DocumentLink>> {
         // Rate limiting
         rl_list("document_links_all", Some(&document_id))?;
+        // Input validation
+        validate_security_input(&document_id)?;
         let pool = get_pool()?;
         DocumentLinkOps::get_all_links_for_document(&pool, &document_id).await
     }
@@ -106,6 +126,22 @@ pub async fn update_document_link(request: UpdateDocumentLinkRequest) -> Command
     async fn update(request: UpdateDocumentLinkRequest) -> Result<()> {
         // Rate limiting
         rl_update("document_link", Some(&request.id))?;
+        // Input validation
+        validate_security_input(&request.id)?;
+        if let Some(ref from_id) = request.from_document_id {
+            validate_security_input(from_id)?;
+        }
+        if let Some(ref to_id) = request.to_document_id {
+            validate_security_input(to_id)?;
+        }
+        if let Some(order) = request.link_order {
+            if order < 1 || order > 10_000 {
+                return Err(crate::error::StoryWeaverError::ValidationError {
+                    message: "link_order must be between 1 and 10,000".to_string()
+                });
+            }
+        }
+
         let pool = get_pool()?;
         
         // Get existing link
@@ -136,6 +172,8 @@ pub async fn delete_document_link(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
         // Rate limiting
         rl_delete("document_link", Some(&id))?;
+        // Input validation
+        validate_security_input(&id)?;
         let pool = get_pool()?;
         DocumentLinkOps::delete(&pool, &id).await
     }
@@ -149,6 +187,8 @@ pub async fn delete_all_links_for_document(document_id: String) -> CommandRespon
     async fn delete_links(document_id: String) -> Result<()> {
         // Rate limiting
         rl_delete("document_links_all", Some(&document_id))?;
+        // Input validation
+        validate_security_input(&document_id)?;
         let pool = get_pool()?;
         DocumentLinkOps::delete_all_links_for_document(&pool, &document_id).await
     }
@@ -162,6 +202,8 @@ pub async fn get_linked_documents(document_id: String) -> CommandResponse<Linked
     async fn get_documents(document_id: String) -> Result<LinkedDocuments> {
         // Rate limiting
         rl_list("linked_documents", Some(&document_id))?;
+        // Input validation
+        validate_security_input(&document_id)?;
         let pool = get_pool()?;
         DocumentLinkOps::get_linked_documents(&pool, &document_id).await
     }

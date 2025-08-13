@@ -7,12 +7,44 @@ import { invoke, listen } from '../utils/tauriSafe';
 // Re-export useAIStreaming for convenience
 export { useAIStreaming };
 
-// Main AI hook that provides a unified interface
+/**
+ * Main AI hook that provides a unified interface for all AI operations in StoryWeaver.
+ * 
+ * This hook combines AI writing functionality with card generation, providing a seamless
+ * experience for writers to generate content and organize it into cards for later reference.
+ * 
+ * @returns {Object} An object containing all AI functions and state
+ * @returns {Function} writeWithCards - Enhanced write function that creates cards from generated content
+ * @returns {Function} generateCardsFromText - Generate AI cards from existing text
+ * @returns {boolean} isAnyLoading - Whether any AI operation is currently loading
+ * @returns {boolean} hasError - Whether there's an active error state
+ * 
+ * @example
+ * ```tsx
+ * const { writeWithCards, generateCardsFromText, isAnyLoading } = useAI();
+ * 
+ * // Generate content with automatic card creation
+ * const result = await writeWithCards(documentId, cursorPosition, "Write a dramatic scene", {
+ *   card_count: 3,
+ *   tone: 'dramatic'
+ * });
+ * ```
+ */
 export const useAI = () => {
   const aiStore = useAIStore();
   const cardStore = useCardStore();
   
-  // Enhanced write function that also creates cards
+  /**
+   * Enhanced write function that generates AI content and automatically creates cards.
+   * 
+   * @param {number} documentId - The ID of the document to write in
+   * @param {number} cursorPosition - The cursor position for auto-write mode
+   * @param {string} [userPrompt] - Optional user prompt for guided writing
+   * @param {Partial<WriteSettings>} [settings] - Optional write settings override
+   * @returns {Promise<WriteResult>} The result of the write operation
+   * 
+   * @throws {Error} When the write operation fails
+   */
   const writeWithCards = useCallback(async (
     documentId: number,
     cursorPosition: number,
@@ -41,7 +73,21 @@ export const useAI = () => {
     }
   }, [aiStore, cardStore]);
   
-  // Generate AI cards from text
+  /**
+   * Generate AI cards from existing text content.
+   * 
+   * Creates multiple AI cards based on the provided text, useful for organizing
+   * generated content or creating suggestions from existing writing.
+   * 
+   * @param {string} text - The source text to generate cards from
+   * @param {number} documentId - The document ID to associate cards with
+   * @param {number} [cardCount=2] - Number of cards to generate
+   * @param {number} [projectId] - Project ID (defaults to 1 if not provided)
+   * @param {string} [featureType='suggestion'] - The type of feature that generated the cards
+   * @returns {Promise<AICard[]>} Array of created AI cards
+   * 
+   * @throws {Error} When card generation fails
+   */
   const generateCardsFromText = useCallback(async (
     text: string,
     documentId: number,
@@ -98,7 +144,35 @@ export const useAI = () => {
   };
 };
 
-// Hook for AI writing with streaming support
+/**
+ * Hook for AI writing with real-time streaming support.
+ * 
+ * Provides streaming functionality for AI writing operations, allowing users to see
+ * content being generated in real-time with typewriter effects. Supports both
+ * auto-write and guided-write modes with streaming.
+ * 
+ * @returns {Object} Streaming write interface
+ * @returns {Object} streaming - Current streaming state
+ * @returns {string} streamedContent - The content being streamed
+ * @returns {Function} startStreamingWrite - Start a streaming write operation
+ * @returns {Function} stopStreamingWrite - Stop the current streaming operation
+ * @returns {boolean} isLoading - Whether a write operation is in progress
+ * 
+ * @example
+ * ```tsx
+ * const { startStreamingWrite, streamedContent, streaming } = useAIWriteStream();
+ * 
+ * // Start streaming write
+ * const result = await startStreamingWrite(documentId, cursorPosition, "Continue the story");
+ * 
+ * // Monitor streaming content
+ * useEffect(() => {
+ *   if (streaming.isStreaming) {
+ *     console.log('Current content:', streamedContent);
+ *   }
+ * }, [streamedContent, streaming.isStreaming]);
+ * ```
+ */
 export const useAIWriteStream = () => {
   const { 
     streaming, 
@@ -112,7 +186,17 @@ export const useAIWriteStream = () => {
   
   const [streamedContent, setStreamedContent] = useState<string>('');
   
-  // Start a streaming write operation
+  /**
+   * Start a streaming write operation with real-time content generation.
+   * 
+   * @param {number} documentId - The document ID to write in
+   * @param {number} cursorPosition - Cursor position for auto-write mode
+   * @param {string} [userPrompt] - Optional prompt for guided writing
+   * @param {Partial<WriteSettings>} [settings] - Optional settings override
+   * @returns {Promise<WriteResult>} Promise that resolves when streaming completes
+   * 
+   * @throws {Error} When streaming fails to start or encounters an error
+   */
   const startStreamingWrite = useCallback(async (
     documentId: number,
     cursorPosition: number,
@@ -206,7 +290,31 @@ export const useAIWriteStream = () => {
   };
 };
 
-// Hook for AI text processing (rewrite, expand, etc.)
+/**
+ * Hook for AI text processing operations like rewrite, expand, and quick edit.
+ * 
+ * Provides functionality to process existing text through various AI operations,
+ * maintaining state for both original and processed text for comparison.
+ * 
+ * @returns {Object} Text processing interface
+ * @returns {Function} processText - Process text with specified operation
+ * @returns {string} processedText - The result of the last processing operation
+ * @returns {string} originalText - The original text that was processed
+ * @returns {Function} resetProcessedText - Clear processed text state
+ * @returns {boolean} isLoading - Whether a processing operation is active
+ * @returns {string|null} error - Current error state, if any
+ * 
+ * @example
+ * ```tsx
+ * const { processText, processedText, originalText } = useAITextProcessor();
+ * 
+ * // Rewrite text with specific tone
+ * await processText("Original text", "rewrite", { tone: "formal" });
+ * 
+ * // Expand text with more detail
+ * await processText("Brief text", "expand", { expansion_level: "detailed" });
+ * ```
+ */
 export const useAITextProcessor = () => {
   const { 
     rewriteText, 
@@ -223,6 +331,16 @@ export const useAITextProcessor = () => {
   const [processedText, setProcessedText] = useState<string>('');
   const [originalText, setOriginalText] = useState<string>('');
   
+  /**
+   * Process text using the specified AI operation.
+   * 
+   * @param {string} text - The text to process
+   * @param {'rewrite' | 'expand' | 'quickEdit'} operation - The type of processing to perform
+   * @param {any} [settings] - Operation-specific settings
+   * @returns {Promise<string>} The processed text result
+   * 
+   * @throws {Error} When the processing operation fails or settings are invalid
+   */
   const processText = useCallback(async (
     text: string,
     operation: 'rewrite' | 'expand' | 'quickEdit',
@@ -275,7 +393,32 @@ export const useAITextProcessor = () => {
   };
 };
 
-// Hook for AI brainstorming and creative tools
+/**
+ * Hook for AI brainstorming and creative tools.
+ * 
+ * Provides creative AI functionality including idea generation, scene description,
+ * and visualization tools to help writers with creative processes.
+ * 
+ * @returns {Object} Creative AI interface
+ * @returns {Function} generateIdeas - Generate brainstorming ideas from a prompt
+ * @returns {Function} generateSceneDescription - Create detailed scene descriptions
+ * @returns {Function} generateVisualization - Generate visual representations
+ * @returns {string[]} ideas - Array of generated ideas
+ * @returns {string} sceneDescription - Generated scene description
+ * @returns {string} visualizationUrl - URL for generated visualization
+ * @returns {Function} clearCreativeResults - Clear all creative results
+ * 
+ * @example
+ * ```tsx
+ * const { generateIdeas, ideas, generateSceneDescription } = useAICreative();
+ * 
+ * // Generate story ideas
+ * await generateIdeas("Fantasy adventure with dragons", { count: 5 });
+ * 
+ * // Create scene description
+ * await generateSceneDescription("A dark forest at midnight", "atmosphere");
+ * ```
+ */
 export const useAICreative = () => {
   const { 
     brainstorm, 
@@ -351,7 +494,29 @@ export const useAICreative = () => {
   };
 };
 
-// Hook for AI quick tools and chat
+/**
+ * Hook for AI quick tools and chat functionality.
+ * 
+ * Provides quick AI interactions including chat and quick editing tools,
+ * maintaining chat history for context-aware conversations.
+ * 
+ * @returns {Object} Quick tools interface
+ * @returns {Function} quickEdit - Perform quick text edits
+ * @returns {Function} sendQuickChat - Send a message to AI chat
+ * @returns {Array} chatHistory - Array of chat messages with roles and timestamps
+ * @returns {Function} clearChatHistory - Clear the chat history
+ * 
+ * @example
+ * ```tsx
+ * const { sendQuickChat, chatHistory, quickEdit } = useAIQuickTools();
+ * 
+ * // Quick chat interaction
+ * await sendQuickChat("How can I improve this dialogue?", selectedText);
+ * 
+ * // Quick text edit
+ * await quickEdit("Make this more dramatic", selectedText);
+ * ```
+ */
 export const useAIQuickTools = () => {
   const { quickEdit, quickChat, isLoading, error } = useAIStore();
   
@@ -401,7 +566,27 @@ export const useAIQuickTools = () => {
   };
 };
 
-// Hook for AI settings management
+/**
+ * Hook for AI settings management.
+ * 
+ * Provides access to all AI-related settings including write, rewrite, expand,
+ * brainstorm, and global settings with update functions.
+ * 
+ * @returns {Object} Settings management interface
+ * @returns {Object} settings - All current AI settings organized by category
+ * @returns {Object} updateSettings - Functions to update each category of settings
+ * 
+ * @example
+ * ```tsx
+ * const { settings, updateSettings } = useAISettings();
+ * 
+ * // Update write settings
+ * updateSettings.write({ tone: 'formal', length: 'medium' });
+ * 
+ * // Update global settings
+ * updateSettings.global({ provider: 'openai', model: 'gpt-4' });
+ * ```
+ */
 export const useAISettings = () => {
   const {
     defaultWriteSettings,
@@ -434,7 +619,35 @@ export const useAISettings = () => {
   };
 };
 
-// Hook for AI credit management
+/**
+ * Hook for AI credit management and monitoring.
+ * 
+ * Manages AI usage credits, providing real-time credit information and
+ * automatic refresh functionality. Includes helpful utilities for
+ * credit-based UI decisions.
+ * 
+ * @returns {Object} Credit management interface
+ * @returns {number} creditsUsed - Total credits used
+ * @returns {number|null} creditsRemaining - Remaining credits (null for unlimited)
+ * @returns {Function} updateCredits - Manually update credit count
+ * @returns {Function} refreshCredits - Refresh credits from server
+ * @returns {boolean} isCheckingCredits - Whether credits are being refreshed
+ * @returns {boolean} hasUnlimitedCredits - Whether user has unlimited credits
+ * @returns {boolean} isLowOnCredits - Whether user is low on credits (< 100)
+ * 
+ * @example
+ * ```tsx
+ * const { creditsRemaining, isLowOnCredits, refreshCredits } = useAICredits();
+ * 
+ * // Check if user can perform operation
+ * if (isLowOnCredits) {
+ *   showCreditWarning();
+ * }
+ * 
+ * // Refresh credits after purchase
+ * await refreshCredits();
+ * ```
+ */
 export const useAICredits = () => {
   const { creditsUsed, creditsRemaining, updateCredits, checkCredits } = useAIStore();
   const [isCheckingCredits, setIsCheckingCredits] = useState(false);

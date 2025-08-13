@@ -491,7 +491,7 @@ pub async fn generate_scene_content(
     async fn generate(
         outline_id: String,
         scene_title: String,
-        _scene_summary: String,
+        scene_summary: String,
         custom_prompt: Option<String>,
         creativity: Option<f32>,
         ai_manager: Arc<AIProviderManager>

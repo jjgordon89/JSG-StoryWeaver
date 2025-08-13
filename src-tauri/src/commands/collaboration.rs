@@ -15,6 +15,7 @@ use crate::error::{Result, StoryWeaverError};
 use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
 use std::str::FromStr;
+use crate::security::validation::{validate_security_input, validate_content_length};
 
 /// Create a shared document link
 #[tauri::command]
@@ -25,6 +26,21 @@ pub async fn create_shared_document_link(
     password: Option<String>,
     expires_in_hours: Option<i32>,
 ) -> Result<SharedDocument> {
+    // Input validation
+    validate_security_input(&document_id)?;
+    validate_security_input(&project_id)?;
+    validate_security_input(&share_type)?;
+    validate_content_length(&share_type, 50)?;
+    if let Some(hours) = expires_in_hours {
+        if hours < 1 || hours > 8760 {
+            return Err(StoryWeaverError::validation("expires_in_hours must be between 1 and 8760".to_string()));
+        }
+    }
+    if let Some(pw) = &password {
+        validate_content_length(pw, 255)?;
+        validate_security_input(pw)?;
+    }
+
     let pool = get_pool()?;
 
     let share_type_enum = ShareType::from_str(&share_type)
@@ -63,6 +79,13 @@ pub async fn get_shared_document(
     token: String,
     password: Option<String>,
 ) -> Result<Option<SharedDocument>> {
+    // Input validation
+    validate_security_input(&token)?;
+    if let Some(ref pw) = password {
+        validate_content_length(pw, 255)?;
+        validate_security_input(pw)?;
+    }
+
     let pool = get_pool()?;
 
     let shared_doc = collaboration_ops::get_shared_document_by_token(pool.as_ref(), &token)
@@ -123,6 +146,28 @@ pub async fn add_comment(
     selected_text: Option<String>,
     comment_type: String,
 ) -> Result<Comment> {
+    // Input validation
+    validate_security_input(&document_id)?;
+    validate_content_length(&content, 5000)?;
+    validate_security_input(&content)?;
+    validate_content_length(&author_name, 100)?;
+    validate_security_input(&author_name)?;
+    if let Some(ref id) = author_identifier {
+        validate_content_length(id, 255)?;
+        validate_security_input(id)?;
+    }
+    if let (Some(s), Some(e)) = (position_start, position_end) {
+        if s < 0 || e < 0 || s > e {
+            return Err(StoryWeaverError::validation("Invalid position range for comment".to_string()));
+        }
+    }
+    if let Some(ref sel) = selected_text {
+        validate_content_length(sel, 5000)?;
+        validate_security_input(sel)?;
+    }
+    validate_content_length(&comment_type, 50)?;
+    validate_security_input(&comment_type)?;
+
     let pool = get_pool()?;
     
     let comment_type_enum = CommentType::from_str(&comment_type)
@@ -148,6 +193,9 @@ pub async fn add_comment(
 /// Get comments for a document
 #[tauri::command]
 pub async fn get_comments(document_id: String) -> Result<Vec<Comment>> {
+    // Input validation
+    validate_security_input(&document_id)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::get_document_comments(pool.as_ref(), &document_id)
@@ -158,6 +206,9 @@ pub async fn get_comments(document_id: String) -> Result<Vec<Comment>> {
 /// Get comment threads for a document
 #[tauri::command]
 pub async fn get_comment_threads(document_id: String) -> Result<Vec<CommentThread>> {
+    // Input validation
+    validate_security_input(&document_id)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::get_comment_threads(pool.as_ref(), &document_id)
@@ -168,6 +219,13 @@ pub async fn get_comment_threads(document_id: String) -> Result<Vec<CommentThrea
 /// Resolve a comment
 #[tauri::command]
 pub async fn resolve_comment(comment_id: i32, resolved_by: String) -> Result<()> {
+    // Input validation
+    if comment_id <= 0 {
+        return Err(StoryWeaverError::validation("comment_id must be a positive integer".to_string()));
+    }
+    validate_content_length(&resolved_by, 100)?;
+    validate_security_input(&resolved_by)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::resolve_comment(pool.as_ref(), comment_id, &resolved_by)
@@ -178,6 +236,11 @@ pub async fn resolve_comment(comment_id: i32, resolved_by: String) -> Result<()>
 /// Delete a comment
 #[tauri::command]
 pub async fn delete_comment(comment_id: i32) -> Result<()> {
+    // Input validation
+    if comment_id <= 0 {
+        return Err(StoryWeaverError::validation("comment_id must be a positive integer".to_string()));
+    }
+
     let pool = get_pool()?;
 
     collaboration_ops::delete_comment(pool.as_ref(), comment_id)
@@ -192,6 +255,17 @@ pub async fn create_collaboration_session(
     max_participants: i32,
     expires_in_hours: Option<i32>,
 ) -> Result<CollaborationSession> {
+    // Input validation
+    validate_security_input(&document_id)?;
+    if max_participants < 1 || max_participants > 100 {
+        return Err(StoryWeaverError::validation("max_participants must be between 1 and 100".to_string()));
+    }
+    if let Some(hours) = expires_in_hours {
+        if hours < 1 || hours > 8760 {
+            return Err(StoryWeaverError::validation("expires_in_hours must be between 1 and 8760".to_string()));
+        }
+    }
+
     let pool = get_pool()?;
 
     collaboration_ops::create_collaboration_session(
@@ -209,6 +283,9 @@ pub async fn create_collaboration_session(
 pub async fn join_collaboration_session(
     session_token: String,
 ) -> Result<Option<CollaborationSession>> {
+    // Input validation
+    validate_security_input(&session_token)?;
+
     let pool = get_pool()?;
 
     let session =
@@ -233,6 +310,9 @@ pub async fn join_collaboration_session(
 /// Leave a collaboration session
 #[tauri::command]
 pub async fn leave_collaboration_session(session_token: String) -> Result<()> {
+    // Input validation
+    validate_security_input(&session_token)?;
+
     let pool = get_pool()?;
 
     let session =
@@ -253,6 +333,14 @@ pub async fn duplicate_document_for_sharing(
     document_id: String,
     new_title: String,
 ) -> Result<String> {
+    // Input validation
+    validate_security_input(&document_id)?;
+    validate_content_length(&new_title, 255)?;
+    validate_security_input(&new_title)?;
+    if new_title.trim().is_empty() {
+        return Err(StoryWeaverError::validation("New title cannot be empty".to_string()));
+    }
+
     let pool = get_pool()?;
 
     collaboration_ops::duplicate_document_for_sharing(pool.as_ref(), &document_id, &new_title)
@@ -263,6 +351,9 @@ pub async fn duplicate_document_for_sharing(
 /// Unpublish a shared document (deactivate the share link)
 #[tauri::command]
 pub async fn unpublish_shared_document(share_token: String) -> Result<()> {
+    // Input validation
+    validate_security_input(&share_token)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::unpublish_shared_document(pool.as_ref(), &share_token)
@@ -273,6 +364,9 @@ pub async fn unpublish_shared_document(share_token: String) -> Result<()> {
 /// Republish a shared document (reactivate the share link)
 #[tauri::command]
 pub async fn republish_shared_document(share_token: String) -> Result<()> {
+    // Input validation
+    validate_security_input(&share_token)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::republish_shared_document(pool.as_ref(), &share_token)
@@ -283,6 +377,9 @@ pub async fn republish_shared_document(share_token: String) -> Result<()> {
 /// Get all shared documents for a project
 #[tauri::command]
 pub async fn get_project_shared_documents(project_id: String) -> Result<Vec<SharedDocument>> {
+    // Input validation
+    validate_security_input(&project_id)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::get_project_shared_documents(pool.as_ref(), &project_id)
@@ -298,6 +395,17 @@ pub async fn create_notification(
     message: String,
     recipient_token: Option<String>,
 ) -> Result<CollaborationNotification> {
+    // Input validation
+    validate_security_input(&document_id)?;
+    validate_content_length(&notification_type, 50)?;
+    validate_security_input(&notification_type)?;
+    validate_content_length(&message, 1000)?;
+    validate_security_input(&message)?;
+    if let Some(ref token) = recipient_token {
+        validate_content_length(token, 255)?;
+        validate_security_input(token)?;
+    }
+
     let pool = get_pool()?;
 
     let notification_type_enum = NotificationType::from_str(&notification_type)
@@ -320,6 +428,14 @@ pub async fn get_notifications_for_user(
     recipient_token: String,
     limit: Option<i32>,
 ) -> Result<Vec<CollaborationNotification>> {
+    // Input validation
+    validate_security_input(&recipient_token)?;
+    if let Some(l) = limit {
+        if l < 0 {
+            return Err(StoryWeaverError::validation("limit cannot be negative".to_string()));
+        }
+    }
+
     let pool = get_pool()?;
 
     collaboration_ops::get_notifications_for_user(pool.as_ref(), &recipient_token, limit)
@@ -330,6 +446,11 @@ pub async fn get_notifications_for_user(
 /// Mark notification as read
 #[tauri::command]
 pub async fn mark_notification_read(notification_id: i32) -> Result<()> {
+    // Input validation
+    if notification_id <= 0 {
+        return Err(StoryWeaverError::validation("notification_id must be a positive integer".to_string()));
+    }
+
     let pool = get_pool()?;
 
     collaboration_ops::mark_notification_read(pool.as_ref(), notification_id)
@@ -340,6 +461,9 @@ pub async fn mark_notification_read(notification_id: i32) -> Result<()> {
 /// Mark all notifications as read for a user
 #[tauri::command]
 pub async fn mark_all_notifications_read(recipient_token: String) -> Result<()> {
+    // Input validation
+    validate_security_input(&recipient_token)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::mark_all_notifications_read(pool.as_ref(), &recipient_token)
@@ -350,6 +474,9 @@ pub async fn mark_all_notifications_read(recipient_token: String) -> Result<()> 
 /// Get unread notification count for a user
 #[tauri::command]
 pub async fn get_unread_notification_count(recipient_token: String) -> Result<i32> {
+    // Input validation
+    validate_security_input(&recipient_token)?;
+
     let pool = get_pool()?;
 
     collaboration_ops::get_unread_notification_count(pool.as_ref(), &recipient_token)
@@ -360,6 +487,11 @@ pub async fn get_unread_notification_count(recipient_token: String) -> Result<i3
 /// Delete old notifications (cleanup)
 #[tauri::command]
 pub async fn delete_old_notifications(days_old: i32) -> Result<()> {
+    // Input validation
+    if days_old < 0 {
+        return Err(StoryWeaverError::validation("days_old cannot be negative".to_string()));
+    }
+
     let pool = get_pool()?;
 
     collaboration_ops::delete_old_notifications(pool.as_ref(), days_old)

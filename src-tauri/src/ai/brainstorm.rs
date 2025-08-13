@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use uuid::Uuid;
 use std::collections::HashMap;
+use super::{AIProvider, AIContext};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BrainstormSession {
@@ -220,19 +221,74 @@ impl BrainstormEngine {
         Ok(session_id)
     }
 
-    pub fn generate_ideas(
+    pub async fn generate_ideas(
         &mut self,
         session_id: &str,
         request: &BrainstormRequest,
+        ai_provider: Option<&dyn AIProvider>,
     ) -> Result<Vec<BrainstormIdea>, Box<dyn std::error::Error>> {
         let mut ideas = Vec::new();
         let num_ideas = request.num_ideas.min(self.config.max_ideas_per_session);
 
         // Generate base prompt
-let base_prompt = self.build_generation_prompt(request)?;
-// TODO: Use base_prompt with AI provider when implemented
+        let base_prompt = self.build_generation_prompt(request)?;
         
-        // For now, we'll generate template-based ideas
+        // If an AI provider is available, use it to generate ideas
+        if let Some(provider) = ai_provider {
+            // Build AI context
+            let mut ai_ctx = AIContext::default();
+            ai_ctx.project_id = Some(request.project_id.clone());
+            ai_ctx.story_context = request.context.clone();
+            ai_ctx.key_details = Some(request.focus_areas.clone());
+            ai_ctx.creativity_level = Some(request.creativity_level as u8);
+            ai_ctx.feature_type = Some(super::WritingFeature::Brainstorm);
+            
+            // Call provider brainstorm with base prompt; truncate to requested count
+            let mut generated = provider.brainstorm(&base_prompt, &ai_ctx).await?;
+            if generated.len() > num_ideas {
+                generated.truncate(num_ideas);
+            }
+            
+            for idea_text in generated {
+                // Pre-compute values that require immutable borrows
+                let tags = if self.config.enable_auto_tagging {
+                    self.auto_generate_tags(&idea_text)
+                } else {
+                    Vec::new()
+                };
+                
+                let rating = if self.config.enable_idea_scoring {
+                    Some(self.score_idea(&idea_text))
+                } else {
+                    None
+                };
+                
+                let idea = BrainstormIdea {
+                    id: Uuid::new_v4().to_string(),
+                    content: idea_text,
+                    category: request.category.to_string(),
+                    tags,
+                    rating,
+                    notes: String::new(),
+                    is_keeper: false,
+                    created_at: chrono::Utc::now(),
+                };
+                ideas.push(idea.clone());
+            }
+            
+            // Save to session and return
+            let session = self.sessions.get_mut(session_id)
+                .ok_or("Session not found")?;
+            
+            for idea in &ideas {
+                session.ideas.push(idea.clone());
+            }
+            session.updated_at = chrono::Utc::now();
+            
+            return Ok(ideas);
+        }
+        
+        // Fallback: template-based ideas
         // In a real implementation, this would call the AI provider
         let templates = self.idea_templates.get(&request.category.to_string())
             .cloned()
@@ -281,7 +337,7 @@ let base_prompt = self.build_generation_prompt(request)?;
         Ok(ideas)
     }
 
-    fn build_generation_prompt(&self, request: &BrainstormRequest) -> Result<String, Box<dyn std::error::Error>> {
+    pub(crate) fn build_generation_prompt(&self, request: &BrainstormRequest) -> Result<String, Box<dyn std::error::Error>> {
         let mut prompt = request.category.get_prompt_template();
         
         if let Some(seed) = &request.seed_prompt {

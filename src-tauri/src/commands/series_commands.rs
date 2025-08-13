@@ -3,6 +3,7 @@
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
+use crate::StoryWeaverError;
 use serde::{Deserialize, Serialize};
 
 /// Create series request
@@ -31,16 +32,16 @@ pub async fn create_series(request: CreateSeriesRequest) -> CommandResponse<Seri
         return Err(StoryWeaverError::validation("Series name cannot be empty"));
     }
     crate::security::validation::validate_security_input(&request.name)?;
-    crate::security::validation::validate_content_length(&request.name, 1, 255)?;
+    crate::security::validation::validate_content_length(&request.name, 255)?;
         
         if let Some(ref desc) = request.description {
-            crate::security::validation::validate_security_input(desc)?;
-        crate::security::validation::validate_content_length(desc, 0, 5000)?;
+        crate::security::validation::validate_security_input(desc)?;
+        crate::security::validation::validate_content_length(desc, 5000)?;
         }
         
         if let Some(ref folder_id) = request.folder_id {
             crate::security::validation::validate_security_input(folder_id)?;
-        crate::security::validation::validate_content_length(folder_id, 1, 255)?;
+        crate::security::validation::validate_content_length(folder_id, 255)?;
         }
         
         let pool = get_pool()?;
@@ -66,7 +67,7 @@ pub async fn get_series(id: String) -> CommandResponse<Option<Series>> {
         return Err(StoryWeaverError::validation("Series ID cannot be empty"));
     }
     crate::security::validation::validate_security_input(&id)?;
-    crate::security::validation::validate_content_length(&id, 1, 255)?;
+    crate::security::validation::validate_content_length(&id, 255)?;
         
         let pool = get_pool()?;
         SeriesOps::get_by_id(&pool, &id).await
@@ -106,24 +107,24 @@ pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> 
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&request.id)?;
-        crate::security::validation::validate_content_length(&request.id, 1, 255)?;
+        crate::security::validation::validate_content_length(&request.id, 255)?;
         
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
                 return Err(StoryWeaverError::validation("Series name cannot be empty"));
             }
             crate::security::validation::validate_security_input(name)?;
-            crate::security::validation::validate_content_length(name, 1, 255)?;
+            crate::security::validation::validate_content_length(name, 255)?;
         }
         
         if let Some(ref desc) = request.description {
             crate::security::validation::validate_security_input(desc)?;
-            crate::security::validation::validate_content_length(desc, 0, 5000)?;
+            crate::security::validation::validate_content_length(desc, 5000)?;
         }
         
         if let Some(ref folder_id) = request.folder_id {
             crate::security::validation::validate_security_input(folder_id)?;
-            crate::security::validation::validate_content_length(folder_id, 1, 255)?;
+            crate::security::validation::validate_content_length(folder_id, 255)?;
         }
         
         let pool = get_pool()?;
@@ -159,7 +160,7 @@ pub async fn delete_series(id: String) -> CommandResponse<()> {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&id)?;
-        crate::security::validation::validate_content_length(&id, 1, 255)?;
+        crate::security::validation::validate_content_length(&id, 255)?;
         
         let pool = get_pool()?;
         SeriesOps::delete(&pool, &id).await
@@ -177,7 +178,7 @@ pub async fn get_series_projects(series_id: String) -> CommandResponse<Vec<Proje
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&series_id)?;
-        crate::security::validation::validate_content_length(&series_id, 1, 255)?;
+        crate::security::validation::validate_content_length(&series_id, 255)?;
         
         let pool = get_pool()?;
         SeriesOps::get_projects(&pool, &series_id).await
@@ -198,9 +199,9 @@ pub async fn add_project_to_series(series_id: String, project_id: String) -> Com
             return Err(StoryWeaverError::validation("Project ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&series_id)?;
-        crate::security::validation::validate_content_length(&series_id, 1, 255)?;
+        crate::security::validation::validate_content_length(&series_id, 255)?;
         crate::security::validation::validate_security_input(&project_id)?;
-        crate::security::validation::validate_content_length(&project_id, 1, 255)?;
+        crate::security::validation::validate_content_length(&project_id, 255)?;
         
         let pool = get_pool()?;
         SeriesOps::add_project(&pool, &series_id, &project_id).await
@@ -218,7 +219,7 @@ pub async fn remove_project_from_series(project_id: String) -> CommandResponse<(
             return Err(StoryWeaverError::validation("Project ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&project_id)?;
-        crate::security::validation::validate_content_length(&project_id, 1, 255)?;
+        crate::security::validation::validate_content_length(&project_id, 255)?;
         
         let pool = get_pool()?;
         SeriesOps::remove_project(&pool, &project_id).await

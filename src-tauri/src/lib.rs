@@ -16,6 +16,9 @@ pub mod background;
 mod utils;
 pub mod security;
 
+#[cfg(test)]
+mod tests;
+
 // Re-export utils for performance monitoring
 pub use utils::performance_monitor;
 
@@ -190,7 +193,6 @@ pub fn run() {
             // AI Card commands
             commands::ai_cards::create_ai_response_card,
             commands::ai_cards::get_ai_response_card,
-            commands::ai_cards::get_ai_response_cards_by_project,
             commands::ai_cards::update_ai_response_card,
             commands::ai_cards::delete_ai_response_card,
             commands::ai_cards::get_ai_response_cards_by_document,
@@ -412,7 +414,9 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .unwrap_or_else(|e| {
+        .map_err(|e| {
             eprintln!("error while running tauri application: {}", e);
-        });
+            std::process::exit(1);
+        })
+        .ok();
 }

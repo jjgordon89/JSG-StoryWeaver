@@ -54,6 +54,12 @@ pub struct AICardFilter {
     pub feature_type: Option<String>,
     pub is_stacked: Option<bool>,
     pub is_starred: Option<bool>,
+    pub date_start: Option<String>,
+    pub date_end: Option<String>,
+    pub provider: Option<String>,
+    pub model_used: Option<String>,
+    pub cost_min: Option<f64>,
+    pub cost_max: Option<f64>,
     pub limit: Option<i32>,
     pub offset: Option<i32>,
 }
@@ -108,31 +114,65 @@ impl AIResponseCard {
     /// Get AI cards with filters
     pub async fn get_filtered(pool: &Pool<Sqlite>, filter: AICardFilter) -> Result<Vec<AIResponseCard>> {
         let mut query = "SELECT * FROM ai_response_cards WHERE 1=1".to_string();
-        let mut bindings = Vec::new();
+        let mut params = Vec::new();
         
         if let Some(project_id) = &filter.project_id {
             query.push_str(" AND project_id = ?");
-            bindings.push(project_id.as_str());
+            params.push(project_id.clone());
         }
         
         if let Some(document_id) = &filter.document_id {
             query.push_str(" AND document_id = ?");
-            bindings.push(document_id.as_str());
+            params.push(document_id.clone());
         }
         
         if let Some(feature_type) = &filter.feature_type {
             query.push_str(" AND feature_type = ?");
-            bindings.push(feature_type.as_str());
+            params.push(feature_type.clone());
         }
         
         if let Some(is_stacked) = filter.is_stacked {
             query.push_str(" AND is_stacked = ?");
-            bindings.push(if is_stacked { "1" } else { "0" });
+            params.push(if is_stacked { "1".to_string() } else { "0".to_string() });
         }
         
         if let Some(is_starred) = filter.is_starred {
             query.push_str(" AND is_starred = ?");
-            bindings.push(if is_starred { "1" } else { "0" });
+            params.push(if is_starred { "1".to_string() } else { "0".to_string() });
+        }
+        
+        // Date range filtering
+        if let Some(date_start) = &filter.date_start {
+            query.push_str(" AND created_at >= ?");
+            params.push(date_start.clone());
+        }
+        
+        if let Some(date_end) = &filter.date_end {
+            query.push_str(" AND created_at <= ?");
+            params.push(date_end.clone());
+        }
+        
+        // Provider filtering (extract from model_used field)
+        if let Some(provider) = &filter.provider {
+            query.push_str(" AND model_used LIKE ?");
+            params.push(format!("{}%", provider));
+        }
+        
+        // Model filtering
+        if let Some(model_used) = &filter.model_used {
+            query.push_str(" AND model_used = ?");
+            params.push(model_used.clone());
+        }
+        
+        // Cost range filtering
+        if let Some(cost_min) = filter.cost_min {
+            query.push_str(" AND cost_estimate >= ?");
+            params.push(cost_min.to_string());
+        }
+        
+        if let Some(cost_max) = filter.cost_max {
+            query.push_str(" AND cost_estimate <= ?");
+            params.push(cost_max.to_string());
         }
         
         query.push_str(" ORDER BY created_at DESC");
@@ -146,8 +186,8 @@ impl AIResponseCard {
         }
         
         let mut sql_query = sqlx::query(&query);
-        for binding in bindings {
-            sql_query = sql_query.bind(binding);
+        for param in &params {
+            sql_query = sql_query.bind(param);
         }
         
         let rows = sql_query
