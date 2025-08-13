@@ -8,3 +8,15 @@ pub mod integration_commands_tests;
 
 #[cfg(test)]
 pub mod command_validation_tests;
+
+#[cfg(test)]
+pub mod comprehensive_validation_tests;
+
+#[cfg(test)]
+pub mod error_handling_tests;
+
+#[cfg(test)]
+pub mod ai_card_filtering_tests;
+
+#[cfg(test)]
+pub mod critical_workflows_tests;

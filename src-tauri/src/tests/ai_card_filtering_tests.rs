@@ -3,13 +3,14 @@
 #[cfg(test)]
 mod tests {
     use crate::database::operations::ai_card_ops::AICardOps;
-    use crate::models::ai_card::{AICardFilter, CreateAICardRequest};
-    use crate::database::create_test_pool;
-    use chrono::{Utc, Duration};
+use crate::models::ai_card::{AICardFilter, CreateAICardRequest};
+use crate::database::{init_test_db, get_pool};
+use chrono::{Utc, Duration};
 
     #[tokio::test]
     async fn test_ai_card_date_range_filtering() {
-        let pool = create_test_pool().await;
+        init_test_db().await.expect("Failed to init test db");
+        let pool = get_pool().expect("Failed to get pool");
         let project_id = "test-project-1";
         
         // Create test cards with different dates
@@ -71,7 +72,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_card_provider_filtering() {
-        let pool = create_test_pool().await;
+        init_test_db().await.expect("Failed to init test db");
+        let pool = get_pool().expect("Failed to get pool");
         let project_id = "test-project-2";
         
         // Create cards with different providers
@@ -121,7 +123,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_card_model_filtering() {
-        let pool = create_test_pool().await;
+        init_test_db().await.expect("Failed to init test db");
+        let pool = get_pool().expect("Failed to get pool");
         let project_id = "test-project-3";
         
         // Create cards with specific models
@@ -171,7 +174,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_card_cost_range_filtering() {
-        let pool = create_test_pool().await;
+        init_test_db().await.expect("Failed to init test db");
+        let pool = get_pool().expect("Failed to get pool");
         let project_id = "test-project-4";
         
         // Create cards with different costs
@@ -228,7 +232,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_ai_card_combined_filtering() {
-        let pool = create_test_pool().await;
+        init_test_db().await.expect("Failed to init test db");
+        let pool = get_pool().expect("Failed to get pool");
         let project_id = "test-project-5";
         
         // Create a card that matches specific criteria

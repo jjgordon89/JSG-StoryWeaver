@@ -4,7 +4,7 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::{Result, StoryWeaverError};
 use crate::security::validation::*;
-use crate::security::rate_limit::{validate_request_body_size, rl_update, rl_search};
+use crate::security::rate_limit::{validate_request_body_size, rl_create, rl_update, rl_delete, rl_list, rl_search};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -115,7 +115,9 @@ pub async fn create_or_update_story_bible(request: CreateOrUpdateStoryBibleReque
 /// Get story bible by project ID
 #[tauri::command]
 pub async fn get_story_bible(project_id: String) -> CommandResponse<Option<StoryBible>> {
-    async fn get_by_project(project_id: String) -> Result<Option<StoryBible>> {
+    async fn get(project_id: String) -> Result<Option<StoryBible>> {
+        // Rate limiting
+        rl_list("story_bible", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -126,7 +128,7 @@ pub async fn get_story_bible(project_id: String) -> CommandResponse<Option<Story
         }
     }
     
-    get_by_project(project_id).await.into()
+    get(project_id).await.into()
 }
 
 // ===== CHARACTER TRAIT COMMANDS =====
@@ -174,6 +176,8 @@ pub struct UpdateCharacterTraitRequest {
 #[tauri::command]
 pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> CommandResponse<CharacterTrait> {
     async fn create(request: CreateCharacterTraitRequest) -> Result<CharacterTrait> {
+        // Rate limiting
+        rl_create("character_trait", Some(&request.character_id))?;
         // Input validation
         validate_security_input(&request.character_id)?;
         validate_safe_name(&request.trait_name, "Name")?;
@@ -206,6 +210,8 @@ pub async fn create_character_trait(request: CreateCharacterTraitRequest) -> Com
 #[tauri::command]
 pub async fn get_character_traits(character_id: String) -> CommandResponse<Vec<CharacterTrait>> {
     async fn get_by_character(character_id: String) -> Result<Vec<CharacterTrait>> {
+        // Rate limiting
+        rl_list("character_trait", Some(&character_id))?;
         // Input validation
         validate_security_input(&character_id)?;
         
@@ -220,6 +226,8 @@ pub async fn get_character_traits(character_id: String) -> CommandResponse<Vec<C
 #[tauri::command]
 pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> CommandResponse<()> {
     async fn update(request: UpdateCharacterTraitRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("character_trait", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -260,6 +268,8 @@ pub async fn update_character_trait(request: UpdateCharacterTraitRequest) -> Com
 #[tauri::command]
 pub async fn delete_character_trait(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("character_trait", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -299,6 +309,8 @@ pub struct UpdateWorldElementRequest {
 #[tauri::command]
 pub async fn create_world_element(request: CreateWorldElementRequest) -> CommandResponse<WorldElement> {
     async fn create(request: CreateWorldElementRequest) -> Result<WorldElement> {
+        // Rate limiting
+        rl_create("world_element", Some(&request.project_id))?;
         // Input validation
         validate_security_input(&request.project_id)?;
         validate_safe_name(&request.name, "Name")?;
@@ -349,6 +361,8 @@ pub async fn create_world_element(request: CreateWorldElementRequest) -> Command
 #[tauri::command]
 pub async fn get_world_elements(project_id: String) -> CommandResponse<Vec<WorldElement>> {
     async fn get_by_project(project_id: String) -> Result<Vec<WorldElement>> {
+        // Rate limiting
+        rl_list("world_element", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -363,6 +377,8 @@ pub async fn get_world_elements(project_id: String) -> CommandResponse<Vec<World
 #[tauri::command]
 pub async fn get_world_element(id: String) -> CommandResponse<Option<WorldElement>> {
     async fn get(id: String) -> Result<Option<WorldElement>> {
+        // Rate limiting
+        rl_list("world_element", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -377,6 +393,8 @@ pub async fn get_world_element(id: String) -> CommandResponse<Option<WorldElemen
 #[tauri::command]
 pub async fn update_world_element(request: UpdateWorldElementRequest) -> CommandResponse<()> {
     async fn update(request: UpdateWorldElementRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("world_element", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -439,6 +457,8 @@ pub async fn update_world_element(request: UpdateWorldElementRequest) -> Command
 #[tauri::command]
 pub async fn delete_world_element(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("world_element", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -454,9 +474,9 @@ pub async fn delete_world_element(id: String) -> CommandResponse<()> {
 pub async fn search_world_elements(project_id: String, query: String) -> CommandResponse<Vec<WorldElement>> {
     async fn search(project_id: String, query: String) -> Result<Vec<WorldElement>> {
         // Rate limiting
-        rl_search("world_elements", Some(&project_id))?;
+        rl_search("world_element", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id)?
         validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
@@ -501,6 +521,8 @@ pub struct UpdateOutlineRequest {
 #[tauri::command]
 pub async fn create_outline(request: CreateOutlineRequest) -> CommandResponse<Outline> {
     async fn create(request: CreateOutlineRequest) -> Result<Outline> {
+        // Rate limiting
+        rl_create("outline", Some(&request.project_id))?;
         // Input validation
         validate_security_input(&request.project_id)?;
         
@@ -563,6 +585,8 @@ pub async fn create_outline(request: CreateOutlineRequest) -> CommandResponse<Ou
 #[tauri::command]
 pub async fn get_outlines(project_id: String) -> CommandResponse<Vec<Outline>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Outline>> {
+        // Rate limiting
+        rl_list("outline", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -577,6 +601,8 @@ pub async fn get_outlines(project_id: String) -> CommandResponse<Vec<Outline>> {
 #[tauri::command]
 pub async fn get_outline(id: String) -> CommandResponse<Outline> {
     async fn get(id: String) -> Result<Outline> {
+        // Rate limiting
+        rl_list("outline", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -591,6 +617,8 @@ pub async fn get_outline(id: String) -> CommandResponse<Outline> {
 #[tauri::command]
 pub async fn get_outline_by_chapter(project_id: String, chapter_number: i32) -> CommandResponse<Option<Outline>> {
     async fn get_by_chapter(project_id: String, chapter_number: i32) -> Result<Option<Outline>> {
+        // Rate limiting
+        rl_list("outline", Some(&project_id))?;
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -609,6 +637,8 @@ pub async fn get_outline_by_chapter(project_id: String, chapter_number: i32) -> 
 #[tauri::command]
 pub async fn update_outline(request: UpdateOutlineRequest) -> CommandResponse<()> {
     async fn update(request: UpdateOutlineRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("outline", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -671,6 +701,8 @@ pub async fn update_outline(request: UpdateOutlineRequest) -> CommandResponse<()
 #[tauri::command]
 pub async fn delete_outline(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("outline", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -686,9 +718,9 @@ pub async fn delete_outline(id: String) -> CommandResponse<()> {
 pub async fn search_outlines(project_id: String, query: String) -> CommandResponse<Vec<Outline>> {
     async fn search(project_id: String, query: String) -> Result<Vec<Outline>> {
         // Rate limiting
-        rl_search("outlines", Some(&project_id))?;
+        rl_search("outline", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_security_input(&project_id)?
         validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;
@@ -739,6 +771,8 @@ pub struct UpdateSceneRequest {
 #[tauri::command]
 pub async fn create_scene(request: CreateSceneRequest) -> CommandResponse<Scene> {
     async fn create(request: CreateSceneRequest) -> Result<Scene> {
+        // Rate limiting
+        rl_create("scene", Some(&request.outline_id))?;
         // Input validation
         validate_security_input(&request.outline_id)?;
         
@@ -824,6 +858,8 @@ pub async fn create_scene(request: CreateSceneRequest) -> CommandResponse<Scene>
 #[tauri::command]
 pub async fn get_scenes(outline_id: String) -> CommandResponse<Vec<Scene>> {
     async fn get_by_outline(outline_id: String) -> Result<Vec<Scene>> {
+        // Rate limiting
+        rl_list("scene", Some(&outline_id))?;
         // Input validation
         validate_security_input(&outline_id)?;
         
@@ -838,6 +874,8 @@ pub async fn get_scenes(outline_id: String) -> CommandResponse<Vec<Scene>> {
 #[tauri::command]
 pub async fn get_scene(id: String) -> CommandResponse<Scene> {
     async fn get(id: String) -> Result<Scene> {
+        // Rate limiting
+        rl_list("scene", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -852,6 +890,8 @@ pub async fn get_scene(id: String) -> CommandResponse<Scene> {
 #[tauri::command]
 pub async fn update_scene(request: UpdateSceneRequest) -> CommandResponse<Scene> {
     async fn update(request: UpdateSceneRequest) -> Result<Scene> {
+        // Rate limiting
+        rl_update("scene", Some(&request.id))?;
         // Input validation
         validate_security_input(&request.id)?;
         
@@ -923,6 +963,8 @@ pub async fn update_scene(request: UpdateSceneRequest) -> CommandResponse<Scene>
 #[tauri::command]
 pub async fn delete_scene(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("scene", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -937,6 +979,8 @@ pub async fn delete_scene(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn validate_scene(id: String) -> CommandResponse<()> {
     async fn validate(id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("scene", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         
@@ -953,9 +997,9 @@ pub async fn validate_scene(id: String) -> CommandResponse<()> {
 pub async fn search_scenes(outline_id: String, query: String) -> CommandResponse<Vec<Scene>> {
     async fn search(outline_id: String, query: String) -> Result<Vec<Scene>> {
         // Rate limiting
-        rl_search("scenes", Some(&outline_id))?;
+        rl_search("scene", Some(&outline_id))?;
         // Input validation
-        validate_security_input(&outline_id)?;
+        validate_security_input(&outline_id)?
         validate_request_body_size(&query, 4_000)?;
         validate_content_length(&query, 1000)?;
         validate_security_input(&query)?;

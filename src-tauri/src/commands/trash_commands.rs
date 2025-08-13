@@ -3,11 +3,14 @@ use crate::database::get_pool;
 use crate::database::models::{DeletedItem, DeletedItemType};
 use crate::database::operations::DeletedItemOps;
 use crate::error::Result;
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 
 /// Get all deleted items (trash)
 #[tauri::command]
 pub async fn get_trash_items() -> CommandResponse<Vec<DeletedItem>> {
     async fn get() -> Result<Vec<DeletedItem>> {
+        // Rate limiting
+        rl_list("trash_items", None)?;
         let pool = get_pool()?;
         DeletedItemOps::get_all(&pool).await
     }
@@ -19,6 +22,8 @@ pub async fn get_trash_items() -> CommandResponse<Vec<DeletedItem>> {
 #[tauri::command]
 pub async fn get_trash_items_by_type(item_type: DeletedItemType) -> CommandResponse<Vec<DeletedItem>> {
     async fn get(item_type: DeletedItemType) -> Result<Vec<DeletedItem>> {
+        // Rate limiting
+        rl_list("trash_items", None)?;
         let pool = get_pool()?;
         DeletedItemOps::get_by_type(&pool, item_type).await
     }
@@ -30,6 +35,8 @@ pub async fn get_trash_items_by_type(item_type: DeletedItemType) -> CommandRespo
 #[tauri::command]
 pub async fn get_trash_items_by_parent(parent_id: String) -> CommandResponse<Vec<DeletedItem>> {
     async fn get(parent_id: String) -> Result<Vec<DeletedItem>> {
+        // Rate limiting
+        rl_list("trash_items", Some(&parent_id))?;
         let pool = get_pool()?;
         DeletedItemOps::get_by_parent(&pool, &parent_id).await
     }
@@ -41,6 +48,8 @@ pub async fn get_trash_items_by_parent(parent_id: String) -> CommandResponse<Vec
 #[tauri::command]
 pub async fn trash_project(project_id: String, reason: Option<String>) -> CommandResponse<DeletedItem> {
     async fn trash(project_id: String, reason: Option<String>) -> Result<DeletedItem> {
+        // Rate limiting
+        rl_delete("project", Some(&project_id))?;
         let pool = get_pool()?;
         DeletedItemOps::trash_project(&pool, &project_id, reason).await
     }
@@ -52,6 +61,8 @@ pub async fn trash_project(project_id: String, reason: Option<String>) -> Comman
 #[tauri::command]
 pub async fn trash_document(document_id: String, reason: Option<String>) -> CommandResponse<DeletedItem> {
     async fn trash(document_id: String, reason: Option<String>) -> Result<DeletedItem> {
+        // Rate limiting
+        rl_delete("document", Some(&document_id))?;
         let pool = get_pool()?;
         DeletedItemOps::trash_document(&pool, &document_id, reason).await
     }
@@ -63,6 +74,8 @@ pub async fn trash_document(document_id: String, reason: Option<String>) -> Comm
 #[tauri::command]
 pub async fn restore_trash_item(deleted_item_id: String) -> CommandResponse<()> {
     async fn restore(deleted_item_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("trash_item", Some(&deleted_item_id))?;
         let pool = get_pool()?;
         DeletedItemOps::restore_item(&pool, &deleted_item_id).await
     }
@@ -74,6 +87,8 @@ pub async fn restore_trash_item(deleted_item_id: String) -> CommandResponse<()> 
 #[tauri::command]
 pub async fn permanently_delete_trash_item(deleted_item_id: String) -> CommandResponse<()> {
     async fn delete(deleted_item_id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("trash_item", Some(&deleted_item_id))?;
         let pool = get_pool()?;
         DeletedItemOps::permanently_delete(&pool, &deleted_item_id).await
     }
@@ -85,6 +100,8 @@ pub async fn permanently_delete_trash_item(deleted_item_id: String) -> CommandRe
 #[tauri::command]
 pub async fn empty_trash() -> CommandResponse<()> {
     async fn empty() -> Result<()> {
+        // Rate limiting
+        rl_delete("trash_items", None)?;
         let pool = get_pool()?;
         DeletedItemOps::empty_trash(&pool).await
     }

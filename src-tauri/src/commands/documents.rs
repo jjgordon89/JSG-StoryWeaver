@@ -94,6 +94,8 @@ pub async fn create_document(request: CreateDocumentRequest) -> CommandResponse<
 #[tauri::command]
 pub async fn get_documents(project_id: String) -> CommandResponse<Vec<Document>> {
     async fn get_by_project(project_id: String) -> Result<Vec<Document>> {
+        rl_list("documents", Some(&project_id))?;
+        
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -108,6 +110,8 @@ pub async fn get_documents(project_id: String) -> CommandResponse<Vec<Document>>
 #[tauri::command]
 pub async fn get_document(id: String) -> CommandResponse<Option<Document>> {
     async fn get(id: String) -> Result<Option<Document>> {
+        rl_list("document", Some(&id))?;
+        
         // Input validation
         validate_security_input(&id)?;
         
@@ -220,6 +224,8 @@ pub async fn save_document(id: String, content: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn delete_document(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        rl_delete("document", Some(&id))?;
+        
         // Input validation
         validate_security_input(&id)?;
         
@@ -266,6 +272,8 @@ pub struct DocumentTree {
 #[tauri::command]
 pub async fn get_document_tree(project_id: String) -> CommandResponse<Vec<DocumentTree>> {
     async fn get_tree(project_id: String) -> Result<Vec<DocumentTree>> {
+        rl_list("document_tree", Some(&project_id))?;
+        
         // Input validation
         validate_security_input(&project_id)?;
         
@@ -346,6 +354,8 @@ pub struct DocumentStats {
 #[tauri::command]
 pub async fn get_document_stats(project_id: String) -> CommandResponse<DocumentStats> {
     async fn get_stats(project_id: String) -> Result<DocumentStats> {
+        rl_list("document_stats", Some(&project_id))?;
+        
         // Input validation
         validate_security_input(&project_id)?;
         

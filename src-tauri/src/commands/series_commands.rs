@@ -4,6 +4,7 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
 use crate::StoryWeaverError;
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
 use serde::{Deserialize, Serialize};
 
 /// Create series request
@@ -27,6 +28,9 @@ pub struct UpdateSeriesRequest {
 #[tauri::command]
 pub async fn create_series(request: CreateSeriesRequest) -> CommandResponse<Series> {
     async fn create(request: CreateSeriesRequest) -> Result<Series> {
+        // Rate limiting
+        rl_create("series", None)?;
+        
         // Input validation
         if request.name.trim().is_empty() {
         return Err(StoryWeaverError::validation("Series name cannot be empty"));
@@ -62,6 +66,9 @@ pub async fn create_series(request: CreateSeriesRequest) -> CommandResponse<Seri
 #[tauri::command]
 pub async fn get_series(id: String) -> CommandResponse<Option<Series>> {
     async fn get(id: String) -> Result<Option<Series>> {
+        // Rate limiting
+        rl_list("series", Some(&id)).await?;
+        
         // Input validation
         if id.trim().is_empty() {
         return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -80,6 +87,9 @@ pub async fn get_series(id: String) -> CommandResponse<Option<Series>> {
 #[tauri::command]
 pub async fn get_all_series() -> CommandResponse<Vec<Series>> {
     async fn get_all() -> Result<Vec<Series>> {
+        // Rate limiting
+        rl_list("series", None)?;
+        
         let pool = get_pool()?;
         SeriesOps::get_all(&pool).await
     }
@@ -91,6 +101,9 @@ pub async fn get_all_series() -> CommandResponse<Vec<Series>> {
 #[tauri::command]
 pub async fn get_series_with_counts() -> CommandResponse<Vec<SeriesWithCount>> {
     async fn get_with_counts() -> Result<Vec<SeriesWithCount>> {
+        // Rate limiting
+        rl_list("series", None)?;
+        
         let pool = get_pool()?;
         SeriesOps::get_series_with_counts(&pool).await
     }
@@ -102,12 +115,15 @@ pub async fn get_series_with_counts() -> CommandResponse<Vec<SeriesWithCount>> {
 #[tauri::command]
 pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> {
     async fn update(request: UpdateSeriesRequest) -> Result<()> {
+        // Rate limiting
+        rl_update("series", Some(&request.id)).await?;
+        
         // Input validation
         if request.id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
         }
         crate::security::validation::validate_security_input(&request.id)?;
-        crate::security::validation::validate_content_length(&request.id, 255)?;
+        crate::security::validation::validate_content_length(&request.id, 255)?;;
         
         if let Some(ref name) = request.name {
             if name.trim().is_empty() {
@@ -155,6 +171,8 @@ pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> 
 #[tauri::command]
 pub async fn delete_series(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
+        // Rate limiting
+        rl_delete("series", Some(&id)).await?;
         // Input validation
         if id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -173,6 +191,8 @@ pub async fn delete_series(id: String) -> CommandResponse<()> {
 #[tauri::command]
 pub async fn get_series_projects(series_id: String) -> CommandResponse<Vec<Project>> {
     async fn get_projects(series_id: String) -> Result<Vec<Project>> {
+        // Rate limiting
+        rl_list("series_projects", Some(&series_id)).await?;
         // Input validation
         if series_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -191,6 +211,8 @@ pub async fn get_series_projects(series_id: String) -> CommandResponse<Vec<Proje
 #[tauri::command]
 pub async fn add_project_to_series(series_id: String, project_id: String) -> CommandResponse<()> {
     async fn add_project(series_id: String, project_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("series_project", Some(&series_id)).await?;
         // Input validation
         if series_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -214,6 +236,8 @@ pub async fn add_project_to_series(series_id: String, project_id: String) -> Com
 #[tauri::command]
 pub async fn remove_project_from_series(project_id: String) -> CommandResponse<()> {
     async fn remove_project(project_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("series_project", Some(&project_id)).await?;
         // Input validation
         if project_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Project ID cannot be empty"));

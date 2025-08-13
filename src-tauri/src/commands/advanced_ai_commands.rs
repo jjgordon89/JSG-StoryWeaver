@@ -4,6 +4,7 @@ use tauri::State;
 use tokio::sync::Mutex;
 use std::str::FromStr;
 use crate::database::{get_pool, models::{Document, DocumentType}, operations::DocumentOps};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
 
 use crate::ai::{
     advanced_ai_manager::StyleAnalysis, AdvancedAIManager, AdvancedGenerationRequest,

@@ -7,6 +7,7 @@ use crate::database::operations::{
 use crate::database;
 use crate::error::Result;
 use crate::security::validation::*;
+use crate::security::rate_limit::{rl_create, rl_list};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tauri::State;
@@ -16,6 +17,8 @@ use uuid::Uuid;
 #[tauri::command]
 pub async fn get_character_templates() -> CommandResponse<Vec<CharacterTemplate>> {
     async fn get() -> Result<Vec<CharacterTemplate>> {
+        // Rate limiting
+        rl_list("character_template", None)?;
         Ok(CharacterTemplateOps::get_system_templates())
     }
     
@@ -26,6 +29,8 @@ pub async fn get_character_templates() -> CommandResponse<Vec<CharacterTemplate>
 #[tauri::command]
 pub async fn get_character_templates_by_archetype(archetype: String) -> CommandResponse<Vec<CharacterTemplate>> {
     async fn get(archetype: String) -> Result<Vec<CharacterTemplate>> {
+        // Rate limiting
+        rl_list("character_template", None)?;
         // Input validation
         validate_security_input(&archetype)?;
         validate_content_length(&archetype, 100)?;
@@ -40,6 +45,8 @@ pub async fn get_character_templates_by_archetype(archetype: String) -> CommandR
 #[tauri::command]
 pub async fn get_character_archetypes() -> CommandResponse<Vec<String>> {
     async fn get() -> Result<Vec<String>> {
+        // Rate limiting
+        rl_list("character_archetype", None)?;
         Ok(CharacterTemplateOps::get_archetypes())
     }
     
@@ -57,17 +64,19 @@ pub async fn apply_character_template(
 ) -> CommandResponse<String> {
     async fn apply(
         template_id: String,
-        _project_id: String,
-        _name: String,
-        _description: Option<String>,
+        project_id: String,
+        name: String,
+        description: Option<String>,
         trait_overrides: Option<HashMap<String, String>>,
     ) -> Result<String> {
+        // Rate limiting
+        rl_create("character_template", Some(&project_id))?;
         // Input validation
         validate_security_input(&template_id)?;
-        validate_security_input(&_project_id)?;
-        validate_safe_name(&_name, "Name")?;
+        validate_security_input(&project_id)?;
+        validate_safe_name(&name, "Name")?;
         
-        if let Some(ref desc) = _description {
+        if let Some(ref desc) = description {
             validate_content_length(desc, 5000)?;
             validate_security_input(desc)?;
         }
@@ -102,6 +111,8 @@ pub async fn apply_character_template(
 #[tauri::command]
 pub async fn get_worldbuilding_templates() -> CommandResponse<Vec<WorldBuildingTemplate>> {
     async fn get() -> Result<Vec<WorldBuildingTemplate>> {
+        // Rate limiting
+        rl_list("worldbuilding_template", None)?;
         Ok(WorldBuildingTemplateOps::get_system_templates())
     }
     
@@ -112,6 +123,8 @@ pub async fn get_worldbuilding_templates() -> CommandResponse<Vec<WorldBuildingT
 #[tauri::command]
 pub async fn get_worldbuilding_templates_by_type(element_type: String) -> CommandResponse<Vec<WorldBuildingTemplate>> {
     async fn get(element_type: String) -> Result<Vec<WorldBuildingTemplate>> {
+        // Rate limiting
+        rl_list("worldbuilding_template", None)?;
         // Input validation
         validate_security_input(&element_type)?;
         validate_content_length(&element_type, 100)?;
@@ -126,6 +139,8 @@ pub async fn get_worldbuilding_templates_by_type(element_type: String) -> Comman
 #[tauri::command]
 pub async fn get_worldbuilding_element_types() -> CommandResponse<Vec<String>> {
     async fn get() -> Result<Vec<String>> {
+        // Rate limiting
+        rl_list("worldbuilding_element_type", None)?;
         Ok(WorldBuildingTemplateOps::get_element_types())
     }
     
@@ -148,8 +163,10 @@ pub async fn apply_worldbuilding_template(
         description: Option<String>,
         property_overrides: Option<HashMap<String, serde_json::Value>>,
     ) -> Result<String> {
+        // Rate limiting
+        rl_create("worldbuilding_template", Some(&project_id))?;
         // Input validation
-        validate_security_input(&template_id)?;
+        validate_security_input(&template_id)?
         validate_security_input(&project_id)?;
         validate_safe_name(&name, "Name")?;
         

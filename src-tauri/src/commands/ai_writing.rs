@@ -3,6 +3,7 @@
 use crate::commands::CommandResponse;
 use crate::error::{StoryWeaverError, Result};
 use crate::ai::{AIProviderManager, AIContext, RewriteStyle, TextStream};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, State, Manager, Window};
 use std::sync::Arc;
@@ -274,6 +275,8 @@ pub async fn auto_write(
     cursor_position: usize,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
+    rl_create("ai_write", Some(&document_id.to_string())).await?;
+    
     // Input validation
     if document_id <= 0 {
         return Err(StoryWeaverError::ValidationError {
@@ -295,6 +298,8 @@ pub async fn guided_write(
     user_prompt: String,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
+    rl_create("ai_write", Some(&document_id.to_string())).await?;
+    
     // Input validation
     if document_id <= 0 {
         return Err(StoryWeaverError::ValidationError {
@@ -328,6 +333,8 @@ pub async fn auto_write_stream(
     cursor_position: usize,
     settings: WriteSettings,
 ) -> Result<StreamStartResponse> {
+    rl_create("ai_write_stream", Some(&document_id.to_string())).await?;
+    
     // Input validation
     if document_id <= 0 {
         return Err(StoryWeaverError::ValidationError {
@@ -395,6 +402,8 @@ pub async fn guided_write_stream(
     user_prompt: String,
     settings: WriteSettings,
 ) -> Result<StreamStartResponse> {
+    rl_create("ai_write_stream", Some(&document_id.to_string())).await?;
+    
     // Input validation
     if document_id <= 0 {
         return Err(StoryWeaverError::ValidationError {
@@ -493,6 +502,8 @@ pub async fn rewrite_text(
     text: String,
     settings: RewriteSettings,
 ) -> Result<String> {
+    rl_update("ai_rewrite", None)?;
+    
     // Input validation
     if text.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -531,6 +542,8 @@ pub async fn expand_text(
     text: String,
     settings: ExpandSettings,
 ) -> Result<String> {
+    rl_update("ai_expand", None)?;
+    
     // Input validation
     if text.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -568,6 +581,8 @@ pub async fn describe_scene(
     text: String,
     focus: Option<String>,
 ) -> Result<String> {
+    rl_create("ai_writing", None)?;
+    
     // Input validation
     if text.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -607,6 +622,8 @@ pub async fn brainstorm_ideas(
     prompt: String,
     settings: BrainstormSettings,
 ) -> Result<Vec<String>> {
+    rl_list("ai_words", None)?;
+    
     // Input validation
     if prompt.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -642,6 +659,8 @@ pub async fn visualize_scene(
     state: State<'_, Arc<AIProviderManager>>,
     description: String,
 ) -> Result<String> {
+    rl_create("ai_visualize", None)?;
+    
     // Input validation
     if description.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -666,6 +685,8 @@ pub async fn quick_edit(
     text: String,
     instruction: String,
 ) -> Result<String> {
+    rl_update("ai_edit", None)?;
+    
     // Input validation
     if text.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -698,6 +719,8 @@ pub async fn quick_chat(
     message: String,
     context: Option<String>,
 ) -> Result<String> {
+    rl_create("ai_chat", None)?;
+    
     // Input validation
     if message.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -734,6 +757,8 @@ pub async fn tone_shift_write(
     tone: String,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
+    rl_create("ai_tone_shift", Some(&document_id.to_string())).await?;
+    
     // Input validation
     if document_id <= 0 {
         return Err(StoryWeaverError::ValidationError {
@@ -748,7 +773,7 @@ pub async fn tone_shift_write(
     }
     
     crate::security::validation::validate_content_length(&tone, 100)?;
-    crate::security::validation::validate_security_input(&tone)?;
+     crate::security::validation::validate_security_input(&tone)?;
     
     // Validate WriteSettings
     validate_write_settings(&settings)?;
@@ -768,6 +793,8 @@ pub async fn get_related_words(
     word: String,
     context: Option<String>,
 ) -> Result<Vec<String>> {
+    rl_list("ai_words", None)?;
+    
     // Input validation
     if word.trim().is_empty() {
         return Err(StoryWeaverError::ValidationError {
@@ -776,7 +803,7 @@ pub async fn get_related_words(
     }
     
     crate::security::validation::validate_content_length(&word, 100)?;
-    crate::security::validation::validate_security_input(&word)?;
+     crate::security::validation::validate_security_input(&word)?;
     
     if let Some(ref ctx) = context {
         crate::security::validation::validate_content_length(ctx, 5000)?;

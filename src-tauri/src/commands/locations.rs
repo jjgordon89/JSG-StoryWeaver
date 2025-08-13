@@ -143,6 +143,8 @@ pub async fn get_locations(project_id: String) -> CommandResponse<Vec<Location>>
 #[tauri::command]
 pub async fn get_location(id: String) -> CommandResponse<Option<Location>> {
     async fn get(id: String) -> Result<Option<Location>> {
+        // Rate limiting
+        rl_list("location", Some(&id))?;
         // Input validation
         validate_security_input(&id)?;
         

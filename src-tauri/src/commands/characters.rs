@@ -144,6 +144,8 @@ pub async fn get_characters(project_id: String) -> CommandResponse<Vec<Character
 #[tauri::command]
 pub async fn get_character(id: String) -> CommandResponse<Option<Character>> {
     async fn get(id: String) -> Result<Option<Character>> {
+        rl_list("character", Some(&id))?;
+        
         // Input validation
         validate_security_input(&id)?;
         
@@ -447,6 +449,8 @@ pub struct CharacterStats {
 #[tauri::command]
 pub async fn get_character_stats(project_id: String) -> CommandResponse<CharacterStats> {
     async fn get_stats(project_id: String) -> Result<CharacterStats> {
+        rl_list("character_stats", Some(&project_id))?;
+        
         // Input validation
         validate_security_input(&project_id)?;
         

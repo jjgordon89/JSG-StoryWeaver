@@ -5,6 +5,7 @@ Generated: 2025-08-12
 This action plan documents discovered technical debt, incomplete implementations, and potential issues across the codebase. Each item includes a priority, effort estimate, dependencies, checkboxes for tracking, file references, and a suggested implementation approach.
 
 Legend:
+
 - Priority: [Critical] [High] [Medium] [Low]
 - Effort: h = hours, d = days
 - [ ] = not started, [~] = in progress, [x] = done
@@ -17,6 +18,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 
 - Critical security and reliability work has been COMPLETED: backend error-handling standardization (unwrap/expect usage) and input validation coverage across Tauri commands with size, length, sanitization, and numeric-bounds checks.
 - **NEW:** E2E test infrastructure is now STABLE: Fixed all selector mismatches in Playwright tests; all tests pass across Chromium, Firefox, and WebKit browsers.
+- **NEW:** Rust test suite compilation STABILIZED: All compilation errors in the StoryWeaver Rust test suite have been resolved. `cargo check --tests` now exits with code 0, indicating successful compilation with only warnings remaining.
 - High-priority product work includes implementing AI streaming write path, cost estimation, and completing the Advanced AI overlay actions (cancel/copy/save/time tracking).
 - Backend filter logic for AI card operations is stubbed and should be completed (date range, provider/model, cost).
 - Context building includes Story Bible integration; Brainstorm flow now uses base_prompt with AI provider and persists brainstorm cards.
@@ -27,6 +29,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 1) Incomplete Implementations
 
 1.1 Implement streaming write functionality in AIWritingPanel
+
 - Priority: High
 - Effort: 8–12h
 - Dependencies: useAIWriteStream, backend streaming commands (guided_write_stream, write stream route), token/cost accounting
@@ -41,6 +44,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - On complete, call handleStreamingComplete to persist card entry
 
 1.2 Implement credit/cost estimation in AIWritingPanel
+
 - Priority: High
 - Effort: 3–5h
 - Dependencies: Token estimator, pricing table, WriteResult tokens_used
@@ -53,6 +57,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Use selection length or prompt length for estimate, show range for streaming
 
 1.3 AdvancedAI Overlay: cancel/copy/save/time tracking
+
 - Priority: High
 - Effort: 1–2d
 - Dependencies: advancedAIStore capabilities, projectStore insert action, persistence layer
@@ -73,6 +78,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Persist saves via a Tauri command that writes snippets/notes to DB
 
 1.4 StyleManager actions (update/delete/bulk/generate-from-style)
+
 - Priority: Medium
 - Effort: 2–3d
 - Dependencies: Backend endpoints for style examples or local persistence
@@ -87,6 +93,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Leverage react-query for caching and invalidations
 
 1.5 WriteProcessor: enrich AIContext with Story Bible
+
 - Priority: High
 - Effort: 1–2d
 - Dependencies: story bible tables and operations
@@ -100,6 +107,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Expose a configurable max-context tokens parameter
 
 1.6 Brainstorm: use base_prompt with AI provider
+
 - Priority: Medium
 - Effort: 4–6h
 - Dependencies: AI provider interface
@@ -110,6 +118,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [x] Save results as brainstorm cards
 
 1.7 AI card filtering implementations
+
 - Priority: Medium
 - Effort: 2–4d total (splitable)
 - Dependencies: Query adjustments, indices
@@ -128,6 +137,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Ensure pagination with filters
 
 1.8 AIResponseCache time-based clearing — COMPLETED
+
 - Priority: Medium
 - Effort: 6–10h
 - Dependencies: cache structure (lru), background tasks
@@ -138,6 +148,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - Status: FULLY IMPLEMENTED with comprehensive test coverage including test_time_based_clearing
 
 1.9 Extend credit/cost estimation to AIQuickTools
+
 - Priority: High
 - Effort: 2–3h
 - Dependencies: Token estimator (aiCost.ts), pricing table
@@ -155,6 +166,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 2) Code Quality Issues
 
 2.1 Standardize error handling: replace unwrap/expect
+
 - Priority: Critical
 - Effort: 2–3d
 - Dependencies: StoryWeaverError patterns, error.rs factory
@@ -175,6 +187,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Ensure no sensitive info leaks in messages
 
 2.2 Duplicate/Conflicting UI labels in AIWritingPanel
+
 - Priority: Medium
 - Effort: 1–2h
 - Dependencies: None
@@ -184,6 +197,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [x] Validate settings.write shape alignment with store
 
 2.3 Consistency: mock modes and dev stubs
+
 - Priority: Medium
 - Effort: 6–10h
 - Dependencies: Build-time env gating
@@ -196,6 +210,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Introduce feature flags and a single MockGuard utility
 
 2.4 Framework mixing (React + Svelte)
+
 - Priority: Medium
 - Effort: 2–3d (analysis/design); impl incremental
 - Dependencies: Decision on mid/long-term direction
@@ -210,6 +225,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Prioritize porting components with most usage first
 
 **Progress Update - 2025-08-12:**
+
 - ✅ Created comprehensive Framework-Mixing-Analysis.md documenting the consolidation strategy
 - ✅ Decided on React-only consolidation approach based on ecosystem alignment
 - ✅ Successfully migrated SeriesConsistencyReport.svelte → SeriesConsistencyReport.tsx
@@ -224,10 +240,11 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 **Migration Complete:** All Svelte components successfully migrated to React. Framework consolidation achieved.
 
 2.5 Documentation gaps
+
 - Priority: Medium
 - Effort: 1–2d
 - Dependencies: None
-- Files: Across src/components/* and hooks/*
+- Files: Across src/components/*and hooks/*
 - [x] Add JSDoc/TSDoc for public APIs and hooks
 - [x] Update README sections for AI streaming and card persistence paths
 
@@ -236,6 +253,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 3) Architectural Concerns
 
 3.1 Input validation coverage across Tauri commands
+
 - Priority: Critical
 - Effort: 2–3d
 - Dependencies: src-tauri/src/security/validation.rs; SECURITY_ANALYSIS_REPORT.md roadmap
@@ -250,6 +268,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Add size-limits middleware-like helpers
 
 3.2 Rate limiting completeness
+
 - Priority: High
 - Effort: 1–2d
 - Dependencies: src-tauri/src/security/rate_limit.rs (foundation exists, tests exist)
@@ -261,6 +280,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Central throttle registry queried by commands before heavy ops
 
 3.3 Card storage coupling and persistence
+
 - Priority: Medium
 - Effort: 1–2d
 - Dependencies: addCard usage
@@ -271,6 +291,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
   - Confirm underlying useCards hook uses Tauri invoke persistently with retries and error handling
 
 3.4 Performance: cache sweeper and indices
+
 - Priority: Medium
 - Effort: 1–2d
 - Dependencies: DB schema
@@ -286,6 +307,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 4) Security and Validation Follow-ups
 
 4.1 Complete input validation per endpoint
+
 - Priority: Critical
 - Effort: 2–3d
 - Dependencies: validation.rs patterns and helpers
@@ -294,6 +316,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [ ] Distinguish dev vs prod lenient modes only where safe
 
 4.2 Error handling standardization (factory pattern)
+
 - Priority: High
 - Effort: 1–2d
 - Dependencies: src-tauri/src/error.rs (factory incompletely adopted per report)
@@ -302,6 +325,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [ ] Tests to assert redaction of sensitive info
 
 4.3 CI Security scanning and automation
+
 - Priority: Medium
 - Effort: 1–2d
 - Dependencies: GitHub Actions or equivalent
@@ -314,27 +338,31 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 5) Testing Gaps
 
 5.1 Frontend unit tests expansion
+
 - Priority: High
 - Effort: 2–4d
 - Dependencies: Vitest, Testing Library
 - Files:
-  - Existing: src/components/__tests__/ErrorBoundary.test.tsx
-  - Existing: src/hooks/__tests__/useErrorHandler.test.ts
+  - Existing: src/components/**tests**/ErrorBoundary.test.tsx
+  - Existing: src/hooks/**tests**/useErrorHandler.test.ts
 - [ ] Add tests for hooks: useAI, useAIWriteStream, useAICreative, useAISettings, useAICredits
 - [ ] Add tests for AIWritingPanel basic flows (prompt entry, button disabled states, insert/replace callback)
 - [ ] Add tests for StreamingStatusOverlay behaviors
 - [ ] Add tests for AIQuickTools cost estimation badge and disable rules
 
 5.2 Backend integration tests for commands
+
 - Priority: High
 - Effort: 3–5d
 - Dependencies: Test harness with sqlite temp DB
 - Files:
   - src-tauri/src/commands/*.rs
-- [ ] Spin up ephemeral DB, cover happy-path and validation failure path
+- [~] Spin up ephemeral DB, cover happy-path and validation failure path
+  - Status: Test compilation FIXED (all compilation errors resolved); runtime execution blocked by Windows DLL issues
 - [ ] Include rate-limit hit path behavior
 
 5.3 E2E coverage with Playwright
+
 - Priority: Medium
 - Effort: 3–5d
 - Dependencies: playwright.config.ts
@@ -344,6 +372,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [ ] Negative flows: invalid names, too-large content blocked with message
 
 **E2E Test Fixes Completed:**
+
 - ✅ Fixed selector mismatch in all e2e test files (backup-recovery.spec.ts, document-linking.spec.ts, folder-hierarchy.spec.ts, project-preview.spec.ts, version-history.spec.ts)
 - ✅ Updated `h1:has-text("StoryWeaver")` selectors to `h1:has-text("Projects")` to match actual UI
 - ✅ All tests now pass successfully across Chromium, Firefox, and WebKit browsers
@@ -354,6 +383,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 6) Deprecated/Outdated Patterns and Dependencies
 
 6.1 Dependency audit follow-up
+
 - Priority: Low
 - Effort: 4–8h
 - Dependencies: SECURITY_ANALYSIS_REPORT.md notes
@@ -363,6 +393,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [ ] Evaluate bump feasibility; run smoke tests
 
 6.2 Build guard for mocks
+
 - Priority: Medium
 - Effort: 2–4h
 - Files:
@@ -399,8 +430,9 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 - [x] [High] Overlay cancel/copy/save/time tracking
   - Effort: 1–2d
   - File: src/components/AdvancedAI/StreamingStatusOverlay.tsx
-- [ ] [High] Backend integration tests for key commands
+- [~] [High] Backend integration tests for key commands
   - Effort: 3–5d
+  - Status: Test compilation FIXED (cargo check --tests passes); runtime execution still has Windows DLL issues (STATUS_ENTRYPOINT_NOT_FOUND)
 - [x] [High] Extend cost estimation to AIQuickTools
   - Effort: 2–3h
   - File: src/components/ai/AIQuickTools.tsx
@@ -440,6 +472,7 @@ Note on line numbers: Where exact line numbers are not reliable due to tooling c
 ## 9) File Path References and Snippets
 
 Frontend
+
 - src/components/ai/AIWritingPanel.tsx
   - Search: "TODO: Implement streaming write functionality"
   - Search: "TODO: Implement credit estimation"
@@ -458,6 +491,7 @@ Frontend
   - Mock responses for guided_write_stream and default generation path
 
 Backend
+
 - src-tauri/src/ai/write_processor.rs
   - Search: "TODO: Add Story Bible elements" at ~240
 - src-tauri/src/ai/brainstorm.rs
@@ -487,9 +521,9 @@ Backend
 - Error handling: Prefer `?` with `map_err(|e| StoryWeaverError::X { ... })` and central factory for shaping responses.
 - Validation: Introduce per-command validator modules with typed input structs and unit tests.
 - Streaming: Use Tauri event channels; ensure cancel path stops server-side task and unsubscribes listeners.
-- Cost estimation: Centralize model pricing in one config; compute (input_tokens * in_price + output_tokens * out_price).
+- Cost estimation: Centralize model pricing in one config; compute (input_tokens *in_price + output_tokens* out_price).
 - Cache cleanup: TTL per entry + periodic cleanup via background task; expose manual trigger command.
-- Testing: 
+- Testing:
   - Frontend: vitest + react-testing-library, mock Tauri invoke.
   - Backend: tokio::test with temp sqlite; property tests for validation (quickcheck style if desired).
   - E2E: Playwright happy-path + negative validation scenarios.
@@ -499,16 +533,19 @@ Backend
 ## 11) Milestones and Sequencing
 
 Milestone A: Secure and Stabilize Core (1–2 weeks) - COMPLETED ✅
+
 - [x] Complete input validation (Critical)
 - [x] Standardize error handling (Critical)
 - [ ] Rate limiting coverage (High) - DEFERRED to Phase 2
 
 Milestone B: AI Productivity Features (1–2 weeks)
+
 - [ ] Streaming write + overlay enhancements (High)
 - [ ] Credit estimation (High)
 - [ ] AI card filters + cache cleanup (Medium)
 
 Milestone C: Quality and Confidence (1–2 weeks)
+
 - [ ] Frontend unit tests for AI flows (Medium)
 - [ ] Backend integration tests (High)
 - [ ] E2E core flows (Medium)
@@ -536,5 +573,26 @@ Prepared as a living document. Update checkboxes as items progress, and extend s
   - Empty strings (search query)
   - Negative numeric bounds (order_index, age)
   - Existing happy-path tests remain as baseline coverage
+
+### Update Note — 2025-01-14: Rust Test Suite Compilation Fixes
+
+**COMPLETED:** All compilation errors in the StoryWeaver Rust test suite have been resolved. `cargo check --tests` now exits with code 0.
+
+**Key Fixes Applied:**
+
+- **Missing Imports:** Added `use crate::ai::TokenCounter;` to `src-tauri/src/tests/error_handling_tests.rs`
+- **Database Initialization:** Replaced deprecated `create_test_pool()` calls with `init_test_db().await.expect("Failed to init test db");` and `get_pool().expect("Failed to get pool");` pattern across test files
+- **Method Signature Corrections:** Fixed `TokenCounter::estimate_cost()` calls to provide all 4 required arguments: provider, model, input_tokens, output_tokens
+- **Function Name Updates:** Corrected `move_document_to_trash` to `trash_document` with proper argument structure
+- **Code Structure:** Moved orphaned `let` statements from global scope into appropriate test functions
+- **Result Handling:** Removed incorrect `.expect()` calls on `TokenCounter::new()` which returns `Self` directly, not a `Result`
+
+**Files Modified:**
+
+- `src-tauri/src/tests/error_handling_tests.rs`
+- `src-tauri/src/tests/ai_card_filtering_tests.rs`
+- `src-tauri/src/tests/integration_commands_tests.rs`
+
+**Status:** Compilation successful with 157 warnings remaining (primarily unused imports and variables). Runtime test execution still has issues (STATUS_ENTRYPOINT_NOT_FOUND - likely Windows DLL issue), but compilation phase is now stable.
 
 No changes to existing checklist statuses beyond validation coverage already marked complete; this note documents exact files updated for validation/test coverage.

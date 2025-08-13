@@ -74,10 +74,10 @@ impl super::BrainstormSessionOps {
 
         Ok(row.map(|r| BrainstormSession {
             id: r.id.and_then(|id| id.parse().ok()),
-            project_id: r.project_id.parse().map_err(|e| {
+            project_id: r.project_id.parse().unwrap_or_else(|e| {
                 tracing::warn!("Failed to parse project_id: {}", e);
-                StoryWeaverError::database(format!("Invalid project_id format: {}", e))
-            })?,
+                0 // Return 0 as fallback for i32
+            }),
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,

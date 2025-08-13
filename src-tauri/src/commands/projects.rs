@@ -82,6 +82,8 @@ pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Pr
 #[tauri::command]
 pub async fn get_projects() -> CommandResponse<Vec<Project>> {
     async fn get(_: ()) -> Result<Vec<Project>> {
+        rl_list("projects", None)?;
+        
         let pool = get_pool()?;
         ProjectOps::get_all(&pool).await
     }
@@ -93,6 +95,8 @@ pub async fn get_projects() -> CommandResponse<Vec<Project>> {
 #[tauri::command]
 pub async fn get_project(id: String) -> CommandResponse<Option<Project>> {
     async fn get(id: String) -> Result<Option<Project>> {
+        rl_list("project", Some(&id))?;
+        
         // Input validation
         validate_security_input(&id)?;
         
@@ -229,6 +233,8 @@ pub struct RecentActivity {
 #[tauri::command]
 pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectSummary> {
     async fn get_summary(project_id: String) -> Result<ProjectSummary> {
+        rl_list("project_summary", Some(&project_id))?;
+        
         // Input validation
         validate_security_input(&project_id)?;
         

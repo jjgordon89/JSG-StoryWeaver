@@ -4,6 +4,7 @@ use crate::error::StoryWeaverError;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use crate::security::validation::{validate_security_input, validate_content_length};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptimizationConfig {
@@ -34,6 +35,8 @@ pub struct IndexRecommendation {
 pub async fn get_optimization_stats(
     pool: State<'_, DbPool>,
 ) -> Result<DatabaseOptimizationStats, StoryWeaverError> {
+    rl_list("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -49,6 +52,8 @@ pub async fn run_database_optimization(
     pool: State<'_, DbPool>,
     config: OptimizationConfig,
 ) -> Result<OptimizationReport, StoryWeaverError> {
+    rl_update("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -89,6 +94,8 @@ pub async fn run_database_optimization(
 pub async fn get_index_recommendations(
     pool: State<'_, DbPool>,
 ) -> Result<Vec<IndexRecommendation>, StoryWeaverError> {
+    rl_list("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -118,6 +125,8 @@ pub async fn create_index(
     columns: Vec<String>,
     index_type: Option<String>,
 ) -> Result<String, StoryWeaverError> {
+    rl_create("optimization", None)?;
+    
     // Input validation
     if table_name.trim().is_empty() {
         return Err(StoryWeaverError::validation("table_name cannot be empty"));
@@ -156,6 +165,8 @@ pub async fn drop_unused_indexes(
     pool: State<'_, DbPool>,
     min_usage_threshold: Option<f64>,
 ) -> Result<Vec<String>, StoryWeaverError> {
+    rl_delete("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -178,6 +189,8 @@ pub async fn clear_ai_cache(
     pool: State<'_, DbPool>,
     older_than_hours: Option<u64>,
 ) -> Result<usize, StoryWeaverError> {
+    rl_delete("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -197,6 +210,8 @@ pub async fn optimize_memory_usage(
     pool: State<'_, DbPool>,
     target_mb: Option<usize>,
 ) -> Result<String, StoryWeaverError> {
+    rl_update("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -218,6 +233,8 @@ pub async fn optimize_memory_usage(
 pub async fn get_cache_statistics(
     pool: State<'_, DbPool>,
 ) -> Result<serde_json::Value, StoryWeaverError> {
+    rl_list("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -235,6 +252,8 @@ pub async fn get_cache_statistics(
 pub async fn run_performance_analysis(
     pool: State<'_, DbPool>,
 ) -> Result<serde_json::Value, StoryWeaverError> {
+    rl_list("optimization", None)?;
+    
     let optimization_manager = OptimizationManager::new(std::sync::Arc::new(pool.inner().clone()))
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to create optimization manager: {}", e)))?;
@@ -254,6 +273,8 @@ pub async fn schedule_maintenance(
     maintenance_type: String,
     schedule_cron: String,
 ) -> Result<String, StoryWeaverError> {
+    rl_create("optimization", None)?;
+    
     // Input validation
     if maintenance_type.trim().is_empty() {
         return Err(StoryWeaverError::validation("maintenance_type cannot be empty"));

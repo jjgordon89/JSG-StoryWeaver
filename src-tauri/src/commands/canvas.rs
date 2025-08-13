@@ -2,6 +2,7 @@
 
 use crate::database::{get_pool, models::canvas::*, operations::canvas as canvas_ops};
 use crate::error::{Result, StoryWeaverError};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 use serde_json::Value;
 use uuid::Uuid;
 use chrono::Utc;
@@ -14,6 +15,8 @@ pub async fn create_canvas(
     name: String,
     description: Option<String>,
 ) -> Result<Canvas> {
+    // Rate limiting
+    rl_create("canvas", Some(&project_id))?;
     // Input validation
     crate::security::validation::validate_security_input(&project_id)?;
     crate::security::validation::validate_security_input(&name)?;
@@ -37,6 +40,8 @@ pub async fn create_canvas(
 pub async fn get_canvas(
     canvas_id: i32,
 ) -> Result<Option<Canvas>> {
+    // Rate limiting
+    rl_list("canvas", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -53,6 +58,8 @@ pub async fn get_canvas(
 pub async fn get_project_canvases(
     project_id: String,
 ) -> Result<Vec<Canvas>> {
+    // Rate limiting
+    rl_list("canvases", Some(&project_id))?;
     // Input validation
     crate::security::validation::validate_security_input(&project_id)?;
     
@@ -69,6 +76,8 @@ pub async fn update_canvas(
     name: Option<String>,
     description: Option<String>,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("canvas", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -96,6 +105,8 @@ pub async fn update_canvas(
 pub async fn delete_canvas(
     canvas_id: i32,
 ) -> Result<()> {
+    // Rate limiting
+    rl_delete("canvas", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -123,6 +134,8 @@ pub async fn create_canvas_element(
     connections: String,
     order_index: i32,
 ) -> Result<CanvasElement> {
+    // Rate limiting
+    rl_create("canvas_element", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -187,6 +200,8 @@ pub async fn create_canvas_element(
 pub async fn get_canvas_elements(
     canvas_id: i32,
 ) -> Result<Vec<CanvasElement>> {
+    // Rate limiting
+    rl_list("canvas_elements", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -211,6 +226,8 @@ pub async fn update_canvas_element(
     title: Option<String>,
     order_index: Option<i32>,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("canvas_element", Some(&element_id.to_string()))?;
     // Input validation
     if element_id <= 0 {
         return Err(StoryWeaverError::validation("Element ID must be positive"));
@@ -271,6 +288,8 @@ pub async fn update_canvas_element(
 pub async fn delete_canvas_element(
     element_id: i32,
 ) -> Result<()> {
+    // Rate limiting
+    rl_delete("canvas_element", Some(&element_id.to_string()))?;
     // Input validation
     if element_id <= 0 {
         return Err(StoryWeaverError::validation("Element ID must be positive"));
@@ -287,6 +306,8 @@ pub async fn delete_canvas_element(
 pub async fn get_outline_templates(
     template_type: Option<String>,
 ) -> Result<Vec<OutlineTemplate>> {
+    // Rate limiting
+    rl_list("outline_templates", None)?;
     // Input validation
     if let Some(ref tt) = template_type {
         crate::security::validation::validate_security_input(tt)?;
@@ -315,6 +336,8 @@ pub async fn create_outline_template(
     structure: String,
     is_official: bool,
 ) -> Result<OutlineTemplate> {
+    // Rate limiting
+    rl_create("outline_template", None)?;
     // Input validation
     crate::security::validation::validate_security_input(&name)?;
     crate::security::validation::validate_content_length(&name, 255)?;
@@ -356,6 +379,8 @@ pub async fn create_canvas_snapshot(
     name: String,
     snapshot_data: String,
 ) -> Result<CanvasSnapshot> {
+    // Rate limiting
+    rl_create("canvas_snapshot", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -382,6 +407,8 @@ pub async fn create_canvas_snapshot(
 pub async fn get_canvas_snapshots(
     canvas_id: i32,
 ) -> Result<Vec<CanvasSnapshot>> {
+    // Rate limiting
+    rl_list("canvas_snapshots", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -398,6 +425,8 @@ pub async fn get_canvas_snapshots(
 pub async fn restore_canvas_snapshot(
     snapshot_id: i32,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("canvas_snapshot", Some(&snapshot_id.to_string()))?;
     // Input validation
     if snapshot_id <= 0 {
         return Err(StoryWeaverError::validation("Snapshot ID must be positive"));
@@ -415,6 +444,8 @@ pub async fn export_canvas(
     canvas_id: i32,
     format: String,
 ) -> Result<CanvasExportResult> {
+    // Rate limiting
+    rl_list("canvas_export", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -440,6 +471,8 @@ pub async fn create_canvas_collaboration_session(
     max_participants: i32,
     expires_in_hours: Option<i64>,
 ) -> Result<CanvasCollaborationSession> {
+    // Rate limiting
+    rl_create("canvas_collaboration", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -459,11 +492,13 @@ pub async fn create_canvas_collaboration_session(
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
-/// Get canvas collaboration session by token
+/// Get canvas collaboration session
 #[tauri::command]
 pub async fn get_canvas_collaboration_session(
     session_token: String,
 ) -> Result<Option<CanvasCollaborationSession>> {
+    // Rate limiting
+    rl_list("canvas_collaboration", Some(&session_token))?;
     // Input validation
     if session_token.trim().is_empty() {
         return Err(StoryWeaverError::validation("Session token cannot be empty"));
@@ -483,6 +518,8 @@ pub async fn get_canvas_collaboration_session(
 pub async fn join_canvas_collaboration_session(
     session_token: String,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("canvas_collaboration", Some(&session_token))?;
     // Input validation
     if session_token.trim().is_empty() {
         return Err(StoryWeaverError::validation("Session token cannot be empty"));
@@ -523,6 +560,8 @@ pub async fn join_canvas_collaboration_session(
 pub async fn leave_canvas_collaboration_session(
     session_token: String,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("canvas_collaboration", Some(&session_token))?;
     // Input validation
     if session_token.trim().is_empty() {
         return Err(StoryWeaverError::validation("Session token cannot be empty"));
@@ -555,6 +594,8 @@ pub async fn join_canvas_collaboration(
     canvas_id: i32,
     user_name: String,
 ) -> Result<String> {
+    // Rate limiting
+    rl_update("canvas_collaboration", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -598,6 +639,8 @@ pub async fn leave_canvas_collaboration(
     session_token: String,
     user_name: String,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("canvas_collaboration", Some(&session_token))?;
     // Input validation
     crate::security::validation::validate_security_input(&session_token)?;
     crate::security::validation::validate_content_length(&session_token, 255)?;
@@ -632,6 +675,8 @@ pub async fn record_canvas_operation(
     operation_data: Value,
     user_token: String,
 ) -> Result<()> {
+    // Rate limiting
+    rl_create("canvas_operation", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));
@@ -677,6 +722,8 @@ pub async fn get_canvas_operations(
     limit: Option<i32>,
     offset: Option<i32>,
 ) -> Result<Vec<CanvasOperation>> {
+    // Rate limiting
+    rl_list("canvas_operations", Some(&canvas_id.to_string()))?;
     // Input validation
     if canvas_id <= 0 {
         return Err(StoryWeaverError::validation("Canvas ID must be positive"));

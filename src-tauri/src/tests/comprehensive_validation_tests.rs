@@ -58,7 +58,7 @@ async fn create_location_happy_path() {
         culture: Some("Elven culture".to_string()),
         history: Some("Founded in the Second Age".to_string()),
         significance: Some(Importance::High),
-        visibility: Some(VisibilityLevel::Public),
+        visibility: Some(VisibilityLevel::Always),
     };
 
     let resp: CommandResponse<Location> = commands::locations::create_location(req).await;
@@ -465,6 +465,7 @@ async fn create_series_rejects_malicious_input() {
         let req = commands::series_commands::CreateSeriesRequest {
             name: bad_name.clone(),
             description: Some("Test series".to_string()),
+            folder_id: None,
         };
 
         let resp: CommandResponse<Series> = commands::series_commands::create_series(req).await;

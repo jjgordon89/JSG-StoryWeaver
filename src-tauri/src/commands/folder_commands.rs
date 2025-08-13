@@ -72,6 +72,8 @@ pub async fn create_folder(request: CreateFolderRequest) -> CommandResponse<Fold
 #[tauri::command]
 pub async fn get_folder(id: String) -> CommandResponse<Option<Folder>> {
     async fn get(id: String) -> Result<Option<Folder>> {
+        // Rate limiting
+        rl_list("folder", Some(&id))?;
         // Input validation
         crate::security::validate_security_input(&id)?;
 
@@ -218,6 +220,8 @@ pub async fn move_items_to_folder(request: MoveItemsToFolderRequest) -> CommandR
 #[tauri::command]
 pub async fn get_folder_tree() -> CommandResponse<Vec<FolderTreeNode>> {
     async fn get_tree() -> Result<Vec<FolderTreeNode>> {
+        // Rate limiting
+        rl_list("folder_tree", None)?;
         let pool = get_pool()?;
         FolderOps::get_folder_tree(&pool).await
     }

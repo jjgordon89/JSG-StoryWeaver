@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::commands::CommandResponse;
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
@@ -39,6 +40,8 @@ pub async fn emit_sync_event(
     request: EmitSyncEventRequest,
 ) -> CommandResponse<()> {
     async fn emit(window: tauri::Window, request: EmitSyncEventRequest) -> Result<()> {
+        // Rate limiting
+        rl_create("sync_event", Some(&request.event_type))?;
         // Get the app handle to emit events to all windows
         let app_handle = window.app_handle();
         

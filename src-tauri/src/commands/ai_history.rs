@@ -69,6 +69,14 @@ pub async fn create_ai_history(request: CreateAIHistoryRequest) -> Result<AIGene
     async fn create(request: CreateAIHistoryRequest) -> Result<AIGenerationHistory> {
         // Rate limiting
         rl_create("ai_history", Some(&request.project_id))?;
+        
+        // Validate input
+        if request.project_id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Project ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
         crate::security::validation::validate_security_input(&request.project_id)?;
         crate::security::validation::validate_security_input(&request.generation_type)?;
@@ -141,6 +149,14 @@ pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Ve
     async fn get_history(project_id: String, limit: Option<i32>) -> Result<Vec<AIGenerationHistory>> {
         // Rate limiting
         rl_list("ai_history", Some(&project_id))?;
+        
+        // Validate input
+        if project_id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Project ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         
@@ -162,7 +178,15 @@ pub async fn get_ai_history(project_id: String, limit: Option<i32>) -> Result<Ve
 pub async fn get_ai_usage_stats(project_id: String) -> Result<AIUsageStats> {
     async fn get_stats(project_id: String) -> Result<AIUsageStats> {
         // Rate limiting
-        rl_list("ai_usage_stats", Some(&project_id))?;
+        rl_list("ai_stats", Some(&project_id))?;
+        
+        // Validate input
+        if project_id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Project ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         
@@ -257,6 +281,14 @@ pub async fn get_ai_history_by_document(document_id: String) -> Result<Vec<AIGen
     async fn get_by_document(document_id: String) -> Result<Vec<AIGenerationHistory>> {
         // Rate limiting
         rl_list("ai_history_by_document", Some(&document_id))?;
+        
+        // Validate input
+        if document_id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Document ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
         crate::security::validation::validate_security_input(&document_id)?;
         
@@ -282,6 +314,14 @@ pub async fn delete_ai_history(id: String) -> Result<()> {
     async fn delete(id: String) -> Result<()> {
         // Rate limiting
         rl_delete("ai_history", Some(&id))?;
+        
+        // Validate input
+        if id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
         crate::security::validation::validate_security_input(&id)?;
         
@@ -305,8 +345,16 @@ pub async fn clear_ai_history(project_id: String) -> Result<()> {
     async fn clear(project_id: String) -> Result<()> {
         // Rate limiting
         rl_delete("ai_history_by_project", Some(&project_id))?;
+        
+        // Validate input
+        if project_id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Project ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
-        crate::security::validation::validate_security_input(&project_id)?;
+        crate::security::validation::validate_security_input(&project_id)?
         
         let pool = get_pool()?;
         
@@ -341,6 +389,9 @@ pub async fn calculate_cost_estimate(
     output_tokens: i32,
 ) -> Result<CostEstimate> {
     async fn calculate(provider: String, model: String, input_tokens: i32, output_tokens: i32) -> Result<CostEstimate> {
+        // Rate limiting
+        rl_list("ai_cost", None)?;
+        
         // Input validation
         crate::security::validation::validate_security_input(&provider)?;
         crate::security::validation::validate_security_input(&model)?;
@@ -431,6 +482,14 @@ pub async fn export_ai_history(project_id: String) -> Result<String> {
     async fn export(project_id: String) -> Result<String> {
         // Rate limiting
         rl_list("ai_history_export", Some(&project_id))?;
+        
+        // Validate input
+        if project_id.trim().is_empty() {
+            return Err(crate::error::StoryWeaverError::ValidationError {
+                message: "Project ID cannot be empty".to_string(),
+            });
+        }
+        
         // Input validation
         crate::security::validation::validate_security_input(&project_id)?;
         

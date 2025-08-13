@@ -1,5 +1,6 @@
 use crate::database::backup::{BackupManager, BackupInfo};
 use crate::error::Result;
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, validate_request_body_size};
 use tauri::AppHandle;
 
 /// Create a backup of the database
@@ -8,6 +9,9 @@ pub async fn create_backup(
     app_handle: AppHandle,
     backup_name: Option<String>,
 ) -> Result<String> {
+    // Rate limiting
+    rl_create("backup", None)?;
+    
     // Input validation
     if let Some(ref name) = backup_name {
         crate::security::validation::validate_content_length(name, 255)?;
@@ -29,6 +33,9 @@ pub async fn restore_from_backup(
     app_handle: AppHandle,
     backup_filename: String,
 ) -> Result<()> {
+    // Rate limiting
+    rl_update("backup", None)?;
+    
     // Input validation
     crate::security::validation::validate_content_length(&backup_filename, 255)?;
     crate::security::validation::validate_security_input(&backup_filename)?;
@@ -44,12 +51,18 @@ pub async fn restore_from_backup(
 /// Get list of available backups
 #[tauri::command]
 pub async fn get_backups(app_handle: AppHandle) -> Result<Vec<BackupInfo>> {
+    // Rate limiting
+    rl_list("backup", None)?;
+    
     BackupManager::get_backups(&app_handle).await
 }
 
 /// Delete a backup
 #[tauri::command]
 pub async fn delete_backup(app_handle: AppHandle, backup_id: String) -> Result<()> {
+    // Rate limiting
+    rl_delete("backup", Some(&backup_id)).await?;
+    
     // Input validation
     crate::security::validation::validate_security_input(&backup_id)?;
     
@@ -64,11 +77,17 @@ pub async fn delete_backup(app_handle: AppHandle, backup_id: String) -> Result<(
 /// Create an automatic backup
 #[tauri::command]
 pub async fn create_auto_backup(app_handle: AppHandle) -> Result<()> {
+    // Rate limiting
+    rl_create("backup", None)?;
+    
     BackupManager::create_auto_backup(&app_handle).await
 }
 
 /// Clean up old auto backups
 #[tauri::command]
 pub async fn cleanup_old_backups(app_handle: AppHandle) -> Result<()> {
+    // Rate limiting
+    rl_delete("backup", None)?;
+    
     BackupManager::cleanup_old_backups(&app_handle).await
 }
