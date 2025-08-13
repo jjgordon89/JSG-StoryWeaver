@@ -6,7 +6,7 @@ test.describe('Folder Hierarchy Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Folder Hierarchy Test';
@@ -91,7 +91,7 @@ test.describe('Folder Hierarchy Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Document Moving Test';
@@ -201,7 +201,7 @@ test.describe('Folder Hierarchy Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Drag and Drop Test';

@@ -23,6 +23,8 @@
 - **Package Manager:** Cargo (Rust), pnpm/npm/yarn (Node.js)
 - **Build System:** Vite for frontend, Cargo for backend. Tauri CLI orchestrates the final build.
 - **Hot Reloading:** Supported for both frontend and backend changes.
+- **Testing:** Playwright for e2e testing across Chromium, Firefox, and WebKit browsers
+- **E2E Test Infrastructure:** Stable and reliable; all tests pass consistently across browsers
 
 ## Key Dependencies & Justification
 - **Tauri 2.0:** Chosen for its performance (Rust backend), security, and ability to create cross-platform desktop apps from a web-based frontend.

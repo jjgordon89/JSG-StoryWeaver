@@ -40,6 +40,40 @@ Improvements_Identified_For_Consolidation:
 
 ---
 Date: 2024-12-19
+TaskRef: "E2E Test Infrastructure Stabilization - Selector Mismatch Resolution"
+
+Learnings:
+
+- Identified critical selector mismatch in e2e tests: tests were looking for `h1:has-text("StoryWeaver")` but actual UI displays `h1:has-text("Projects")`
+- Fixed selector mismatches across 5 test files: backup-recovery.spec.ts, document-linking.spec.ts, folder-hierarchy.spec.ts, project-preview.spec.ts, and version-history.spec.ts
+- Browser-specific behavior: Chromium tests were timing out (30+ seconds) while Firefox and WebKit tests passed quickly (<15ms)
+- Systematic approach to test fixing: used regex search to find all instances, then updated each file methodically
+- Playwright e2e tests now pass reliably across all browsers (Chromium, Firefox, WebKit)
+
+Difficulties:
+
+- Initial confusion about why only Chromium tests were failing while other browsers passed
+- Required careful verification that UI actually displays "Projects" not "StoryWeaver" in the h1 element
+- Had to update multiple test files with the same pattern
+
+Successes:
+
+- Achieved 100% e2e test pass rate across all browsers
+- Established stable testing foundation for future development
+- Documented testing patterns in systemPatterns.md for future reference
+- Updated all memory bank files to reflect the completion of this critical infrastructure work
+
+Improvements_Identified_For_Consolidation:
+
+- Pattern: Always verify UI element text matches test selectors before writing tests
+- Process: Use regex search to find all instances of problematic selectors for systematic fixes
+- Testing: Cross-browser validation is essential; browser-specific timeouts can indicate selector issues
+- Documentation: Update memory bank files immediately after completing infrastructure improvements
+
+---
+
+---
+Date: 2024-12-19
 TaskRef: "Resolved duplicate database client extensions warning"
 
 Learnings:

@@ -195,8 +195,14 @@ impl TaskQueue {
         // Sort tasks by priority (higher priority first)
         let mut tasks_vec: Vec<_> = tasks.drain(..).collect();
         tasks_vec.sort_by(|a, b| {
-            let a_priority = a.try_lock().map(|t| t.priority).unwrap_or(TaskPriority::Normal);
-            let b_priority = b.try_lock().map(|t| t.priority).unwrap_or(TaskPriority::Normal);
+            let a_priority = a.try_lock()
+                .map(|t| t.priority)
+                .map_err(|e| tracing::warn!("Failed to lock task for priority comparison: {}", e))
+                .unwrap_or(TaskPriority::Normal);
+            let b_priority = b.try_lock()
+                .map(|t| t.priority)
+                .map_err(|e| tracing::warn!("Failed to lock task for priority comparison: {}", e))
+                .unwrap_or(TaskPriority::Normal);
             b_priority.cmp(&a_priority)
         });
 
@@ -232,7 +238,10 @@ impl TaskQueue {
     pub async fn complete_task(&self, task_id: &str, success: bool, error_message: Option<String>) -> Result<()> {
         let mut running_tasks = self.running_tasks.write().await;
         let task_index = running_tasks.iter().position(|t| {
-            t.try_lock().map(|task| task.id == task_id).unwrap_or(false)
+            t.try_lock()
+                .map(|task| task.id == task_id)
+                .map_err(|e| tracing::warn!("Failed to lock task for completion check: {}", e))
+                .unwrap_or(false)
         });
         
         if let Some(index) = task_index {
@@ -243,7 +252,8 @@ impl TaskQueue {
                 if success {
                     task_lock.mark_completed();
                 } else {
-                    task_lock.mark_failed(error_message.unwrap_or_else(|| "Unknown error".to_string()));
+                    let error_msg = error_message.unwrap_or_else(|| "Unknown error".to_string());
+                    task_lock.mark_failed(error_msg);
                 }
             }
             
@@ -266,7 +276,10 @@ impl TaskQueue {
         // Check queued tasks
         let mut tasks = self.tasks.write().await;
         let task_index = tasks.iter().position(|t| {
-            t.try_lock().map(|task| task.id == task_id).unwrap_or(false)
+            t.try_lock()
+                .map(|task| task.id == task_id)
+                .map_err(|e| tracing::warn!("Failed to lock task for cancellation check: {}", e))
+                .unwrap_or(false)
         });
         
         if let Some(index) = task_index {
@@ -288,7 +301,10 @@ impl TaskQueue {
         // Check running tasks
         let mut running_tasks = self.running_tasks.write().await;
         let task_index = running_tasks.iter().position(|t| {
-            t.try_lock().map(|task| task.id == task_id).unwrap_or(false)
+            t.try_lock()
+                .map(|task| task.id == task_id)
+                .map_err(|e| tracing::warn!("Failed to lock task for cancellation check: {}", e))
+                .unwrap_or(false)
         });
         
         if let Some(index) = task_index {

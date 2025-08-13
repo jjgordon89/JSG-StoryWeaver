@@ -6,7 +6,7 @@ test.describe('Document Linking Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Document Linking Test';
@@ -99,7 +99,7 @@ test.describe('Document Linking Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Delete Link Test';
@@ -171,7 +171,7 @@ test.describe('Document Linking Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Navigation Test';

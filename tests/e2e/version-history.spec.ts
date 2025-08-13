@@ -6,7 +6,7 @@ test.describe('Document Version History', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Version History Test';
@@ -102,7 +102,7 @@ test.describe('Document Version History', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Version Restore Test';
@@ -215,7 +215,7 @@ test.describe('Document Version History', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Version Deletion Test';

@@ -32,6 +32,14 @@ StoryWeaver uses a hybrid desktop application architecture powered by **Tauri 2.
   - There is a separate DB-backed style_examples subsystem (`src-tauri/src/commands/style_examples.rs`) with numeric IDs and different shapes. The UI currently standardizes on the AdvancedAIManager path to avoid ID/type mismatches. A future migration can unify on one subsystem.
 
 - **Generation Constraints Pipeline (Generate-from-style):**
-  - The Style Manager’s “Generate” action constructs a `ProseGenerationRequest` and calls `generate_with_prose_mode`.
+  - The Style Manager's "Generate" action constructs a `ProseGenerationRequest` and calls `generate_with_prose_mode`.
   - The request sets `style_examples` to an array of selected style example IDs. The backend (`AdvancedAIManager`) inlines matched examples into the enhanced AI context to constrain tone, sentence structure, and vocabulary.
   - Additional request fields (e.g., `ultra_creative`, `max_words`, `use_saliency_engine`) are sourced from store settings to keep behavior consistent across tools.
+
+## Testing Patterns
+- **E2E Testing with Playwright:**
+  - Cross-browser testing across Chromium, Firefox, and WebKit ensures compatibility
+  - Selector patterns use semantic text matching (e.g., `h1:has-text("Projects")`) for robust UI testing
+  - Test files follow naming convention: `*.spec.ts` in the `e2e/` directory
+  - All tests wait for UI elements to be visible before interaction to prevent flaky tests
+  - Consistent test structure: setup → action → assertion → cleanup

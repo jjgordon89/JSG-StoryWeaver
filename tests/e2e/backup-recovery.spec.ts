@@ -6,7 +6,7 @@ test.describe('Backup and Recovery System', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Backup Test Project';
@@ -79,7 +79,7 @@ test.describe('Backup and Recovery System', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Restore Test Project';
@@ -173,7 +173,7 @@ test.describe('Backup and Recovery System', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Backup Management Test';

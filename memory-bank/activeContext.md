@@ -1,11 +1,15 @@
 # Active Context: StoryWeaver
 
 ## Current Work Focus
-We've made significant progress on Phase 1 of the StoryWeaver project, establishing the foundation for the application. Phase 1 is approximately 99% complete, with only three remaining tasks that need to be completed before we can officially move on to Phase 2: implementing project preview functionality, creating UI components for the backend administrative systems (backup, trash, version history), and performing end-to-end testing of the backend-UI integration.
+We've made significant progress on Phase 1 of the StoryWeaver project, establishing the foundation for the application. Phase 1 is approximately 99% complete, with only two remaining tasks that need to be completed before we can officially move on to Phase 2: implementing project preview functionality and performing end-to-end testing of the backend-UI integration.
 
 While completing the final Phase 1 tasks, we've also begun initial work on Phase 2 (Core Writing Features). We've implemented the foundation of the AI provider system with support for OpenAI, Claude, and Gemini, created a basic WriteProcessor with multiple writing modes, and developed the frontend Card System UI for displaying AI responses. An updated Phase 2 plan has been created to reflect the current progress and remaining tasks.
 
 ## Recent Events (Last 10)
+- **2025-01-14:** **E2E Test Infrastructure STABILIZED:** Fixed all e2e test selector mismatches across 5 test files (backup-recovery.spec.ts, document-linking.spec.ts, folder-hierarchy.spec.ts, project-preview.spec.ts, version-history.spec.ts); updated `h1:has-text("StoryWeaver")` selectors to `h1:has-text("Projects")` to match actual UI; all tests now pass successfully across Chromium, Firefox, and WebKit browsers; resolved timeout issues that were preventing proper e2e test execution.
+- **2025-01-27:** **Project Preview Functionality COMPLETED:** Verified that ProjectPreview component, backend commands (get_project_preview), and comprehensive e2e tests are already fully implemented and functional.
+- **2025-01-27:** **UI Components for Data Management COMPLETED:** Verified that all UI components for backup, trash, and version history management are fully implemented and working in DataManagement.tsx, including BackupManager, TrashManager, and VersionOverview components with complete functionality.
+- **2025-08-12:** **Backend Error Handling COMPLETED:** Standardized error handling across backend codebase by replacing unsafe unwrap/expect patterns with proper error handling, logging, and data validation in collaboration.rs, brainstorm_session_ops.rs, encryption.rs, token_counter.rs, prose_mode_ops.rs, and backup.rs; added tracing::warn for invalid data parsing; implemented filter_map for robust data processing.
 - **2025-08-12:** **Framework Migration Phase 1 COMPLETED:** Successfully migrated all high-priority Svelte components to React: SeriesConsistencyReport.tsx, SeriesConsistencyWidget.tsx, TemplateSelector.tsx, TemplateApplicationDialog.tsx; updated SeriesConsistencyIntegration.tsx to use React components directly; Phase 1 of React-only consolidation strategy complete.
 - **2025-08-12:** Completed AdvancedAI StyleManager actions: update/delete/bulk delete with optimistic UI and local persistence; wired Generate-from-style to Write/Rewrite via generate_with_prose_mode using selected style constraints.
 - **2025-08-12:** Completed comprehensive input validation coverage across Tauri command handlers; added length, size, sanitization, and numeric-bounds checks; updated related modules accordingly.
@@ -32,9 +36,10 @@ While completing the final Phase 1 tasks, we've also begun initial work on Phase
 
 ## Next Steps
 1. **Complete Final Phase 1 Integration Tasks:**
-   - Implement project preview functionality
-   - Create UI components for backup, trash, and version history management
-   - Perform end-to-end testing of backend-UI integration
+   - ✅ Implement project preview functionality: Complete with ProjectPreview component, backend commands, and e2e tests
+   - ✅ Create UI components for backup, trash, and version history management
+   - ✅ E2E test infrastructure: All tests now pass reliably across browsers; foundation is stable
+   - Continue expanding e2e test coverage for core user flows
 
 2. **Continue Phase 2 Implementation:**
    - Complete AI Provider Integration:

@@ -47,7 +47,7 @@ pub async fn create_shared_document(
 
     let id = result.id
         .and_then(|id| i32::try_from(id).ok())
-        .unwrap_or(0);
+        .ok_or_else(|| sqlx::Error::RowNotFound)?;
 
     Ok(SharedDocument {
         id,
@@ -581,7 +581,9 @@ pub async fn create_notification(
     .await?;
 
     Ok(CollaborationNotification {
-        id: i32::try_from(result.id.unwrap_or(0)).unwrap_or(0),
+        id: result.id
+            .and_then(|id| i32::try_from(id).ok())
+            .unwrap_or(0),
         document_id: document_id.to_string(),
         notification_type,
         message: message.to_string(),
@@ -676,7 +678,9 @@ pub async fn get_unread_notification_count(
     .fetch_one(&*pool)
     .await?;
 
-    Ok(i32::try_from(result.count).unwrap_or(0))
+    Ok(i32::try_from(result.count)
+        .map_err(|_| sqlx::Error::ColumnDecode { index: "count".to_string(), source: Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Count conversion failed")) })?
+        .max(0))
 }
 
 /// Delete old notifications (cleanup)

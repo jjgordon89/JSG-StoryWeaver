@@ -73,8 +73,11 @@ impl super::BrainstormSessionOps {
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm session: {}", e)))?;
 
         Ok(row.map(|r| BrainstormSession {
-            id: r.id.map(|id| id.parse().unwrap_or(0)),
-            project_id: r.project_id.parse().unwrap_or(0),
+            id: r.id.and_then(|id| id.parse().ok()),
+            project_id: r.project_id.parse().map_err(|e| {
+                tracing::warn!("Failed to parse project_id: {}", e);
+                StoryWeaverError::database(format!("Invalid project_id format: {}", e))
+            })?,
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -106,9 +109,17 @@ impl super::BrainstormSessionOps {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by project: {}", e)))?;
 
-        Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: r.id.map(|id| id.parse().unwrap_or(0)),
-            project_id: r.project_id.parse().unwrap_or(0),
+        Ok(rows.into_iter().filter_map(|r| {
+            let project_id = match r.project_id.parse::<i32>() {
+                Ok(id) => id,
+                Err(e) => {
+                    tracing::warn!("Skipping row with invalid project_id: {}", e);
+                    return None;
+                }
+            };
+            Some(BrainstormSession {
+                id: r.id.and_then(|id| id.parse().ok()),
+                project_id,
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -122,6 +133,7 @@ impl super::BrainstormSessionOps {
             status: r.status,
             created_at: r.created_at.map(|dt| dt.to_string()),
             updated_at: r.updated_at.map(|dt| dt.to_string()),
+        })
         }).collect())
     }
 
@@ -140,9 +152,17 @@ impl super::BrainstormSessionOps {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by type: {}", e)))?;
 
-        Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: r.id.map(|id| id.parse().unwrap_or(0)),
-            project_id: r.project_id.parse().unwrap_or(0),
+        Ok(rows.into_iter().filter_map(|r| {
+            let project_id = match r.project_id.parse::<i32>() {
+                Ok(id) => id,
+                Err(e) => {
+                    tracing::warn!("Skipping row with invalid project_id: {}", e);
+                    return None;
+                }
+            };
+            Some(BrainstormSession {
+                id: r.id.and_then(|id| id.parse().ok()),
+                project_id,
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -156,6 +176,7 @@ impl super::BrainstormSessionOps {
             status: r.status,
             created_at: r.created_at.map(|dt| dt.to_string()),
             updated_at: r.updated_at.map(|dt| dt.to_string()),
+        })
         }).collect())
     }
 
@@ -174,9 +195,17 @@ impl super::BrainstormSessionOps {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get brainstorm sessions by status: {}", e)))?;
 
-        Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: r.id.map(|id| id.parse().unwrap_or(0)),
-            project_id: r.project_id.parse().unwrap_or(0),
+        Ok(rows.into_iter().filter_map(|r| {
+            let project_id = match r.project_id.parse::<i32>() {
+                Ok(id) => id,
+                Err(e) => {
+                    tracing::warn!("Skipping row with invalid project_id: {}", e);
+                    return None;
+                }
+            };
+            Some(BrainstormSession {
+                id: r.id.and_then(|id| id.parse().ok()),
+                project_id,
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -190,6 +219,7 @@ impl super::BrainstormSessionOps {
             status: r.status,
             created_at: r.created_at.map(|dt| dt.to_string()),
             updated_at: r.updated_at.map(|dt| dt.to_string()),
+        })
         }).collect())
     }
 
@@ -207,9 +237,17 @@ impl super::BrainstormSessionOps {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to list brainstorm sessions: {}", e)))?;
 
-        Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: r.id.map(|id| id.parse().unwrap_or(0)),
-            project_id: r.project_id.parse().unwrap_or(0),
+        Ok(rows.into_iter().filter_map(|r| {
+            let project_id = match r.project_id.parse::<i32>() {
+                Ok(id) => id,
+                Err(e) => {
+                    tracing::warn!("Skipping row with invalid project_id: {}", e);
+                    return None;
+                }
+            };
+            Some(BrainstormSession {
+                id: r.id.and_then(|id| id.parse().ok()),
+                project_id,
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -223,6 +261,7 @@ impl super::BrainstormSessionOps {
             status: r.status,
             created_at: r.created_at.map(|dt| dt.to_string()),
             updated_at: r.updated_at.map(|dt| dt.to_string()),
+        })
         }).collect())
     }
 
@@ -337,9 +376,17 @@ impl super::BrainstormSessionOps {
         .await
         .map_err(|e| StoryWeaverError::database(format!("Failed to get recent brainstorm sessions: {}", e)))?;
 
-        Ok(rows.into_iter().map(|r| BrainstormSession {
-            id: r.id.map(|id| id.parse().unwrap_or(0)),
-            project_id: r.project_id.parse().unwrap_or(0),
+        Ok(rows.into_iter().filter_map(|r| {
+            let project_id = match r.project_id.parse::<i32>() {
+                Ok(id) => id,
+                Err(e) => {
+                    tracing::warn!("Skipping row with invalid project_id: {}", e);
+                    return None;
+                }
+            };
+            Some(BrainstormSession {
+                id: r.id.and_then(|id| id.parse().ok()),
+                project_id,
             session_name: r.session_name,
             session_type: r.session_type,
             initial_prompt: r.initial_prompt,
@@ -353,6 +400,7 @@ impl super::BrainstormSessionOps {
             status: r.status,
             created_at: r.created_at.map(|dt| dt.to_string()),
             updated_at: r.updated_at.map(|dt| dt.to_string()),
+        })
         }).collect())
     }
 

@@ -6,7 +6,7 @@ test.describe('Project Preview Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Test Preview Project';
@@ -90,7 +90,7 @@ test.describe('Project Preview Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Test Open Project';
@@ -138,7 +138,7 @@ test.describe('Project Preview Feature', () => {
     await page.goto('/');
     
     // Wait for the app to load
-    await page.waitForSelector('h1:has-text("StoryWeaver")');
+    await page.waitForSelector('h1:has-text("Projects")');
     
     // Create a test project
     const projectName = 'Test Statistics Project';
