@@ -222,7 +222,7 @@ Learnings:
 - Key fixes included: replacing 'title' props with 'aria-label' on Button components, fixing Textarea onChange handlers to extract e.target.value from event objects, correcting TextArea to Textarea component name, adding proper TypeScript types for event parameters, removing unused handleGenreSelect function, and importing createOrUpdateStoryBible from useStoryBible hook
 - Build validation confirmed zero remaining errors in BraindumpEditor.tsx
 - Pattern: Button components in this codebase use 'aria-label' instead of 'title' prop for accessibility
-- Pattern: Textarea onChange handlers expect React.ChangeEvent<HTMLTextAreaElement> and require extracting e.target.value
+- Pattern: Textarea onChange handlers expect React.ChangeEvent&lt;HTMLTextAreaElement&gt; and require extracting e.target.value
 - Pattern: useStoryBible hook provides both generateSynopsis and createOrUpdateStoryBible functions that need explicit destructuring
 
 Difficulties:
@@ -251,7 +251,7 @@ Learnings:
 
 - Successfully resolved all TypeScript errors in HierarchicalWorldbuilding.tsx by systematically addressing each issue
 - Button component in this project only supports variants: 'default', 'primary', 'secondary', 'ghost', 'link', 'outline' - 'destructive' is not available
-- Event handlers in React components need proper typing, especially with optional parameters: `(e?: React.MouseEvent<HTMLButtonElement>) -> void`
+- Event handlers in React components need proper typing, especially with optional parameters: `(e?: React.MouseEvent&lt;HTMLButtonElement&gt;) -&gt; void`
 - Optional chaining (`e?.stopPropagation()`) is essential when event parameters are optional
 - Unused imports and variables must be removed or commented out to pass TypeScript strict mode
 - Tree icon from lucide-react was not available, replaced with Folder icon for hierarchical view
@@ -295,9 +295,9 @@ TaskRef: "DateTime Conversion Fixes in Collaboration Module"
 
 Learnings:
 
-- **sqlx::query_as! Limitation**: The `sqlx::query_as!` macro cannot automatically convert `NaiveDateTime` from SQLite to `DateTime<Utc>` in Rust structs
+- **sqlx::query_as! Limitation**: The `sqlx::query_as!` macro cannot automatically convert `NaiveDateTime` from SQLite to `DateTime&lt;Utc&gt;` in Rust structs
 - **Manual Mapping Solution**: Switching to `sqlx::query!` with manual struct mapping allows for proper type conversions
-- **DateTime Conversion Pattern**: Use `.and_utc()` method to convert `NaiveDateTime` to `DateTime<Utc>`
+- **DateTime Conversion Pattern**: Use `.and_utc()` method to convert `NaiveDateTime` to `DateTime&lt;Utc&gt;`
 - **Option Handling**: Database fields that can be NULL require careful Option handling with appropriate defaults
 - **Error Reduction Impact**: Systematic type fixes can significantly reduce compilation errors (130+ to 126)
 - **StoryWeaver Project Pattern**: Collaboration module uses complex Comment struct with multiple DateTime fields requiring careful conversion
@@ -319,7 +319,7 @@ Successes:
 
 Improvements_Identified_For_Consolidation:
 
-- **DateTime Conversion Pattern**: Standard approach for converting SQLite NaiveDateTime to Rust DateTime<Utc>
+- **DateTime Conversion Pattern**: Standard approach for converting SQLite NaiveDateTime to Rust DateTime&lt;Utc&gt;
 - **Option Handling Strategy**: Consistent defaults for different field types (strings, booleans, integers)
 - **Manual Struct Mapping**: When sqlx::query_as! fails, use sqlx::query! with manual mapping
 - **Error Reduction Methodology**: Systematic approach to resolving type mismatch compilation errors
@@ -335,11 +335,11 @@ TaskRef: "Identify and Document Root Causes/Fixes for Rust Codebase Errors"
 Learnings:
 
 - Multiple root causes contribute to ongoing errors: inconsistent Result alias usage, missing error factory functions, struct variant misuse, incorrect command return types, DB type mismatches, improper Option handling, incomplete From trait implementations.
-- The codebase uses a single-argument Result<T> alias for StoryWeaverError, but much code expects Result<T, E>, causing broad breakages.
+- The codebase uses a single-argument Result&lt;T&gt; alias for StoryWeaverError, but much code expects Result&lt;T, E&gt;, causing broad breakages.
 - Error construction patterns are inconsistent, leading to propagation and handler type mismatches.
 - Database model field and query mismatches are a recurring issue.
 - Some errors arise from .await on non-async code or missing async functions.
-- Option<T> vs. T type divergences, especially in DB and model logic, result in subtle runtime or compile errors.
+- Option&lt;T&gt; vs. T type divergences, especially in DB and model logic, result in subtle runtime or compile errors.
 
 Difficulties:
 
@@ -355,8 +355,8 @@ Successes:
 Improvements_Identified_For_Consolidation:
 
 - Standardize error construction with factory functions for every reused variant—use as default pattern.
-- Consistently use Result<T> as defined by project (prefer over std::result::Result<T, E>) for internal error type.
-- Make CommandResponse<T> the only return pattern for Tauri command handlers, converting from internal Result<T> logic.
+- Consistently use Result&lt;T&gt; as defined by project (prefer over std::result::Result&lt;T, E&gt;) for internal error type.
+- Make CommandResponse&lt;T&gt; the only return pattern for Tauri command handlers, converting from internal Result&lt;T&gt; logic.
 - All struct field initializations and Option handling should use explicit .map(), .unwrap_or(), or direct assignment for type clarity.
 
 ---
@@ -365,7 +365,7 @@ TaskRef: "Security Hardening Phase 2 – Rate limiting, request size limits, and
 
 Learnings:
 
-- Implemented a lightweight, in-process rate limiter using DashMap + VecDeque with a global Lazy<RateLimiter>, exposing:
+- Implemented a lightweight, in-process rate limiter using DashMap + VecDeque with a global Lazy&lt;RateLimiter&gt;, exposing:
   - `check_rate_limit(key, max, per)` and `check_rate_limit_default(key)` (60 req/min convention)
   - Request size helpers: `validate_request_body_size_default` (1 MB) and `validate_request_body_size(custom)`
 - Integrated rate limiting and request size validation into representative endpoints:
@@ -423,7 +423,7 @@ Successes:
 Improvements_Identified_For_Consolidation:
 
 - Pattern: When uncertain about shell, prefer PowerShell-safe commands on Windows or explicitly invoke `powershell -Command` for directory/file operations.
-- For Python MCP servers, prefer `"python", args: ["-m", "<module>"]` in config to sidestep PATH issues of script entrypoints.
+- For Python MCP servers, prefer `"python", args: ["-m", "&lt;module&gt;"]` in config to sidestep PATH issues of script entrypoints.
 - Maintain conservative defaults for new servers: `disabled=false`, `autoApprove=[]`, and validate by calling at least one tool post-install.
 
 ---
@@ -498,3 +498,35 @@ Improvements_Identified_For_Consolidation:
 - Add pause/cancel controls to AIWritingPanel or delegate to AdvancedAI overlay; wire stop/cancel to a backend abort command to prevent orphaned tasks.
 - Replace heuristic estimator with a centralized pricing table when provider/model pricing is stabilized; propagate to backend for authoritative accounting.
 - Add unit tests for aiCost.ts and AIWritingPanel cost badge rendering across tools and settings variations.
+
+---
+Date: 2025-08-14
+TaskRef: "Milestone A / Task A1 – Fix Compilation Errors"
+
+Learnings:
+- Vec&lt;&amp;T&gt; to Vec&lt;T&gt; conversion: when a function returns `Vec&lt;&amp;ProseMode&gt;`, collect owned values via `.into_iter().cloned().collect()`.
+- Option&lt;&amp;T&gt; to Option&lt;T&gt; conversion: use `.iter().find(...).cloned()` or for a `Vec&lt;&amp;T&gt;` already in hand, `.into_iter().find(...).cloned()`.
+- Error factory parameter types: `StoryWeaverError::ai_request` expects `&str` for the message; pass `&error_text` rather than owning `String`.
+- Async misuse: removed `.await` on synchronous rate-limit helpers (`rl_create`, `rl_update`, `rl_delete`, `rl_list`) across command modules to resolve E0277.
+- Build verification: `cargo check` finishes successfully with 0 errors; warnings remain (147), to be addressed under later tasks (B1/B2).
+
+Difficulties:
+- Iterator item types can implicitly become `&&T` if chaining `.iter()` over a `Vec&lt;&amp;T&gt;` and then calling `.cloned()` on the wrong level; switching to `.into_iter().cloned()` was necessary in one case.
+- Synchronous rate-limit helpers were awaited in multiple command files, requiring careful, targeted replacements to avoid new regressions.
+
+Successes:
+- Restored backend to a no-error state: `cargo check` completes successfully.
+- Updated Action Plan status to reflect A1 completion and current warning count.
+
+Files Modified:
+- `src-tauri/src/commands/advanced_ai_commands.rs`: Fixed prose mode return types using `.into_iter().cloned().collect()` and `.into_iter().find(...).cloned()`.
+- `src-tauri/src/commands/backup_commands.rs`: Removed `.await` from synchronous `rl_delete`.
+- `src-tauri/src/commands/series_commands.rs`: Removed `.await` from synchronous `rl_*` uses.
+- `src-tauri/src/commands/ai_writing.rs`: Removed `.await` from synchronous `rl_*` uses; aligned calls accordingly.
+- `src-tauri/src/ai/openai.rs`: Verified existing uses already pass `&error_text` to `ai_request` (no change required).
+
+Improvements_Identified_For_Consolidation:
+- Pattern cheat-sheet for Rust collections and options:
+  - `Vec&lt;&amp;T&gt;` → `Vec&lt;T&gt;`: `.into_iter().cloned().collect()`
+  - `Option&lt;&amp;T&gt;` → `Option&lt;T&gt;`: `.cloned()` on the `Option&lt;&amp;T&gt;`
+- Add a lint or CI check for `.await` on functions returning non-future `Result&lt;(), E&gt;` signatures to catch accidental awaits early.

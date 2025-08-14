@@ -67,7 +67,7 @@ pub async fn create_series(request: CreateSeriesRequest) -> CommandResponse<Seri
 pub async fn get_series(id: String) -> CommandResponse<Option<Series>> {
     async fn get(id: String) -> Result<Option<Series>> {
         // Rate limiting
-        rl_list("series", Some(&id)).await?;
+        rl_list("series", Some(&id))?;
         
         // Input validation
         if id.trim().is_empty() {
@@ -116,7 +116,7 @@ pub async fn get_series_with_counts() -> CommandResponse<Vec<SeriesWithCount>> {
 pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> {
     async fn update(request: UpdateSeriesRequest) -> Result<()> {
         // Rate limiting
-        rl_update("series", Some(&request.id)).await?;
+        rl_update("series", Some(&request.id))?;
         
         // Input validation
         if request.id.trim().is_empty() {
@@ -172,7 +172,7 @@ pub async fn update_series(request: UpdateSeriesRequest) -> CommandResponse<()> 
 pub async fn delete_series(id: String) -> CommandResponse<()> {
     async fn delete(id: String) -> Result<()> {
         // Rate limiting
-        rl_delete("series", Some(&id)).await?;
+        rl_delete("series", Some(&id))?;
         // Input validation
         if id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -192,7 +192,7 @@ pub async fn delete_series(id: String) -> CommandResponse<()> {
 pub async fn get_series_projects(series_id: String) -> CommandResponse<Vec<Project>> {
     async fn get_projects(series_id: String) -> Result<Vec<Project>> {
         // Rate limiting
-        rl_list("series_projects", Some(&series_id)).await?;
+        rl_list("series_projects", Some(&series_id))?;
         // Input validation
         if series_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -212,7 +212,7 @@ pub async fn get_series_projects(series_id: String) -> CommandResponse<Vec<Proje
 pub async fn add_project_to_series(series_id: String, project_id: String) -> CommandResponse<()> {
     async fn add_project(series_id: String, project_id: String) -> Result<()> {
         // Rate limiting
-        rl_update("series_project", Some(&series_id)).await?;
+        rl_update("series_project", Some(&series_id))?;
         // Input validation
         if series_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Series ID cannot be empty"));
@@ -237,7 +237,7 @@ pub async fn add_project_to_series(series_id: String, project_id: String) -> Com
 pub async fn remove_project_from_series(project_id: String) -> CommandResponse<()> {
     async fn remove_project(project_id: String) -> Result<()> {
         // Rate limiting
-        rl_update("series_project", Some(&project_id)).await?;
+        rl_update("series_project", Some(&project_id))?;
         // Input validation
         if project_id.trim().is_empty() {
             return Err(StoryWeaverError::validation("Project ID cannot be empty"));

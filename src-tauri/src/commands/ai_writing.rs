@@ -275,7 +275,7 @@ pub async fn auto_write(
     cursor_position: usize,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
-    rl_create("ai_write", Some(&document_id.to_string())).await?;
+    rl_create("ai_write", Some(&document_id.to_string()))?;
     
     // Input validation
     if document_id <= 0 {
@@ -298,7 +298,7 @@ pub async fn guided_write(
     user_prompt: String,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
-    rl_create("ai_write", Some(&document_id.to_string())).await?;
+    rl_create("ai_write", Some(&document_id.to_string()))?;
     
     // Input validation
     if document_id <= 0 {
@@ -333,7 +333,7 @@ pub async fn auto_write_stream(
     cursor_position: usize,
     settings: WriteSettings,
 ) -> Result<StreamStartResponse> {
-    rl_create("ai_write_stream", Some(&document_id.to_string())).await?;
+    rl_create("ai_write_stream", Some(&document_id.to_string()))?;
     
     // Input validation
     if document_id <= 0 {
@@ -402,7 +402,7 @@ pub async fn guided_write_stream(
     user_prompt: String,
     settings: WriteSettings,
 ) -> Result<StreamStartResponse> {
-    rl_create("ai_write_stream", Some(&document_id.to_string())).await?;
+    rl_create("ai_write_stream", Some(&document_id.to_string()))?;
     
     // Input validation
     if document_id <= 0 {
@@ -757,7 +757,7 @@ pub async fn tone_shift_write(
     tone: String,
     settings: WriteSettings,
 ) -> Result<WriteResult> {
-    rl_create("ai_tone_shift", Some(&document_id.to_string())).await?;
+    rl_create("ai_tone_shift", Some(&document_id.to_string()))?;
     
     // Input validation
     if document_id <= 0 {

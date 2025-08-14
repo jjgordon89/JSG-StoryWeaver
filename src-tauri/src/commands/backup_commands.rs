@@ -61,7 +61,7 @@ pub async fn get_backups(app_handle: AppHandle) -> Result<Vec<BackupInfo>> {
 #[tauri::command]
 pub async fn delete_backup(app_handle: AppHandle, backup_id: String) -> Result<()> {
     // Rate limiting
-    rl_delete("backup", Some(&backup_id)).await?;
+    rl_delete("backup", Some(&backup_id))?;
     
     // Input validation
     crate::security::validation::validate_security_input(&backup_id)?;
