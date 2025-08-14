@@ -3,7 +3,6 @@
 
 use crate::error::{Result, StoryWeaverError};
 use sqlx::{sqlite::SqlitePool, Pool, Sqlite};
-use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
@@ -31,7 +30,6 @@ pub async fn init(app_handle: &AppHandle) -> Result<()> {
         .map_err(|e| StoryWeaverError::database(format!("Failed to create app data dir: {}", e)))?;
     
     let db_path = app_data_dir.join("storyweaver.db");
-    let database_url = format!("sqlite:{}", db_path.display());
     
     // Create connection pool with optimized settings
     let pool = SqlitePool::connect_with(

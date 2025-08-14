@@ -1,8 +1,8 @@
 use crate::error::Result;
 use crate::commands::CommandResponse;
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
+use crate::security::rate_limit::{rl_create};
 use serde::{Deserialize, Serialize};
-use tauri::{Emitter, Manager};
+use tauri::Emitter;
 
 /// Event types for state synchronization
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -42,9 +42,6 @@ pub async fn emit_sync_event(
     async fn emit(window: tauri::Window, request: EmitSyncEventRequest) -> Result<()> {
         // Rate limiting
         rl_create("sync_event", Some(&request.event_type))?;
-        // Get the app handle to emit events to all windows
-        let app_handle = window.app_handle();
-        
         // Emit the event to the specific window
         window
             .emit(&request.event_type, request.payload)

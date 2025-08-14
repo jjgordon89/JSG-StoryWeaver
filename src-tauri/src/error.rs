@@ -780,19 +780,19 @@ impl From<anyhow::Error> for StoryWeaverError {
         
         // Check for common error types that might be wrapped in anyhow
         if let Some(sqlx_err) = err.downcast_ref::<sqlx::Error>() {
-            return sqlx_err.clone().into();
+            return sqlx_err.into();
         }
         
         if let Some(io_err) = err.downcast_ref::<std::io::Error>() {
-            return io_err.clone().into();
+            return io_err.into();
         }
         
         if let Some(json_err) = err.downcast_ref::<serde_json::Error>() {
-            return json_err.clone().into();
+            return json_err.into();
         }
         
         if let Some(reqwest_err) = err.downcast_ref::<reqwest::Error>() {
-            return reqwest_err.clone().into();
+            return reqwest_err.into();
         }
         
         // Default to internal error

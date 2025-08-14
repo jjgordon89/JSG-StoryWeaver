@@ -1,0 +1,355 @@
+.canvas-export-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.canvas-export-dialog {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 700px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+}
+
+.export-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 12px 12px 0 0;
+}
+
+.export-dialog-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.export-dialog-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.format-selection h4,
+.canvas-info h4,
+.export-result h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.75rem;
+}
+
+.format-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-secondary);
+}
+
+.format-option:hover {
+  border-color: var(--accent-color);
+  background: var(--bg-hover);
+}
+
+.format-option.selected {
+  border-color: var(--accent-color);
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.format-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.format-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.format-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.format-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.format-radio {
+  flex-shrink: 0;
+}
+
+.format-radio input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--accent-color);
+}
+
+.export-result {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.result-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.result-item {
+  color: var(--text-primary);
+}
+
+.result-item strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.success-message {
+  background: var(--success-light);
+  color: var(--success-text);
+  padding: 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid var(--success-border);
+}
+
+.canvas-info {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.info-item {
+  color: var(--text-primary);
+}
+
+.info-item strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.export-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 0 0 12px 12px;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.export-btn {
+  min-width: 140px;
+  justify-content: center;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .canvas-export-dialog {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #404040;
+    --bg-hover: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --border-color: #404040;
+    --border-hover: #555555;
+    --accent-color: #0ea5e9;
+    --accent-hover: #0284c7;
+    --accent-bg: rgba(14, 165, 233, 0.1);
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --success-border: rgba(34, 197, 94, 0.3);
+    --success-light: rgba(34, 197, 94, 0.15);
+    --success-text: #22c55e;
+  }
+}
+
+/* Light mode adjustments */
+@media (prefers-color-scheme: light) {
+  .canvas-export-dialog {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-hover: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --border-hover: #cbd5e1;
+    --accent-color: #0ea5e9;
+    --accent-hover: #0284c7;
+    --accent-bg: rgba(14, 165, 233, 0.05);
+    --success-bg: rgba(34, 197, 94, 0.05);
+    --success-border: rgba(34, 197, 94, 0.2);
+    --success-light: rgba(34, 197, 94, 0.1);
+    --success-text: #16a34a;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .canvas-export-dialog {
+    width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .format-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .export-dialog-content {
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+  
+  .export-dialog-header,
+  .export-dialog-actions {
+    padding: 1rem;
+  }
+  
+  .info-grid,
+  .result-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .export-dialog-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Animation for dialog appearance */
+@keyframes dialogSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.canvas-export-dialog {
+  animation: dialogSlideIn 0.2s ease-out;
+}
+
+/* Loading spinner integration */
+.export-btn .loading-spinner {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Focus styles for accessibility */
+.format-option:focus-within,
+.btn:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.close-btn:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}

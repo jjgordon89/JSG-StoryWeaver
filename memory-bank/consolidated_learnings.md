@@ -1,90 +1,29 @@
-# Consolidated Learnings: StoryWeaver
+## 2025-08-14 — Validators & Command Hardening
 
-## Key Insights and Patterns
+### Pattern: Centralize validation for command boundaries
+- Move repeated length/byte/security checks into a small helpers module (`src-tauri/src/security/validators.rs`) to ensure consistent enforcement and error messages.
+- Helpers implemented:
+  - `validate_id(field_name, value, max_len)` — trims, checks char/byte limits, security scan.
+  - `validate_non_empty_str(field_name, value, max_len)` — enforces non-empty + length/security.
+  - `validate_optional_str(field_name, &Option<String>, max_len, allow_empty)` — optional string validation.
+  - `validate_body_limits(field_name, body, max_bytes, max_chars)` — enforces both byte and char limits and security checks.
+  - `validate_order_index_default(order_index)` and rating shortcuts for common numeric ranges.
+- Rationale: Prevents mismatches between byte and char limits, reduces copy/paste errors, and produces consistent error messages.
 
-### Action Plan Audit Pattern (2025-01-14)
-**Discovery:** Action plans can become outdated as development progresses. Two items marked as incomplete in CODEBASE_ACTION_PLAN.md were actually fully implemented:
-- AI card filter implementations: Complete in `AIResponseCard::get_filtered` with comprehensive filtering
-- AIResponseCache time-based clearing: Complete with TTL, background sweeper, and manual cleanup
+### Applied Changes (high-impact)
+- Replaced ad-hoc validation across core command handlers:
+  - `src-tauri/src/commands/projects.rs` — now uses `validate_id`, `validate_optional_str`, consolidating project-level checks.
+  - `src-tauri/src/commands/documents.rs` — now uses `validate_body_limits`, `validate_id`, `validate_optional_id`, `validate_order_index_default`.
+  - `src-tauri/src/commands/ai_writing.rs` — now uses `validate_non_empty_str`, `validate_body_limits`, `validate_optional_str` for AI inputs.
+- Result: Standardized validation on high-risk surfaces (project/document creation, AI inputs). Reduced chance of missing byte-length checks or inconsistent messages.
 
-**Learning:** Always verify current implementation status before starting work on action plan items. Code analysis should precede implementation to avoid duplicate work.
+### Best Practices
+- Prefer `validate_body_limits` when content may contain multi-byte characters or when both byte and char length matter (uploads, large text fields).
+- Use `validate_non_empty_str` for short text fields that must not be blank (titles, prompts).
+- Use `validate_optional_str` for optional inputs where empty string may be allowed or disallowed explicitly.
+- For identifier-like fields, use `validate_id` and `validate_optional_id` with conservative max lengths (e.g., 64 or 255 depending on the domain).
 
-**Pattern:** When auditing action plans:
-1. Search for existing implementations in the codebase
-2. Examine test coverage to understand feature completeness
-3. Update action plan documentation with current status
-4. Focus efforts on genuinely incomplete items
-
----
-
-# Rust Error Handling and API Patterns (2025-08-11)
-
-### Standard Patterns for StoryWeaver Rust/Tauri Backend
-
----
-
-### 1. Result Aliasing
-
-- **Always use the project alias `Result<T>`** (defined as `std::result::Result<T, StoryWeaverError>`) instead of the standard `Result<T, E>` style when StoryWeaver errors are expected.
-- Never write `Result<T, StoryWeaverError>` — use `Result<T>`.
-
----
-
-### 2. Error Factory Functions
-
-- **All frequently-used error variants should have a factory/helper function**, e.g. `not_found`, to create error objects with proper fields.  
-- Internally, use:  
-
-  ```rust
-  Err(StoryWeaverError::not_found("ResourceType", id))
-  ```
-
-  **Do not** create error variants directly with struct literal syntax unless rare/specialized.
-
----
-
-### 3. Tauri Command Return Convention
-
-- **Tauri command async handlers must always return `CommandResponse<T>`** (project pattern).
-- Convert from internal `Result<T>` using `.into()`.
-- Never return plain values or raw `Result<T, _>` types from Tauri-exposed commands.
-
----
-
-### 4. Model and Type Conversions
-
-- For all struct initializations and DB field mapping, **be explicit with Option handling**  
-  - Use `.map()`, `.unwrap_or()`, or direct assignment.
-  - Types must always match between DB/query return and model field/struct signature.
-
----
-
-### 5. Use of `?` and `From` Traits
-
-- **Implement `From` trait for all third-party error types that flow through the system** (e.g., `sqlx::Error`, `anyhow::Error`, `std::io::Error`, etc.) to support clean propagation with `?` operator.
-- Avoid direct `map_err()` calls for common conversions unless context string is essential.
-
----
-
-### 6. Struct Consistency
-
-- All data models and command argument/result types must align field-for-field with API and DB schema.
-- Remove obsolete fields and add new required ones as project grows.
-
----
-
-### 7. Command Handler Logic
-
-- Separate inner business logic as private async functions returning `Result<T>`.
-- Command-exposed functions should stay lean, only responsible for conversion and response wrapping.
-
----
-
-### 8. Test Coverage
-
-- Add and maintain unit tests for error propagation and conversion.
-- Ensure integration tests for key DB operation commands.
-
----
-
-_Always refactor legacy code to these standard patterns. Use these conventions for all future code reviews and remediation cycles._
+### Next consolidation steps
+- Expand validators use to remaining command handlers (templates, collaboration, plugin, story_bible, canvas).
+- Add unit tests for validators covering non-ASCII multibyte inputs and edge byte-length cases.
+- Add CI gate enforcing use of `validate_*` helpers for exported Tauri commands that accept user-provided strings.

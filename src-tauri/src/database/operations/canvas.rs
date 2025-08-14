@@ -5,9 +5,8 @@ use crate::database::models::canvas::{
     OutlineTemplate, OutlineTemplateType,
 };
 use crate::database::models::canvas::{CanvasElementType, CanvasExportResult, ExportFormat};
-use chrono::{DateTime, NaiveDateTime, Utc};
-use serde_json::Value;
-use sqlx::{FromRow, Row, SqlitePool};
+use chrono::{DateTime, Utc};
+use sqlx::SqlitePool;
 use uuid::Uuid;
 
 /// Create a new canvas

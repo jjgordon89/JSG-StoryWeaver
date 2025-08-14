@@ -30,13 +30,7 @@
   },
   "plugins": {
     "fs": {
-      "scope": ["$APPDATA/**", "$APPDATA/StoryWeaver/**", "$DOCUMENT/**"]
-    },
-    "dialog": {},
-    "notification": {},
-    "window": {},
-    "shell": {
-      "open": true
+      "requireLiteralLeadingDot": false
     }
   },
   "bundle": {

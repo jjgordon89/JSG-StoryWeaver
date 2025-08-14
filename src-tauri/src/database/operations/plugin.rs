@@ -5,7 +5,7 @@ use crate::database::models::plugin::{
     PluginExecutionResult, PluginMarketplaceEntry, PluginRating, PluginSearchResult,
     PluginSortOrder, PluginTemplate, PluginVisibility,
 };
-use chrono::{NaiveDateTime, Utc};
+use chrono::Utc;
 use serde_json::Value;
 use sqlx::{FromRow, Row, SqlitePool};
 use uuid::Uuid;
@@ -237,11 +237,11 @@ pub async fn get_plugin_execution_history(
         (Some(pid), Some(uid)) => {
             sqlx::query_as(
                 r#"
-                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
-                       credits_used, execution_time_ms, success, error_message, created_at
+                SELECT id, plugin_id, user_identifier, input_variables as execution_request, output_result as execution_result,
+                       0 as credits_used, execution_time_ms, success, error_message, executed_at as created_at
                 FROM plugin_execution_history
                 WHERE plugin_id = ? AND user_identifier = ?
-                ORDER BY created_at DESC
+                ORDER BY executed_at DESC
                 LIMIT ? OFFSET ?
                 "#,
             )
@@ -255,11 +255,11 @@ pub async fn get_plugin_execution_history(
         (Some(pid), None) => {
             sqlx::query_as(
                 r#"
-                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
-                       credits_used, execution_time_ms, success, error_message, created_at
+                SELECT id, plugin_id, user_identifier, input_variables as execution_request, output_result as execution_result,
+                       0 as credits_used, execution_time_ms, success, error_message, executed_at as created_at
                 FROM plugin_execution_history
                 WHERE plugin_id = ?
-                ORDER BY created_at DESC
+                ORDER BY executed_at DESC
                 LIMIT ? OFFSET ?
                 "#,
             )
@@ -272,11 +272,11 @@ pub async fn get_plugin_execution_history(
         (None, Some(uid)) => {
             sqlx::query_as(
                 r#"
-                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
-                       credits_used, execution_time_ms, success, error_message, created_at
+                SELECT id, plugin_id, user_identifier, input_variables as execution_request, output_result as execution_result,
+                       0 as credits_used, execution_time_ms, success, error_message, executed_at as created_at
                 FROM plugin_execution_history
                 WHERE user_identifier = ?
-                ORDER BY created_at DESC
+                ORDER BY executed_at DESC
                 LIMIT ? OFFSET ?
                 "#,
             )
@@ -289,10 +289,10 @@ pub async fn get_plugin_execution_history(
         (None, None) => {
             sqlx::query_as(
                 r#"
-                SELECT id, plugin_id, user_identifier, execution_request, execution_result,
-                       credits_used, execution_time_ms, success, error_message, created_at
+                SELECT id, plugin_id, user_identifier, input_variables as execution_request, output_result as execution_result,
+                       0 as credits_used, execution_time_ms, success, error_message, executed_at as created_at
                 FROM plugin_execution_history
-                ORDER BY created_at DESC
+                ORDER BY executed_at DESC
                 LIMIT ? OFFSET ?
                 "#,
             )
@@ -418,12 +418,13 @@ pub async fn record_plugin_execution(
     request: PluginExecutionRequest,
     result: PluginExecutionResult,
 ) -> Result<PluginExecutionResult, sqlx::Error> {
+    // Align with current database (input_variables/output_result/executed_at)
     let execution_id = Uuid::new_v4().to_string();
     let now = Utc::now();
-
-    let request_json = serde_json::to_string(&request).unwrap_or_default();
-    let result_json = serde_json::to_string(&result).unwrap_or_default();
     let naive_now = now.naive_utc();
+
+    let request_json = serde_json::to_string(&request.variables).unwrap_or_default();
+    let result_json = serde_json::to_string(&result).unwrap_or_default();
 
     sqlx::query!(
         r#"
@@ -446,7 +447,7 @@ pub async fn record_plugin_execution(
     .execute(&*pool)
     .await?;
 
-    // Update usage stats
+    // Update daily stats
     update_plugin_usage_stats(&*pool, request.plugin_id, result.success).await?;
 
     Ok(result)
@@ -485,6 +486,83 @@ pub async fn update_plugin_usage_stats(
     .await?;
 
     Ok(())
+}
+
+/// Upsert (create or update) a marketplace entry for a plugin
+pub async fn upsert_plugin_marketplace_entry(
+    pool: &SqlitePool,
+    plugin_id: i32,
+    creator_name: &str,
+    visibility: crate::database::models::plugin::PluginVisibility,
+    featured: bool,
+) -> Result<PluginMarketplaceEntry, sqlx::Error> {
+    let now = Utc::now().naive_utc();
+    let vis_str = visibility.to_string();
+
+    // Try update first
+    let updated = sqlx::query!(
+        r#"
+        UPDATE plugin_marketplace_entries
+        SET creator_name = ?, visibility = ?, featured = ?, updated_at = ?
+        WHERE plugin_id = ?
+        "#,
+        creator_name,
+        vis_str,
+        featured,
+        now,
+        plugin_id
+    )
+    .execute(&*pool)
+    .await?;
+
+    if updated.rows_affected() == 0 {
+        // Insert new entry
+        sqlx::query!(
+            r#"
+            INSERT INTO plugin_marketplace_entries
+                (plugin_id, creator_name, visibility, download_count, rating_average, rating_count, featured, published_at, updated_at)
+            VALUES (?, ?, ?, 0, 0.0, 0, ?, ?, ?)
+            "#,
+            plugin_id,
+            creator_name,
+            vis_str,
+            featured,
+            now,
+            now
+        )
+        .execute(&*pool)
+        .await?;
+    }
+
+    // Return current entry
+    let row = sqlx::query(
+        r#"
+        SELECT id, plugin_id, creator_name, visibility, download_count, rating_average, rating_count, featured, published_at, updated_at
+        FROM plugin_marketplace_entries
+        WHERE plugin_id = ?
+        "#,
+    )
+    .bind(plugin_id)
+    .fetch_one(&*pool)
+    .await?;
+
+    let entry = PluginMarketplaceEntry {
+        id: row.get("id"),
+        plugin_id: row.get::<i64, _>("plugin_id") as i32,
+        creator_name: row.get("creator_name"),
+        visibility: row
+            .get::<'_, String, _>("visibility")
+            .parse()
+            .unwrap_or(crate::database::models::plugin::PluginVisibility::Private),
+        download_count: row.get("download_count"),
+        rating_average: row.get("rating_average"),
+        rating_count: row.get("rating_count"),
+        featured: row.get("featured"),
+        published_at: row.get("published_at"),
+        updated_at: row.get("updated_at"),
+    };
+
+    Ok(entry)
 }
 
 /// Get plugin usage statistics
@@ -591,7 +669,7 @@ pub async fn create_plugin_template(
     description: &str,
     category: PluginCategory,
     template_code: &str,
-    example_variables: Option<Value>,
+    _example_variables: Option<Value>,
 ) -> Result<PluginTemplate, sqlx::Error> {
     let now = Utc::now();
     let category_str = category.to_string();
@@ -638,9 +716,8 @@ pub async fn update_plugin(
     code: Option<&str>,
     category: Option<PluginCategory>,
     visibility: Option<PluginVisibility>,
-    metadata: Option<Value>,
+    _metadata: Option<Value>,
 ) -> Result<(), sqlx::Error> {
-    let now = Utc::now();
     let now = Utc::now();
     let mut transaction = pool.begin().await?;
     

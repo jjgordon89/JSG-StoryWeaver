@@ -4,8 +4,8 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
 use crate::StoryWeaverError;
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
-use serde::{Deserialize, Serialize};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
+use serde::Deserialize;
 
 /// Create series request
 #[derive(Debug, Deserialize)]

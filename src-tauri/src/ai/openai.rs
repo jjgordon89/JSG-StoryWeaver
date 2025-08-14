@@ -142,7 +142,7 @@ impl OpenAIProvider {
         }
     }
 
-    fn build_system_message(&self, context: &AIContext) -> ChatMessage {
+    fn build_system_message(&self, _context: &AIContext) -> ChatMessage {
         // Build a system message based on the context
         // This could include information about the document, user preferences, etc.
         ChatMessage {

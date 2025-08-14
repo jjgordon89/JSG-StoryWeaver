@@ -6,9 +6,10 @@ use crate::error::Result;
 use crate::security::validation::{
     validate_project_name, validate_content_length, validate_security_input
 };
+use crate::security::validators::{validate_id, validate_optional_str};
 use serde::{Deserialize, Serialize};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, rl_save, validate_request_body_size};
-use std::time::Duration;
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, validate_request_body_size};
+use crate::time_operation;
 
 /// Create project request
 #[derive(Debug, Deserialize)]
@@ -75,7 +76,7 @@ pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Pr
         ProjectOps::create(&pool, project).await
     }
     
-    create(request).await.into()
+    time_operation!("create_project", { create(request).await }).into()
 }
 
 /// Get all projects
@@ -88,7 +89,7 @@ pub async fn get_projects() -> CommandResponse<Vec<Project>> {
         ProjectOps::get_all(&pool).await
     }
     
-    get(()).await.into()
+    time_operation!("get_projects", { get(()).await }).into()
 }
 
 /// Get a project by ID
@@ -98,13 +99,13 @@ pub async fn get_project(id: String) -> CommandResponse<Option<Project>> {
         rl_list("project", Some(&id))?;
         
         // Input validation
-        validate_security_input(&id)?;
+        validate_id("project_id", &id, 64)?;
         
         let pool = get_pool()?;
         ProjectOps::get_by_id(&pool, &id).await
     }
     
-    get(id).await.into()
+    time_operation!("get_project", { get(id).await }).into()
 }
 
 /// Update a project
@@ -114,22 +115,18 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
         // Rate limiting
         rl_update("project", Some(&request.id))?;
         // Input validation
-        validate_security_input(&request.id)?;
+        validate_id("project_id", &request.id, 64)?;
         
         if let Some(ref name) = request.name {
             validate_project_name(name)?;
         }
         
         if let Some(ref description) = request.description {
-            validate_request_body_size(description, 5_000)?;
-            validate_content_length(description, 5000)?;
-            validate_security_input(description)?;
+            validate_optional_str("description", &request.description, 5000, true)?;
         }
         
-        if let Some(ref genre) = request.genre {
-            validate_request_body_size(genre, 100)?;
-            validate_security_input(genre)?;
-            validate_content_length(genre, 100)?;
+        if let Some(_) = &request.genre {
+            validate_optional_str("genre", &request.genre, 100, false)?;
         }
         
         if let Some(word_count) = request.target_word_count {
@@ -176,7 +173,7 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
         ProjectOps::update(&pool, &project).await
     }
     
-    update(request).await.into()
+    time_operation!("update_project", { update(request).await }).into()
 }
 
 /// Delete a project
@@ -186,13 +183,13 @@ pub async fn delete_project(id: String) -> CommandResponse<()> {
         // Rate limiting
         rl_delete("project", Some(&id))?;
         // Input validation
-        validate_security_input(&id)?;
+        validate_id("project_id", &id, 64)?;
         
         let pool = get_pool()?;
         ProjectOps::delete(&pool, &id).await
     }
     
-    delete(id).await.into()
+    time_operation!("delete_project", { delete(id).await }).into()
 }
 
 /// Update project word count
@@ -202,13 +199,13 @@ pub async fn update_project_word_count(project_id: String) -> CommandResponse<()
         // Rate limiting
         rl_update("project_word_count", Some(&project_id))?;
         // Input validation
-        validate_security_input(&project_id.to_string())?;
+        validate_id("project_id", &project_id, 64)?;
         
         let pool = get_pool()?;
         ProjectOps::update_word_count(&pool, &project_id).await
     }
     
-    update_count(project_id).await.into()
+    time_operation!("update_project_word_count", { update_count(project_id).await }).into()
 }
 
 /// Project summary for dashboard
@@ -236,7 +233,7 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
         rl_list("project_summary", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id.to_string())?;
+        validate_id("project_id", &project_id, 64)?;
         
         let pool = get_pool()?;
         
@@ -288,5 +285,5 @@ pub async fn get_project_summary(project_id: String) -> CommandResponse<ProjectS
         })
     }
     
-    get_summary(project_id).await.into()
+    time_operation!("get_project_summary", { get_summary(project_id).await }).into()
 }

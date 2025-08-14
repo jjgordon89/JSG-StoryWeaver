@@ -442,11 +442,11 @@ impl super::SeriesConsistencyOps {
     pub async fn get_conflicts_by_severity(
         pool: &Pool<Sqlite>,
         series_id: &str,
-        severity: ConflictSeverity,
+        target_severity: ConflictSeverity,
     ) -> Result<Vec<ConsistencyConflict>> {
         let report = Self::generate_consistency_report(&*pool, series_id).await?;
         Ok(report.conflicts.into_iter()
-            .filter(|c| matches!(&c.severity, severity))
+            .filter(|c| std::mem::discriminant(&c.severity) == std::mem::discriminant(&target_severity))
             .collect())
     }
 }

@@ -112,7 +112,7 @@ pub fn validate_numeric_range_u32(
 /// and run security checks.
 /// Useful for content/metadata/payload validation where both limits apply.
 pub fn validate_body_limits(
-    field_name: &str,
+    _field_name: &str,
     body: &str,
     max_bytes: usize,
     max_chars: usize,

@@ -6,8 +6,14 @@ use crate::database::models::plugin::{
 };
 use crate::database::{get_pool, operations::plugin as plugin_ops};
 use crate::error::{Result, StoryWeaverError};
+use crate::security::plugin_security::{
+    validate_plugin_security, validate_plugin_execution_context, quick_plugin_security_check,
+};
 use serde_json::Value;
 use std::str::FromStr;
+use tauri::State;
+use std::sync::Arc;
+use crate::ai::{AIProviderManager, AIContext};
 
 /// Create a new plugin
 #[tauri::command]
@@ -25,21 +31,22 @@ pub async fn create_plugin(
     max_tokens: Option<i32>,
     tags: Option<Vec<String>>,
 ) -> Result<Plugin> {
-    // Input validation
+    // Quick security check for plugin creation
+    quick_plugin_security_check(&name, &description, &prompt_template, &variables)?;
+
+    // Additional input validation
     if name.trim().is_empty() {
         return Err(StoryWeaverError::validation("Plugin name cannot be empty".to_string()));
     }
     if name.len() > 255 {
         return Err(StoryWeaverError::validation("Plugin name too long (max 255 characters)".to_string()));
     }
-    crate::security::validate_security_input(&name)?;
     if description.trim().is_empty() {
         return Err(StoryWeaverError::validation("Plugin description cannot be empty".to_string()));
     }
     if description.len() > 2000 {
         return Err(StoryWeaverError::validation("Plugin description too long (max 2000 characters)".to_string()));
     }
-    crate::security::validate_security_input(&description)?;
     if version.trim().is_empty() {
         return Err(StoryWeaverError::validation("Plugin version cannot be empty".to_string()));
     }
@@ -48,13 +55,6 @@ pub async fn create_plugin(
     }
     crate::security::validate_security_input(&version)?;
     crate::security::validate_security_input(&creator_id)?;
-    if prompt_template.trim().is_empty() {
-        return Err(StoryWeaverError::validation("Prompt template cannot be empty".to_string()));
-    }
-    if prompt_template.len() > 10000 {
-        return Err(StoryWeaverError::validation("Prompt template too long (max 10000 characters)".to_string()));
-    }
-    crate::security::validate_security_input(&prompt_template)?;
     if let Some(temp) = temperature {
         if temp < 0.0 || temp > 2.0 {
             return Err(StoryWeaverError::validation("Temperature must be between 0.0 and 2.0".to_string()));
@@ -90,16 +90,26 @@ pub async fn create_plugin(
         tags: tags.map(|t| t.join(",")),
         is_multi_stage: false,
         stage_count: Some(1),
-        creator_id: Some(creator_id),
+        creator_id: Some(creator_id.clone()),
         is_public: visibility_enum == PluginVisibility::Published,
         version,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };
 
-    plugin_ops::create_plugin_from_struct(&pool, plugin)
+    let created = plugin_ops::create_plugin_from_struct(&pool, plugin)
         .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin: {}", e)))
+        .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin: {}", e)))?;
+    // Upsert marketplace entry to reflect visibility/creator
+    let _ = plugin_ops::upsert_plugin_marketplace_entry(
+        &pool,
+        created.id as i32,
+        &creator_id,
+        visibility_enum,
+        false,
+    )
+    .await;
+    Ok(created)
 }
 
 /// Get plugin by ID
@@ -221,14 +231,96 @@ pub async fn delete_plugin(plugin_id: i32) -> Result<()> {
 /// Execute plugin
 #[tauri::command]
 pub async fn execute_plugin_command(
+    state: State<'_, Arc<AIProviderManager>>,
     plugin_id: i32,
     variables: Value,
     document_id: Option<i32>,
     selected_text: Option<String>,
     cursor_position: Option<i32>,
 ) -> Result<PluginExecutionResult> {
+    // Basic input safeguards
+    if plugin_id <= 0 {
+        return Err(StoryWeaverError::validation("Invalid plugin_id".to_string()));
+    }
+
     let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
 
+    // Fetch plugin definition
+    let plugin = plugin_ops::get_plugin_by_id(&pool, &plugin_id.to_string())
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to load plugin: {}", e)))?
+        .ok_or_else(|| StoryWeaverError::not_found("Plugin", &plugin_id.to_string()))?;
+
+    // Comprehensive plugin security validation
+    let security_result = validate_plugin_security(&plugin)?;
+    if !security_result.is_safe {
+        return Err(StoryWeaverError::validation(format!(
+            "Plugin failed security validation: {}",
+            security_result.errors.join("; ")
+        )));
+    }
+
+    // Validate execution context
+    validate_plugin_execution_context(&plugin, &variables, &selected_text)?;
+
+    // Render prompt by injecting variables into the template
+    fn render_prompt(template: &str, vars: &Value, selected_text: &Option<String>) -> String {
+        let mut result = template.to_string();
+
+        if let Some(obj) = vars.as_object() {
+            for (k, v) in obj {
+                let placeholder = format!("{{{{{}}}}}", k);
+                let replacement = match v {
+                    Value::String(s) => s.clone(),
+                    _ => v.to_string(),
+                };
+                result = result.replace(&placeholder, &replacement);
+            }
+        }
+
+        // Support {{selected_text}} placeholder
+        if let Some(sel) = selected_text {
+            result = result.replace("{{selected_text}}", sel);
+        }
+
+        result
+    }
+
+    // Validate prompt template size and substitute
+    crate::security::validation::validate_content_length(&plugin.prompt_template, 20000)?;
+    let prompt = render_prompt(&plugin.prompt_template, &variables, &selected_text);
+    crate::security::validation::validate_content_length(&prompt, 20000)?;
+    crate::security::validation::validate_security_input(&prompt)?;
+
+    // Build AI context
+    let mut ai_ctx = AIContext::default();
+    ai_ctx.document_id = document_id.map(|d| d.to_string());
+    ai_ctx.selected_text = selected_text.clone();
+
+    // Execute via default AI provider (model routing can be added later)
+    let provider = state
+        .get_default_provider()
+        .ok_or_else(|| StoryWeaverError::ai("No AI provider available"))?;
+
+    let start = std::time::Instant::now();
+    let generated = provider
+        .generate_text(&prompt, &ai_ctx)
+        .await
+        .map_err(|e| StoryWeaverError::ai(e.to_string()))?;
+
+    let elapsed_ms = start.elapsed().as_millis() as i64;
+    let token_estimate = (generated.len() as f32 / 4.0) as i32;
+
+    let result = PluginExecutionResult {
+        success: true,
+        result_text: Some(generated.clone()),
+        error_message: None,
+        credits_used: token_estimate, // simple estimate; can wire to real credit tracking later
+        execution_time_ms: elapsed_ms,
+        stage_results: None,
+    };
+
+    // Record execution
     let request = PluginExecutionRequest {
         plugin_id,
         variables,
@@ -236,20 +328,9 @@ pub async fn execute_plugin_command(
         selected_text,
         cursor_position,
     };
+    let recorded = plugin_ops::record_plugin_execution(&pool, request, result.clone()).await?;
 
-    // For now, create a placeholder result since actual plugin execution is not implemented
-    let result = PluginExecutionResult {
-        success: false,
-        result_text: None,
-        error_message: Some("Plugin execution not yet implemented".to_string()),
-        credits_used: 0,
-        execution_time_ms: 0,
-        stage_results: None,
-    };
-
-    let recorded_result = plugin_ops::record_plugin_execution(&pool, request, result.clone()).await?;
-
-    Ok(recorded_result)
+    Ok(recorded)
 }
 
 /// Rate plugin
@@ -470,4 +551,24 @@ pub async fn create_plugin_template(
     )
     .await
     .map_err(|e| StoryWeaverError::database(format!("Failed to create plugin template: {}", e)))
+}
+
+/// Validate plugin security
+#[tauri::command]
+pub async fn validate_plugin_security_command(plugin_id: i32) -> Result<crate::security::plugin_security::PluginSecurityValidationResult> {
+    // Input validation
+    if plugin_id <= 0 {
+        return Err(StoryWeaverError::validation("Invalid plugin_id".to_string()));
+    }
+
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
+
+    // Fetch plugin definition
+    let plugin = plugin_ops::get_plugin_by_id(&pool, &plugin_id.to_string())
+        .await
+        .map_err(|e| StoryWeaverError::database(format!("Failed to load plugin: {}", e)))?
+        .ok_or_else(|| StoryWeaverError::not_found("Plugin", &plugin_id.to_string()))?;
+
+    // Run comprehensive security validation
+    validate_plugin_security(&plugin)
 }

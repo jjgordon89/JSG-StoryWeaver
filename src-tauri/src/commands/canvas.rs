@@ -513,6 +513,24 @@ pub async fn get_canvas_collaboration_session(
         .map_err(|e| StoryWeaverError::database(e.to_string()))
 }
 
+/// Get canvas collaboration session by canvas ID
+#[tauri::command]
+pub async fn get_canvas_collaboration_session_by_canvas_id(
+    canvas_id: i32,
+) -> Result<Option<CanvasCollaborationSession>> {
+    // Rate limiting
+    rl_list("canvas_collaboration", Some(&canvas_id.to_string()))?;
+    // Input validation
+    if canvas_id <= 0 {
+        return Err(StoryWeaverError::validation("Canvas ID must be positive"));
+    }
+    
+    let pool = get_pool().map_err(|e| StoryWeaverError::database(e.to_string()))?;
+    canvas_ops::get_canvas_collaboration_session_by_canvas_id(&pool, canvas_id)
+        .await
+        .map_err(|e| StoryWeaverError::database(e.to_string()))
+}
+
 /// Join canvas collaboration session
 #[tauri::command]
 pub async fn join_canvas_collaboration_session(

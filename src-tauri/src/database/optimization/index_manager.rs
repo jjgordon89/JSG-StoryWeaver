@@ -5,7 +5,7 @@ use crate::database::{get_pool, DbPool};
 use crate::error::{Result, StoryWeaverError};
 use sqlx::Row;
 use std::collections::HashMap;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
 /// Manages database indexes for optimal performance
 pub struct IndexManager {

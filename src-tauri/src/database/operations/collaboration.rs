@@ -5,7 +5,7 @@ use crate::database::models::collaboration::{
     CommentType, NotificationType, ShareSettings, ShareType, SharedDocument,
 };
 use crate::database::models::{Document, DocumentType};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
 use uuid::Uuid;

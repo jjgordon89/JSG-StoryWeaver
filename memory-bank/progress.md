@@ -109,6 +109,12 @@ The following items have been intentionally deferred to Phase 2:
 - ⏳ Add configurable creativity levels (1-10) and Key Details for project-level context
 - ✅ Generate-from-style action wired to Write path with style constraints
 
+### Plugin System
+- ✅ Plugin System Completion (Task C2): Complete plugin execution engine, testing environment, marketplace functionality, variable injection system, and comprehensive security validation
+
+### Canvas/Visual Planning System
+- ✅ Canvas System Completion (Task C4): Complete React frontend implementation with drag-and-drop functionality, outline template system, export functionality, keyboard shortcuts, collaboration features, and full backend integration. All 11 element types supported with zoom controls, viewport management, and real-time collaboration sessions.
+
 ### UI Components
 - ✅ Card Stacking System: Implement the UI for organizing AI responses into collapsible, stackable cards
 - ⏳ Connect the Card System to the backend for persistent storage and retrieval of AI responses

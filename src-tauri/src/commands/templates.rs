@@ -1,17 +1,14 @@
 use crate::commands::CommandResponse;
 use crate::database::operations::{
     CharacterTemplateOps, WorldBuildingTemplateOps,
-    character_template_ops::{CharacterTemplate, CharacterTemplateTrait},
-    worldbuilding_template_ops::{WorldBuildingTemplate, WorldBuildingTemplateProperty}
+    character_template_ops::CharacterTemplate,
+    worldbuilding_template_ops::WorldBuildingTemplate
 };
 use crate::database;
 use crate::error::Result;
 use crate::security::validation::*;
 use crate::security::rate_limit::{rl_create, rl_list};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tauri::State;
-use uuid::Uuid;
 
 /// Get all character templates
 #[tauri::command]

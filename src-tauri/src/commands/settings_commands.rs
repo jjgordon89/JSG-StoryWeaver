@@ -1,7 +1,7 @@
 use crate::database::{get_pool, models::{AppSettings, UserPreference, PreferenceDataType}, operations::{AppSettingsOps, UserPreferenceOps}};
 use crate::error::Result;
 use crate::commands::CommandResponse;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::Value;
 
 /// Get a setting by key

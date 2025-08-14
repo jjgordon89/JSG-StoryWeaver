@@ -648,7 +648,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
         Ok(())
     }
 
-    pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, is_keeper: bool) -> Result<()> {
+    pub fn mark_idea_as_keeper(&mut self, session_id: &str, idea_id: &str, _is_keeper: bool) -> Result<()> {
         self.brainstorm_engine.mark_as_keeper(session_id, idea_id)?;
         Ok(())
     }
@@ -673,10 +673,9 @@ Focus on extracting concrete, usable story elements that would be valuable for a
 
     pub async fn start_streaming_generation(
         &mut self,
-        request: AdvancedGenerationRequest,
-        story_bible: Option<StoryBibleElements>,
+        _request: AdvancedGenerationRequest,
+        _story_bible: Option<StoryBibleElements>,
     ) -> Result<String> {
-        let _ = request;
         // For now, return a placeholder stream ID
         // This would be implemented with actual streaming in the future
         let stream_id = uuid::Uuid::new_v4().to_string();
@@ -685,7 +684,7 @@ Focus on extracting concrete, usable story elements that would be valuable for a
 
     pub async fn get_stream_status(
         &self,
-        stream_id: &str,
+        _stream_id: &str,
     ) -> Result<std::collections::HashMap<String, serde_json::Value>> {
         // Placeholder implementation for streaming status
         let mut status = std::collections::HashMap::new();

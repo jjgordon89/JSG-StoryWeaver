@@ -4,9 +4,7 @@
 use crate::database::{get_pool, models::*};
 use crate::error::{Result, StoryWeaverError};
 use chrono::{DateTime, Utc};
-use serde_json::json;
 use sqlx::Row;
-use uuid::Uuid;
 
 /// Performance metrics operations
 impl super::PerformanceMetricOps {

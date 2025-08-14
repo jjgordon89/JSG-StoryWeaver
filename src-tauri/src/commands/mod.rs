@@ -40,6 +40,7 @@ pub mod canvas;
 
 // Phase 6 Polish & Optimization
 pub mod optimization_commands;
+pub mod performance_optimization;
 
 // Export main commands
 // Functions are defined locally in this module

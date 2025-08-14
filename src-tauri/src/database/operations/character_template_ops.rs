@@ -4,7 +4,6 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 /// Character template definition
 #[derive(Debug, Clone, Serialize, Deserialize)]

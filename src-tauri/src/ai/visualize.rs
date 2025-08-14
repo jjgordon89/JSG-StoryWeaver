@@ -117,7 +117,7 @@ impl VisualizeEngine {
         let mood_keywords = ["mysterious", "ominous", "peaceful", "chaotic", "serene", "tense",
                            "magical", "ethereal", "gritty", "romantic"];
         
-        let text_lower = text.to_lowercase();
+        let _text_lower = text.to_lowercase();
         
         // Extract sentences containing visual keywords
         let sentences: Vec<&str> = text.split('.').collect();

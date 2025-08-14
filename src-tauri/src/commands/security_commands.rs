@@ -8,7 +8,6 @@ use crate::security::{
     api_keys::{ApiProvider, get_api_key_manager},
     privacy::{PrivacySettings, get_privacy_manager, save_privacy_settings},
     audit::{AuditSeverity, log_api_key_event},
-    rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size},
 };
 use serde::{Serialize, Deserialize};
 use tauri::command;

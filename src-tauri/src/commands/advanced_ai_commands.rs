@@ -4,14 +4,12 @@ use tauri::State;
 use tokio::sync::Mutex;
 use std::str::FromStr;
 use crate::database::{get_pool, models::{Document, DocumentType}, operations::DocumentOps};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
 
 use crate::ai::{
     advanced_ai_manager::StyleAnalysis, AdvancedAIManager, AdvancedGenerationRequest,
     AdvancedGenerationResult, BrainstormRequest, BrainstormSession, GeneratedImage,
     ProseMode, SaliencyContext, StyleExample, VisualizeRequest,
 };
-use crate::commands::CommandResponse;
 use crate::error::{Result, StoryWeaverError};
 use crate::ai::saliency_engine::StoryBibleElements as SaliencyStoryBible;
 use crate::ai::visualize::ImageResolution;
@@ -521,14 +519,14 @@ pub async fn start_streaming_generation(
 
 #[tauri::command]
 pub async fn get_stream_status(
-    streamId: String,
+    stream_id: String,
     ai_state: State<'_, AdvancedAIState>,
 ) -> Result<HashMap<String, serde_json::Value>> {
     // Input validation
-    crate::security::validation::validate_security_input(&streamId)?;
+    crate::security::validation::validate_security_input(&stream_id)?;
     
     let ai_manager = ai_state.lock().await;
-    ai_manager.get_stream_status(&streamId).await
+    ai_manager.get_stream_status(&stream_id).await
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -613,9 +611,9 @@ pub async fn save_generated_content(data: SaveGeneratedContentRequest) -> Result
 }
 
 #[tauri::command]
-pub async fn cancel_streaming_generation(streamId: String, _ai_state: State<'_, AdvancedAIState>) -> Result<()> {
+pub async fn cancel_streaming_generation(stream_id: String, _ai_state: State<'_, AdvancedAIState>) -> Result<()> {
     // Validate input and accept cancel in current placeholder implementation
-    crate::security::validation::validate_security_input(&streamId)?;
+    crate::security::validation::validate_security_input(&stream_id)?;
     // In a future implementation, signal the running task to cancel.
     Ok(())
 }

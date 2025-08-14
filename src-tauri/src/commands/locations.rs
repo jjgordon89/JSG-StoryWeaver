@@ -4,9 +4,8 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::LocationOps};
 use crate::error::Result;
 use crate::security::validation::*;
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, validate_request_body_size};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 /// Create location request
 #[derive(Debug, Deserialize)]

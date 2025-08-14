@@ -14,6 +14,7 @@ pub mod audit;
 pub mod privacy;
 pub mod rate_limit;
 pub mod validators;
+pub mod plugin_security;
 
 #[cfg(test)]
 mod tests;
@@ -27,6 +28,7 @@ pub use audit::*;
 pub use privacy::*;
 pub use rate_limit::*;
 pub use validators::*;
+pub use plugin_security::*;
 
 use crate::error::StoryWeaverError;
 use tauri::AppHandle;

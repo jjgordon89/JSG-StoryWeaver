@@ -4,7 +4,7 @@ use crate::error::StoryWeaverError;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use crate::security::validation::{validate_security_input, validate_content_length};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OptimizationConfig {

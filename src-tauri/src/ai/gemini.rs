@@ -436,7 +436,7 @@ impl AIProvider for GeminiProvider {
         self.generate_text(&prompt, &context).await
     }
 
-    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+    async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         // Gemini doesn't have a direct embedding API like OpenAI
         // We'll need to use a different approach or return a placeholder
         // In production, you might use Google's Universal Sentence Encoder or similar

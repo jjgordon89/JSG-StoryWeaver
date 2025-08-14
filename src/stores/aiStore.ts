@@ -194,7 +194,7 @@ export const useAIStore = create<AIState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: WriteResult; error?: string }>(
+      const result = await invoke<WriteResult>(
         'auto_write',
         {
           document_id: documentId,
@@ -203,15 +203,11 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        set({ 
-          lastResult: result.data,
-          creditsUsed: state.creditsUsed + result.data.credits_used,
-        });
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Auto write failed');
-      }
+      set({ 
+        lastResult: result,
+        creditsUsed: state.creditsUsed + result.credits_used,
+      });
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -228,7 +224,7 @@ export const useAIStore = create<AIState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: WriteResult; error?: string }>(
+      const result = await invoke<WriteResult>(
         'guided_write',
         {
           document_id: documentId,
@@ -237,15 +233,11 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        set({ 
-          lastResult: result.data,
-          creditsUsed: state.creditsUsed + result.data.credits_used,
-        });
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Guided write failed');
-      }
+      set({ 
+        lastResult: result,
+        creditsUsed: state.creditsUsed + result.credits_used,
+      });
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -263,7 +255,7 @@ export const useAIStore = create<AIState>((set, get) => ({
       set({ isLoading: true, error: null });
       
       // Note: This command needs to be implemented in the backend
-      const result = await invoke<{ success: boolean; data?: WriteResult; error?: string }>(
+      const result = await invoke<WriteResult>(
         'tone_shift_write',
         {
           document_id: documentId,
@@ -273,15 +265,11 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        set({ 
-          lastResult: result.data,
-          creditsUsed: state.creditsUsed + result.data.credits_used,
-        });
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Tone shift write failed');
-      }
+      set({ 
+        lastResult: result,
+        creditsUsed: state.creditsUsed + result.credits_used,
+      });
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -298,7 +286,7 @@ export const useAIStore = create<AIState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string; error?: string }>(
+      const result = await invoke<string>(
         'rewrite_text',
         {
           text,
@@ -306,11 +294,7 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Rewrite failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -327,7 +311,7 @@ export const useAIStore = create<AIState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string; error?: string }>(
+      const result = await invoke<string>(
         'expand_text',
         {
           text,
@@ -335,11 +319,7 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Expand failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -356,19 +336,15 @@ export const useAIStore = create<AIState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string[]; error?: string }>(
-        'brainstorm',
+      const result = await invoke<string[]>(
+        'brainstorm_ideas',
         {
           prompt,
           settings: finalSettings,
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Brainstorm failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -378,11 +354,11 @@ export const useAIStore = create<AIState>((set, get) => ({
     }
   },
   
-  describeScene: async (text: string, focus = 'general') => {
+  describeScene: async (text: string, focus?: string) => {
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string; error?: string }>(
+      const result = await invoke<string>(
         'describe_scene',
         {
           text,
@@ -390,11 +366,7 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Describe scene failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -408,18 +380,14 @@ export const useAIStore = create<AIState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string; error?: string }>(
+      const result = await invoke<string>(
         'visualize_scene',
         {
           description,
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Visualize scene failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -430,25 +398,18 @@ export const useAIStore = create<AIState>((set, get) => ({
   },
   
   quickEdit: async (text: string, instruction: string, settings = {}) => {
-    const finalSettings = { instruction, high_quality_mode: false, ...settings };
-    
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string; error?: string }>(
+      const result = await invoke<string>(
         'quick_edit',
         {
           text,
           instruction,
-          settings: finalSettings,
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Quick edit failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -458,11 +419,11 @@ export const useAIStore = create<AIState>((set, get) => ({
     }
   },
   
-  quickChat: async (message: string, context = '') => {
+  quickChat: async (message: string, context?: string) => {
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string; error?: string }>(
+      const result = await invoke<string>(
         'quick_chat',
         {
           message,
@@ -470,11 +431,7 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Quick chat failed');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -484,11 +441,11 @@ export const useAIStore = create<AIState>((set, get) => ({
     }
   },
 
-  getRelatedWords: async (word: string, context = '') => {
+  getRelatedWords: async (word: string, context?: string) => {
     try {
       set({ isLoading: true, error: null });
       
-      const result = await invoke<{ success: boolean; data?: string[]; error?: string }>(
+      const result = await invoke<string[]>(
         'get_related_words',
         {
           word,
@@ -496,11 +453,7 @@ export const useAIStore = create<AIState>((set, get) => ({
         }
       );
       
-      if (result.success && result.data) {
-        return result.data;
-      } else {
-        throw new Error(result.error || 'Failed to get related words');
-      }
+      return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });
@@ -603,9 +556,22 @@ export const useAIStore = create<AIState>((set, get) => ({
   
   checkCredits: async () => {
     try {
-      const result = await invoke<{ used: number; remaining: number | null }>('get_credit_usage');
-      set({ creditsUsed: result.used, creditsRemaining: result.remaining });
-      return result;
+      // Note: get_credit_usage requires a project_id parameter
+      const result = await invoke<{
+        project_usage: number;
+        daily_usage: number;
+        monthly_limit: number | null;
+        remaining_credits: number | null;
+      }>('get_credit_usage', { project_id: '1' }); // Default project for now
+      
+      set({ 
+        creditsUsed: result.project_usage, 
+        creditsRemaining: result.remaining_credits 
+      });
+      return { 
+        used: result.project_usage, 
+        remaining: result.remaining_credits 
+      };
     } catch (error) {
       console.error('Failed to check credits:', error);
       return { used: get().creditsUsed, remaining: get().creditsRemaining };

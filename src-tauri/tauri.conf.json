@@ -28,11 +28,7 @@
       "csp": null
     }
   },
-  "plugins": {
-    "updater": {
-      "active": false
-    }
-  },
+  "plugins": {},
   "bundle": {
     "active": true,
     "targets": "all",

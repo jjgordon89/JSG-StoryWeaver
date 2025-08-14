@@ -3,7 +3,7 @@
 use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::*};
 use crate::error::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 use crate::security::validation::validate_security_input;
 

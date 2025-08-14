@@ -40,33 +40,16 @@ pub mod plugin;
 pub mod canvas;
 pub mod ai;
 
-// Re-export for convenience
+// Re-export for convenience - only actively used modules
 pub use folder_ops::*;
 pub use series_ops::*;
 pub use document_link_ops::*;
 pub use document_version_ops::*;
 pub use app_settings_ops::*;
-pub use project_ops::*;
-pub use document_ops::*;
-pub use character_ops::*;
-pub use location_ops::*;
-pub use background_task_ops::*;
-pub use performance_metric_ops::*;
-pub use story_bible_ops::*;
-pub use timeline_ops::*;
-pub use plot_thread_ops::*;
-pub use character_trait_ops::*;
-pub use world_element_ops::*;
-pub use outline_ops::*;
-pub use outline_act_ops::*;
-pub use scene_ops::*;
 pub use series_consistency_ops::*;
-pub use style_example_ops::*;
-pub use ai_history_ops::*;
-pub use character_template_ops::*;
-pub use worldbuilding_template_ops::*;
+pub use ai_card_ops::*;
 
-// Phase 4 Advanced AI Features
+// Phase 4 Advanced AI Features - only actively used
 pub use ai_provider_ops::*;
 pub use ai_model_configuration_ops::*;
 pub use prose_mode_ops::*;
@@ -75,7 +58,7 @@ pub use brainstorm_session_ops::*;
 pub use credit_usage_ops::*;
 pub use streaming_session_ops::*;
 
-// Phase 5 Collaboration & Plugins
+// Phase 5 Collaboration & Plugins - only actively used
 pub use collaboration::*;
 pub use plugin::*;
 pub use canvas::*;

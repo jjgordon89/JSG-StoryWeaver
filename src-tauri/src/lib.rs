@@ -15,6 +15,8 @@ pub mod ai;
 pub mod background;
 mod utils;
 pub mod security;
+pub mod documents;
+pub mod logging;
 
 #[cfg(test)]
 mod tests;
@@ -29,6 +31,14 @@ pub use error::StoryWeaverError;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize logging before starting the application
+    if let Err(e) = logging::init_logging(None) {
+        eprintln!("Failed to initialize logging: {}", e);
+    }
+    // Record startup info (version from Cargo and optional BUILD_INFO env var)
+    let build_info = std::env::var("BUILD_INFO").unwrap_or_else(|_| "local".to_string());
+    logging::log_startup(env!("CARGO_PKG_VERSION"), &build_info);
+
     tauri::Builder::default()
         // Initialize all required plugins for Phase 1
         .plugin(tauri_plugin_fs::init())
@@ -37,7 +47,6 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         // Setup handler for commands
@@ -231,6 +240,20 @@ pub fn run() {
             commands::story_bible::validate_scene,
             commands::story_bible::search_scenes,
             
+            // Outline-to-document linking commands
+            commands::story_bible::link_outline_to_document,
+            commands::story_bible::unlink_outline_from_document,
+            commands::story_bible::get_outline_linked_documents,
+            commands::story_bible::get_document_linked_outlines,
+            
+            // Series-level sharing commands
+            commands::story_bible::share_world_element_to_series,
+            commands::story_bible::unshare_world_element_from_series,
+            commands::story_bible::get_series_world_elements,
+            
+            // Story Bible detection commands
+            commands::story_bible::detect_story_bible_in_text,
+            
             // Story Bible AI Generation commands
             commands::story_bible_ai::generate_synopsis,
             commands::story_bible_ai::generate_character_traits,
@@ -317,6 +340,7 @@ pub fn run() {
             commands::plugin::create_plugin_template,
             commands::plugin::get_plugin_templates,
             commands::plugin::apply_plugin_template,
+            commands::plugin::validate_plugin_security_command,
             
             // Phase 5 Canvas commands
             commands::canvas::create_canvas,
@@ -336,6 +360,7 @@ pub fn run() {
             commands::canvas::export_canvas,
             commands::canvas::create_canvas_collaboration_session,
             commands::canvas::get_canvas_collaboration_session,
+            commands::canvas::get_canvas_collaboration_session_by_canvas_id,
             commands::canvas::join_canvas_collaboration,
             commands::canvas::leave_canvas_collaboration,
             commands::canvas::record_canvas_operation,
@@ -350,7 +375,28 @@ pub fn run() {
             commands::optimization_commands::optimize_memory_usage,
             commands::optimization_commands::get_cache_statistics,
             commands::optimization_commands::run_performance_analysis,
-            commands::optimization_commands::schedule_maintenance
+            commands::optimization_commands::schedule_maintenance,
+            
+            // Performance Optimization commands (D1 Tasks)
+            // Use canonical optimization_commands for functions that already exist there
+            commands::performance_optimization::get_performance_overview,
+            commands::performance_optimization::optimize_database_indexes,
+            commands::performance_optimization::cleanup_unused_indexes,
+            // AI cache clear - use optimization_commands' canonical command
+            commands::optimization_commands::clear_ai_cache,
+            // Streaming/document cache specific commands (unique)
+            commands::performance_optimization::clear_streaming_buffers,
+            commands::performance_optimization::clear_document_cache,
+            commands::performance_optimization::get_streaming_details,
+            // Memory optimization - use optimization_commands canonical implementation
+            commands::optimization_commands::optimize_memory_usage,
+            // Analysis & stats - use optimization_commands canonical implementations
+            commands::optimization_commands::run_performance_analysis,
+            commands::optimization_commands::get_cache_statistics,
+            commands::optimization_commands::schedule_maintenance,
+            // Additional performance helpers
+            commands::performance_optimization::create_custom_index,
+            commands::performance_optimization::get_memory_pressure
         ])
         .setup(|app| {
             // Initialize database on startup

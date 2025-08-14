@@ -1,11 +1,11 @@
 //! AI Writing Commands for StoryWeaver
 
-use crate::commands::CommandResponse;
 use crate::error::{StoryWeaverError, Result};
-use crate::ai::{AIProviderManager, AIContext, RewriteStyle, TextStream};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
+use crate::ai::{AIProviderManager, AIContext, TextStream};
+use crate::security::rate_limit::{rl_create, rl_update, rl_list};
+use crate::security::validators::{validate_non_empty_str, validate_body_limits, validate_optional_str};
 use serde::{Deserialize, Serialize};
-use tauri::{Emitter, State, Manager, Window};
+use tauri::{Emitter, State, Window};
 use std::sync::Arc;
 use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
@@ -21,18 +21,10 @@ fn validate_write_settings(settings: &WriteSettings) -> Result<()> {
     }
     
     // Validate tone
-    crate::security::validation::validate_content_length(&settings.tone, 100)?;
-    crate::security::validation::validate_security_input(&settings.tone)?;
-    
-    if settings.tone.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Tone cannot be empty".to_string(),
-        });
-    }
+    validate_non_empty_str("tone", &settings.tone, 100)?;
     
     // Validate key details
-    crate::security::validation::validate_content_length(&settings.key_details, 5000)?;
-    crate::security::validation::validate_security_input(&settings.key_details)?;
+    validate_body_limits("key_details", &settings.key_details, 5_000, 5_000)?;
     
     Ok(())
 }
@@ -162,7 +154,7 @@ impl WriteProcessor {
         }
     }
     
-    pub async fn auto_write_stream(&self, document_id: i32, cursor_position: usize, settings: WriteSettings) -> crate::error::Result<TextStream> {
+    pub async fn auto_write_stream(&self, document_id: i32, cursor_position: usize, _settings: WriteSettings) -> crate::error::Result<TextStream> {
         let context = self.context_builder.build_write_context(document_id, cursor_position, 1000).await?;
         
         let prompt = format!(
@@ -179,7 +171,7 @@ impl WriteProcessor {
         Ok(stream)
     }
     
-    pub async fn guided_write_stream(&self, document_id: i32, user_prompt: &str, settings: WriteSettings) -> crate::error::Result<TextStream> {
+    pub async fn guided_write_stream(&self, document_id: i32, user_prompt: &str, _settings: WriteSettings) -> crate::error::Result<TextStream> {
         let context = self.context_builder.build_write_context(document_id, 0, 1000).await?;
         
         let prompt = format!(
@@ -196,7 +188,7 @@ impl WriteProcessor {
         Ok(stream)
     }
 
-    pub async fn auto_write(&self, document_id: i32, cursor_position: usize, settings: WriteSettings) -> crate::error::Result<WriteResult> { // Changed return type to Result
+    pub async fn auto_write(&self, document_id: i32, cursor_position: usize, _settings: WriteSettings) -> crate::error::Result<WriteResult> { // Changed return type to Result
         let context = self.context_builder.build_write_context(document_id, cursor_position, 1000).await?;
         
         let prompt = format!(
@@ -210,14 +202,19 @@ impl WriteProcessor {
         let generated_text = provider.generate_text(&prompt, &context.ai_context).await
             .map_err(|e| crate::error::StoryWeaverError::ai_provider("default".to_string(), e.to_string()))?; // Map error to StoryWeaverError
         
+        // Calculate actual credits and word count
+        let word_count = generated_text.split_whitespace().count();
+        let token_count = generated_text.len() / 4; // Rough estimate: 4 chars per token
+        let credits_used = (token_count as f32 * 0.002) as u32; // Rough cost estimate
+        
         Ok(WriteResult {
             generated_text,
-            credits_used: 10, // Placeholder
-            word_count: 100, // Placeholder
+            credits_used,
+            word_count,
         })
     }
     
-    pub async fn guided_write(&self, document_id: i32, user_prompt: &str, settings: WriteSettings) -> crate::error::Result<WriteResult> { // Changed return type to Result
+    pub async fn guided_write(&self, document_id: i32, user_prompt: &str, _settings: WriteSettings) -> crate::error::Result<WriteResult> { // Changed return type to Result
         let context = self.context_builder.build_write_context(document_id, 0, 1000).await?;
         
         let prompt = format!(
@@ -231,10 +228,15 @@ impl WriteProcessor {
         let generated_text = provider.generate_text(&prompt, &context.ai_context).await
             .map_err(|e| crate::error::StoryWeaverError::ai_provider("default".to_string(), e.to_string()))?; // Map error to StoryWeaverError
         
+        // Calculate actual credits and word count
+        let word_count = generated_text.split_whitespace().count();
+        let token_count = generated_text.len() / 4; // Rough estimate: 4 chars per token
+        let credits_used = (token_count as f32 * 0.002) as u32; // Rough cost estimate
+        
         Ok(WriteResult {
             generated_text,
-            credits_used: 15, // Placeholder
-            word_count: 150, // Placeholder
+            credits_used,
+            word_count,
         })
     }
 }
@@ -308,14 +310,7 @@ pub async fn guided_write(
     }
     
     // Validate user prompt
-    crate::security::validation::validate_content_length(&user_prompt, 10000)?;
-    crate::security::validation::validate_security_input(&user_prompt)?;
-    
-    if user_prompt.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "User prompt cannot be empty".to_string(),
-        });
-    }
+    validate_non_empty_str("user_prompt", &user_prompt, 10_000)?;
     
     // Validate WriteSettings
     validate_write_settings(&settings)?;
@@ -351,32 +346,53 @@ pub async fn auto_write_stream(
     // Start streaming in a background task
     tokio::spawn(async move {
         match processor.auto_write_stream(document_id, cursor_position, settings).await {
-            Ok(mut stream) => {
-                // Simulate streaming by sending chunks
-                let words: Vec<&str> = stream.content.split_whitespace().collect();
-                let mut current_content = String::new();
+            Ok(stream) => {
+                // Real streaming implementation
+                let mut accumulated_content = String::new();
+                let mut token_count = 0;
                 
-                for (i, word) in words.iter().enumerate() {
-                    current_content.push_str(word);
-                    if i < words.len() - 1 {
-                        current_content.push(' ');
-                    }
+                // Check if the provider supports real streaming
+                if stream.is_complete {
+                    // Provider returned complete text, simulate streaming
+                    let words: Vec<&str> = stream.content.split_whitespace().collect();
                     
+                    for (i, word) in words.iter().enumerate() {
+                        accumulated_content.push_str(word);
+                        if i < words.len() - 1 {
+                            accumulated_content.push(' ');
+                        }
+                        
+                        token_count = accumulated_content.len() / 4; // Rough estimate
+                        
+                        let chunk = StreamChunk {
+                            content: accumulated_content.clone(),
+                            is_complete: i == words.len() - 1,
+                            token_count,
+                            stream_id: stream_id_clone.clone(),
+                        };
+                        
+                        // Emit the chunk to the frontend
+                        if let Err(e) = window.emit("ai_stream_chunk", &chunk) {
+                            eprintln!("Failed to emit stream chunk: {}", e);
+                            break;
+                        }
+                        
+                        // Add delay to simulate real streaming
+                        sleep(Duration::from_millis(100)).await;
+                    }
+                } else {
+                    // Real streaming - emit content as it arrives
+                    // This would be implemented when providers support true streaming
                     let chunk = StreamChunk {
-                        content: current_content.clone(),
-                        is_complete: i == words.len() - 1,
-                        token_count: current_content.len() / 4, // Rough estimate
+                        content: stream.content.clone(),
+                        is_complete: true,
+                        token_count: stream.token_count,
                         stream_id: stream_id_clone.clone(),
                     };
                     
-                    // Emit the chunk to the frontend
                     if let Err(e) = window.emit("ai_stream_chunk", &chunk) {
                         eprintln!("Failed to emit stream chunk: {}", e);
-                        break;
                     }
-                    
-                    // Add delay to simulate real streaming
-                    sleep(Duration::from_millis(50)).await;
                 }
             }
             Err(e) => {
@@ -412,14 +428,7 @@ pub async fn guided_write_stream(
     }
     
     // Validate user prompt
-    crate::security::validation::validate_content_length(&user_prompt, 10000)?;
-    crate::security::validation::validate_security_input(&user_prompt)?;
-    
-    if user_prompt.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "User prompt cannot be empty".to_string(),
-        });
-    }
+    validate_non_empty_str("user_prompt", &user_prompt, 10_000)?;
     
     // Validate WriteSettings
     validate_write_settings(&settings)?;
@@ -430,32 +439,53 @@ pub async fn guided_write_stream(
     // Start streaming in a background task
     tokio::spawn(async move {
         match processor.guided_write_stream(document_id, &user_prompt, settings).await {
-            Ok(mut stream) => {
-                // Simulate streaming by sending chunks
-                let words: Vec<&str> = stream.content.split_whitespace().collect();
-                let mut current_content = String::new();
+            Ok(stream) => {
+                // Real streaming implementation
+                let mut accumulated_content = String::new();
+                let mut token_count = 0;
                 
-                for (i, word) in words.iter().enumerate() {
-                    current_content.push_str(word);
-                    if i < words.len() - 1 {
-                        current_content.push(' ');
-                    }
+                // Check if the provider supports real streaming
+                if stream.is_complete {
+                    // Provider returned complete text, simulate streaming
+                    let words: Vec<&str> = stream.content.split_whitespace().collect();
                     
+                    for (i, word) in words.iter().enumerate() {
+                        accumulated_content.push_str(word);
+                        if i < words.len() - 1 {
+                            accumulated_content.push(' ');
+                        }
+                        
+                        token_count = accumulated_content.len() / 4; // Rough estimate
+                        
+                        let chunk = StreamChunk {
+                            content: accumulated_content.clone(),
+                            is_complete: i == words.len() - 1,
+                            token_count,
+                            stream_id: stream_id_clone.clone(),
+                        };
+                        
+                        // Emit the chunk to the frontend
+                        if let Err(e) = window.emit("ai_stream_chunk", &chunk) {
+                            eprintln!("Failed to emit stream chunk: {}", e);
+                            break;
+                        }
+                        
+                        // Add delay to simulate real streaming
+                        sleep(Duration::from_millis(100)).await;
+                    }
+                } else {
+                    // Real streaming - emit content as it arrives
+                    // This would be implemented when providers support true streaming
                     let chunk = StreamChunk {
-                        content: current_content.clone(),
-                        is_complete: i == words.len() - 1,
-                        token_count: current_content.len() / 4, // Rough estimate
+                        content: stream.content.clone(),
+                        is_complete: true,
+                        token_count: stream.token_count,
                         stream_id: stream_id_clone.clone(),
                     };
                     
-                    // Emit the chunk to the frontend
                     if let Err(e) = window.emit("ai_stream_chunk", &chunk) {
                         eprintln!("Failed to emit stream chunk: {}", e);
-                        break;
                     }
-                    
-                    // Add delay to simulate real streaming
-                    sleep(Duration::from_millis(50)).await;
                 }
             }
             Err(e) => {
@@ -505,15 +535,7 @@ pub async fn rewrite_text(
     rl_update("ai_rewrite", None)?;
     
     // Input validation
-    if text.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Text to rewrite cannot be empty".to_string(),
-        });
-    }
-    
-    // Validate text content
-    crate::security::validation::validate_content_length(&text, 50000)?;
-    crate::security::validation::validate_security_input(&text)?;
+    validate_non_empty_str("text", &text, 50_000)?;
     
     // Validate RewriteSettings
     validate_rewrite_settings(&settings)?;
@@ -545,15 +567,7 @@ pub async fn expand_text(
     rl_update("ai_expand", None)?;
     
     // Input validation
-    if text.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Text to expand cannot be empty".to_string(),
-        });
-    }
-    
-    // Validate text content
-    crate::security::validation::validate_content_length(&text, 50000)?;
-    crate::security::validation::validate_security_input(&text)?;
+    validate_non_empty_str("text", &text, 50_000)?;
     
     // Validate ExpandSettings
     validate_expand_settings(&settings)?;
@@ -584,18 +598,10 @@ pub async fn describe_scene(
     rl_create("ai_writing", None)?;
     
     // Input validation
-    if text.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Scene text cannot be empty".to_string(),
-        });
-    }
+    validate_non_empty_str("text", &text, 10_000)?;
     
-    crate::security::validation::validate_content_length(&text, 10000)?;
-    crate::security::validation::validate_security_input(&text)?;
-    
-    if let Some(ref focus_val) = focus {
-        crate::security::validation::validate_content_length(focus_val, 100)?;
-        crate::security::validation::validate_security_input(focus_val)?;
+    if let Some(ref _focus_val) = focus {
+        validate_optional_str("focus", &focus, 100, false)?;
     }
     
     match state.get_default_provider() {
@@ -625,15 +631,7 @@ pub async fn brainstorm_ideas(
     rl_list("ai_words", None)?;
     
     // Input validation
-    if prompt.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Brainstorm prompt cannot be empty".to_string(),
-        });
-    }
-    
-    // Validate prompt content
-    crate::security::validation::validate_content_length(&prompt, 5000)?;
-    crate::security::validation::validate_security_input(&prompt)?;
+    validate_non_empty_str("prompt", &prompt, 5_000)?;
     
     // Validate BrainstormSettings
     validate_brainstorm_settings(&settings)?;
@@ -662,14 +660,7 @@ pub async fn visualize_scene(
     rl_create("ai_visualize", None)?;
     
     // Input validation
-    if description.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Scene description cannot be empty".to_string(),
-        });
-    }
-    
-    crate::security::validation::validate_content_length(&description, 5000)?;
-    crate::security::validation::validate_security_input(&description)?;
+    validate_non_empty_str("description", &description, 5_000)?;
     
     match state.get_default_provider() {
         Some(provider) => {
@@ -688,22 +679,8 @@ pub async fn quick_edit(
     rl_update("ai_edit", None)?;
     
     // Input validation
-    if text.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Text to edit cannot be empty".to_string(),
-        });
-    }
-    
-    if instruction.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Edit instruction cannot be empty".to_string(),
-        });
-    }
-    
-    crate::security::validation::validate_content_length(&text, 10000)?;
-    crate::security::validation::validate_security_input(&text)?;
-    crate::security::validation::validate_content_length(&instruction, 1000)?;
-    crate::security::validation::validate_security_input(&instruction)?;
+    validate_non_empty_str("text", &text, 10_000)?;
+    validate_non_empty_str("instruction", &instruction, 1_000)?;
     
     match state.get_default_provider() {
         Some(provider) => {
@@ -722,18 +699,10 @@ pub async fn quick_chat(
     rl_create("ai_chat", None)?;
     
     // Input validation
-    if message.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Chat message cannot be empty".to_string(),
-        });
-    }
+    validate_non_empty_str("message", &message, 5_000)?;
     
-    crate::security::validation::validate_content_length(&message, 5000)?;
-    crate::security::validation::validate_security_input(&message)?;
-    
-    if let Some(ref ctx) = context {
-        crate::security::validation::validate_content_length(ctx, 10000)?;
-        crate::security::validation::validate_security_input(ctx)?;
+    if let Some(ref _ctx) = context {
+        validate_optional_str("context", &context, 10_000, true)?;
     }
     
     match state.get_default_provider() {
@@ -766,14 +735,7 @@ pub async fn tone_shift_write(
         });
     }
     
-    if tone.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Tone cannot be empty".to_string(),
-        });
-    }
-    
-    crate::security::validation::validate_content_length(&tone, 100)?;
-     crate::security::validation::validate_security_input(&tone)?;
+    validate_non_empty_str("tone", &tone, 100)?;
     
     // Validate WriteSettings
     validate_write_settings(&settings)?;
@@ -796,18 +758,10 @@ pub async fn get_related_words(
     rl_list("ai_words", None)?;
     
     // Input validation
-    if word.trim().is_empty() {
-        return Err(StoryWeaverError::ValidationError {
-            message: "Word cannot be empty".to_string(),
-        });
-    }
+    validate_non_empty_str("word", &word, 100)?;
     
-    crate::security::validation::validate_content_length(&word, 100)?;
-     crate::security::validation::validate_security_input(&word)?;
-    
-    if let Some(ref ctx) = context {
-        crate::security::validation::validate_content_length(ctx, 5000)?;
-        crate::security::validation::validate_security_input(ctx)?;
+    if let Some(ref _ctx) = context {
+        validate_optional_str("context", &context, 5000, true)?;
     }
     
     match state.get_default_provider() {

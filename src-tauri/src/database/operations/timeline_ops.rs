@@ -1,7 +1,8 @@
 use crate::database::models::*;
 use crate::error::{Result, StoryWeaverError};
 use chrono::Utc;
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Sqlite};
+use sqlx::Row;
 use uuid::Uuid;
 use serde_json;
 

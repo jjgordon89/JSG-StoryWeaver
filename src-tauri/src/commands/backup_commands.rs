@@ -1,6 +1,6 @@
 use crate::database::backup::{BackupManager, BackupInfo};
 use crate::error::Result;
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, validate_request_body_size};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
 use tauri::AppHandle;
 
 /// Create a backup of the database

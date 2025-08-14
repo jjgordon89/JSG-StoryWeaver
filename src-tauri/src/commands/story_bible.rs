@@ -5,7 +5,7 @@ use crate::database::{get_pool, models::*, operations::*};
 use crate::error::{Result, StoryWeaverError};
 use crate::security::validation::*;
 use crate::security::rate_limit::{validate_request_body_size, rl_create, rl_update, rl_delete, rl_list, rl_search};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 
 // ===== STORY BIBLE COMMANDS =====
@@ -1013,4 +1013,329 @@ pub async fn search_scenes(outline_id: String, query: String) -> CommandResponse
     }
     
     search(outline_id, query).await.into()
+}
+
+// ===== OUTLINE-TO-DOCUMENT LINKING COMMANDS =====
+
+/// Link outline to document request
+#[derive(Debug, Deserialize)]
+pub struct LinkOutlineToDocumentRequest {
+    pub outline_id: String,
+    pub document_id: String,
+    pub link_type: String, // "chapter", "scene", "reference"
+}
+
+/// Unlink outline from document request
+#[derive(Debug, Deserialize)]
+pub struct UnlinkOutlineFromDocumentRequest {
+    pub outline_id: String,
+    pub document_id: String,
+}
+
+/// Link an outline to a document
+#[tauri::command]
+pub async fn link_outline_to_document(request: LinkOutlineToDocumentRequest) -> CommandResponse<()> {
+    async fn link(request: LinkOutlineToDocumentRequest) -> Result<()> {
+        // Rate limiting
+        rl_create("outline_document_link", Some(&request.outline_id))?;
+        // Input validation
+        validate_security_input(&request.outline_id)?;
+        validate_security_input(&request.document_id)?;
+        validate_safe_name(&request.link_type, "Link type")?;
+        
+        let pool = get_pool()?;
+        
+        // Check if outline exists
+        let _outline = OutlineOps::get_by_id(&pool, &request.outline_id).await?;
+        
+        // Check if document exists
+        let _document = DocumentOps::get_by_id(&pool, &request.document_id).await?;
+        
+        // Create the link using document_links table
+        let link = DocumentLink {
+            id: String::new(), // Will be set by the operation
+            from_document_id: request.outline_id, // Using outline_id as from_document_id
+            to_document_id: request.document_id,
+            link_order: 1, // Default order
+            created_at: chrono::Utc::now(),
+        };
+        
+        DocumentLinkOps::create(&pool, link).await?;
+        Ok(())
+    }
+    
+    link(request).await.into()
+}
+
+/// Unlink an outline from a document
+#[tauri::command]
+pub async fn unlink_outline_from_document(request: UnlinkOutlineFromDocumentRequest) -> CommandResponse<()> {
+    async fn unlink(request: UnlinkOutlineFromDocumentRequest) -> Result<()> {
+        // Rate limiting
+        rl_delete("outline_document_link", Some(&request.outline_id))?;
+        // Input validation
+        validate_security_input(&request.outline_id)?;
+        validate_security_input(&request.document_id)?;
+        
+        let pool = get_pool()?;
+        
+        // Find and delete the link
+        let links = DocumentLinkOps::get_outgoing_links(&pool, &request.outline_id).await?;
+        for link in links {
+            if link.to_document_id == request.document_id {
+                DocumentLinkOps::delete(&pool, &link.id).await?;
+                break;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    unlink(request).await.into()
+}
+
+/// Get documents linked to an outline
+#[tauri::command]
+pub async fn get_outline_linked_documents(outline_id: String) -> CommandResponse<Vec<Document>> {
+    async fn get_linked(outline_id: String) -> Result<Vec<Document>> {
+        // Rate limiting
+        rl_list("outline_document_link", Some(&outline_id))?;
+        // Input validation
+        validate_security_input(&outline_id)?;
+        
+        let pool = get_pool()?;
+        
+        // Get outgoing links from the outline
+        let links = DocumentLinkOps::get_outgoing_links(&pool, &outline_id).await?;
+        let mut documents = Vec::new();
+        
+        for link in links {
+            if let Ok(Some(document)) = DocumentOps::get_by_id(&pool, &link.to_document_id).await {
+                documents.push(document);
+            }
+        }
+        
+        Ok(documents)
+    }
+    
+    get_linked(outline_id).await.into()
+}
+
+/// Get outlines linked to a document
+#[tauri::command]
+pub async fn get_document_linked_outlines(document_id: String) -> CommandResponse<Vec<Outline>> {
+    async fn get_linked(document_id: String) -> Result<Vec<Outline>> {
+        // Rate limiting
+        rl_list("outline_document_link", Some(&document_id))?;
+        // Input validation
+        validate_security_input(&document_id)?;
+        
+        let pool = get_pool()?;
+        
+        // Get incoming links to the document
+        let links = DocumentLinkOps::get_incoming_links(&pool, &document_id).await?;
+        let mut outlines = Vec::new();
+        
+        for link in links {
+            if let Ok(outline) = OutlineOps::get_by_id(&pool, &link.from_document_id).await {
+                outlines.push(outline);
+            }
+        }
+        
+        Ok(outlines)
+    }
+    
+    get_linked(document_id).await.into()
+}
+
+// ===== SERIES-LEVEL SHARING COMMANDS =====
+
+/// Share world element to series
+#[tauri::command]
+pub async fn share_world_element_to_series(element_id: String, series_id: String) -> CommandResponse<()> {
+    async fn share(element_id: String, series_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("world_element", Some(&element_id))?;
+        // Input validation
+        validate_security_input(&element_id)?;
+        validate_security_input(&series_id)?;
+        
+        let pool = get_pool()?;
+        WorldElementOps::share_to_series(&pool, &element_id, &series_id).await
+    }
+    
+    share(element_id, series_id).await.into()
+}
+
+/// Unshare world element from series
+#[tauri::command]
+pub async fn unshare_world_element_from_series(element_id: String) -> CommandResponse<()> {
+    async fn unshare(element_id: String) -> Result<()> {
+        // Rate limiting
+        rl_update("world_element", Some(&element_id))?;
+        // Input validation
+        validate_security_input(&element_id)?;
+        
+        let pool = get_pool()?;
+        WorldElementOps::unshare_from_series(&pool, &element_id).await
+    }
+    
+    unshare(element_id).await.into()
+}
+
+/// Get world elements shared to a series
+#[tauri::command]
+pub async fn get_series_world_elements(series_id: String) -> CommandResponse<Vec<WorldElement>> {
+    async fn get_series_elements(series_id: String) -> Result<Vec<WorldElement>> {
+        // Rate limiting
+        rl_list("world_element", Some(&series_id))?;
+        // Input validation
+        validate_security_input(&series_id)?;
+        
+        let pool = get_pool()?;
+        WorldElementOps::get_by_series(&pool, &series_id).await
+    }
+    
+    get_series_elements(series_id).await.into()
+}
+
+// ===== STORY BIBLE DETECTION COMMANDS =====
+
+/// Story Bible detection request
+#[derive(Debug, Deserialize)]
+pub struct DetectStoryBibleRequest {
+    pub project_id: String,
+    pub text: String,
+    pub detection_types: Vec<String>, // ["characters", "locations", "world_elements"]
+}
+
+/// Story Bible detection result
+#[derive(Debug, serde::Serialize)]
+pub struct StoryBibleDetection {
+    pub detection_type: String,
+    pub entity_id: String,
+    pub entity_name: String,
+    pub start_position: usize,
+    pub end_position: usize,
+    pub confidence: f64,
+}
+
+/// Detect Story Bible elements in text
+#[tauri::command]
+pub async fn detect_story_bible_in_text(request: DetectStoryBibleRequest) -> CommandResponse<Vec<StoryBibleDetection>> {
+    async fn detect(request: DetectStoryBibleRequest) -> Result<Vec<StoryBibleDetection>> {
+        // Rate limiting
+        rl_search("story_bible_detection", Some(&request.project_id))?;
+        // Input validation
+        validate_security_input(&request.project_id)?;
+        validate_request_body_size(&request.text, 100_000)?;
+        validate_content_length(&request.text, 100000)?;
+        validate_security_input(&request.text)?;
+        
+        for detection_type in &request.detection_types {
+            validate_safe_name(detection_type, "Detection type")?;
+        }
+        
+        let pool = get_pool()?;
+        let mut detections = Vec::new();
+        
+        // Detect characters
+        if request.detection_types.contains(&"characters".to_string()) {
+            let characters = CharacterOps::get_by_project(&pool, &request.project_id).await?;
+            for character in characters {
+                if let Some(positions) = find_text_occurrences(&request.text, &character.name) {
+                    for (start, end) in positions {
+                        detections.push(StoryBibleDetection {
+                            detection_type: "character".to_string(),
+                            entity_id: character.id.clone(),
+                            entity_name: character.name.clone(),
+                            start_position: start,
+                            end_position: end,
+                            confidence: 0.9, // High confidence for exact name matches
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Detect locations
+        if request.detection_types.contains(&"locations".to_string()) {
+            let locations = LocationOps::get_by_project(&pool, &request.project_id).await?;
+            for location in locations {
+                if let Some(positions) = find_text_occurrences(&request.text, &location.name) {
+                    for (start, end) in positions {
+                        detections.push(StoryBibleDetection {
+                            detection_type: "location".to_string(),
+                            entity_id: location.id.clone(),
+                            entity_name: location.name.clone(),
+                            start_position: start,
+                            end_position: end,
+                            confidence: 0.9, // High confidence for exact name matches
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Detect world elements
+        if request.detection_types.contains(&"world_elements".to_string()) {
+            let world_elements = WorldElementOps::get_by_project(&pool, &request.project_id).await?;
+            for element in world_elements {
+                if let Some(positions) = find_text_occurrences(&request.text, &element.name) {
+                    for (start, end) in positions {
+                        detections.push(StoryBibleDetection {
+                            detection_type: "world_element".to_string(),
+                            entity_id: element.id.clone(),
+                            entity_name: element.name.clone(),
+                            start_position: start,
+                            end_position: end,
+                            confidence: 0.9, // High confidence for exact name matches
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Sort by position in text
+        detections.sort_by_key(|d| d.start_position);
+        
+        Ok(detections)
+    }
+    
+    detect(request).await.into()
+}
+
+/// Helper function to find text occurrences
+fn find_text_occurrences(text: &str, search_term: &str) -> Option<Vec<(usize, usize)>> {
+    if search_term.is_empty() {
+        return None;
+    }
+    
+    let mut positions = Vec::new();
+    let text_lower = text.to_lowercase();
+    let search_lower = search_term.to_lowercase();
+    
+    let mut start = 0;
+    while let Some(pos) = text_lower[start..].find(&search_lower) {
+        let actual_pos = start + pos;
+        let end_pos = actual_pos + search_term.len();
+        
+        // Check if it's a whole word (not part of another word)
+        let is_word_boundary_start = actual_pos == 0 || 
+            !text.chars().nth(actual_pos - 1).unwrap_or(' ').is_alphanumeric();
+        let is_word_boundary_end = end_pos >= text.len() || 
+            !text.chars().nth(end_pos).unwrap_or(' ').is_alphanumeric();
+        
+        if is_word_boundary_start && is_word_boundary_end {
+            positions.push((actual_pos, end_pos));
+        }
+        
+        start = actual_pos + 1;
+    }
+    
+    if positions.is_empty() {
+        None
+    } else {
+        Some(positions)
+    }
 }

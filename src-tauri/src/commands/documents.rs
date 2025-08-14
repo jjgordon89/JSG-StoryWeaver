@@ -4,10 +4,11 @@ use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::DocumentOps};
 use crate::error::Result;
 use crate::security::validation::{
-    validate_document_name, validate_content_length, validate_security_input
+    validate_document_name
 };
+use crate::security::validators::{validate_id, validate_optional_id, validate_body_limits, validate_order_index_default};
 use serde::{Deserialize, Serialize};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, rl_save, validate_request_body_size_default, validate_request_body_size};
+use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, rl_save};
 
 /// Create document request
 #[derive(Debug, Deserialize)]
@@ -46,25 +47,20 @@ pub async fn create_document(request: CreateDocumentRequest) -> CommandResponse<
         // Rate limiting
         rl_create("document", Some(&request.project_id))?;
         // Input validation
-        validate_security_input(&request.project_id)?;
+        validate_id("project_id", &request.project_id, 64)?;
         validate_document_name(&request.title)?;
         
         if let Some(ref content) = request.content {
-            validate_request_body_size_default(content)?; // 1MB default bytes
-            validate_content_length(content, 1_000_000)?; // 1MB limit for document content
-            validate_security_input(content)?;
+            // Enforce both byte and char limits via helper
+            validate_body_limits("content", content, 1_000_000, 1_000_000)?;
         }
         
         if let Some(order_index) = request.order_index {
-            if order_index < 0 || order_index > 10000 {
-                return Err(crate::error::StoryWeaverError::ValidationError {
-                    message: "Order index must be between 0 and 10,000".to_string()
-                });
-            }
+            validate_order_index_default(order_index)?;
         }
         
-        if let Some(ref parent_id) = request.parent_id {
-            validate_security_input(parent_id)?;
+        if let Some(ref _parent_id) = request.parent_id {
+            validate_optional_id("parent_id", &request.parent_id, 64)?;
         }
         
         let pool = get_pool()?;
@@ -97,7 +93,7 @@ pub async fn get_documents(project_id: String) -> CommandResponse<Vec<Document>>
         rl_list("documents", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id.to_string())?;
+        validate_id("project_id", &project_id, 64)?;
         
         let pool = get_pool()?;
         DocumentOps::get_by_project(&pool, &project_id).await
@@ -113,7 +109,7 @@ pub async fn get_document(id: String) -> CommandResponse<Option<Document>> {
         rl_list("document", Some(&id))?;
         
         // Input validation
-        validate_security_input(&id)?;
+        validate_id("document_id", &id, 64)?;
         
         let pool = get_pool()?;
         DocumentOps::get_by_id(&pool, &id).await
@@ -129,34 +125,26 @@ pub async fn update_document(request: UpdateDocumentRequest) -> CommandResponse<
         // Rate limiting
         rl_update("document", Some(&request.id))?;
         // Input validation
-        validate_security_input(&request.id)?;
+        validate_id("document_id", &request.id, 64)?;
         
         if let Some(ref title) = request.title {
             validate_document_name(title)?;
         }
         
         if let Some(ref content) = request.content {
-            validate_request_body_size_default(content)?; // 1MB default bytes
-            validate_content_length(content, 1_000_000)?; // 1MB limit
-            validate_security_input(content)?;
+            validate_body_limits("content", content, 1_000_000, 1_000_000)?;
         }
         
         if let Some(order_index) = request.order_index {
-            if order_index < 0 || order_index > 10000 {
-                return Err(crate::error::StoryWeaverError::ValidationError {
-                    message: "Order index must be between 0 and 10,000".to_string()
-                });
-            }
+            validate_order_index_default(order_index)?;
         }
         
-        if let Some(ref parent_id) = request.parent_id {
-            validate_security_input(parent_id)?;
+        if let Some(ref _parent_id) = request.parent_id {
+            validate_optional_id("parent_id", &request.parent_id, 64)?;
         }
         
         if let Some(ref metadata) = request.metadata {
-            validate_request_body_size(metadata, 50_000)?; // 50KB bytes limit
-            validate_content_length(metadata, 50000)?; // 50KB limit for metadata
-            validate_security_input(metadata)?;
+            validate_body_limits("metadata", metadata, 50_000, 50_000)?;
         }
         
         let pool = get_pool()?;
@@ -199,10 +187,8 @@ pub async fn save_document(id: String, content: String) -> CommandResponse<()> {
         // Rate limiting
         rl_save("document", Some(&id))?;
         // Input validation
-        validate_security_input(&id)?;
-        validate_request_body_size_default(&content)?; // 1MB default bytes
-        validate_content_length(&content, 1_000_000)?; // 1MB limit
-        validate_security_input(&content)?;
+        validate_id("document_id", &id, 64)?;
+        validate_body_limits("content", &content, 1_000_000, 1_000_000)?;
         
         let pool = get_pool()?;
         
@@ -227,7 +213,7 @@ pub async fn delete_document(id: String) -> CommandResponse<()> {
         rl_delete("document", Some(&id))?;
         
         // Input validation
-        validate_security_input(&id)?;
+        validate_id("document_id", &id, 64)?;
         
         let pool = get_pool()?;
         DocumentOps::delete(&pool, &id).await
@@ -243,10 +229,8 @@ pub async fn search_documents(request: SearchDocumentsRequest) -> CommandRespons
         // Rate limiting
         rl_search("documents", Some(&request.project_id))?;
         // Input validation
-        validate_security_input(&request.project_id)?;
-        validate_request_body_size(&request.query, 4_000)?; // Max ~4KB bytes
-        validate_content_length(&request.query, 1000)?; // Limit search query length
-        validate_security_input(&request.query)?;
+        validate_id("project_id", &request.project_id, 64)?;
+        validate_body_limits("query", &request.query, 4_000, 1000)?;
         
         if request.query.trim().is_empty() {
             return Err(crate::error::StoryWeaverError::ValidationError {
@@ -275,13 +259,12 @@ pub async fn get_document_tree(project_id: String) -> CommandResponse<Vec<Docume
         rl_list("document_tree", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id.to_string())?;
+        validate_id("project_id", &project_id, 64)?;
         
         let pool = get_pool()?;
         let documents = DocumentOps::get_by_project(&pool, &project_id).await?;
         
         // Build tree structure
-        let mut tree: Vec<DocumentTree> = Vec::new();
         let mut document_map = std::collections::HashMap::new();
         
         // First pass: create map of all documents
@@ -357,7 +340,7 @@ pub async fn get_document_stats(project_id: String) -> CommandResponse<DocumentS
         rl_list("document_stats", Some(&project_id))?;
         
         // Input validation
-        validate_security_input(&project_id)?;
+        validate_id("project_id", &project_id, 64)?;
         
         let pool = get_pool()?;
         

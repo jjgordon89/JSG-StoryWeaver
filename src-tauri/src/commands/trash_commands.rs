@@ -3,7 +3,7 @@ use crate::database::get_pool;
 use crate::database::models::{DeletedItem, DeletedItemType};
 use crate::database::operations::DeletedItemOps;
 use crate::error::Result;
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list};
+use crate::security::rate_limit::{rl_update, rl_delete, rl_list};
 
 /// Get all deleted items (trash)
 #[tauri::command]

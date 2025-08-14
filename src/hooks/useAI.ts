@@ -236,14 +236,14 @@ export const useAIWriteStream = () => {
       let response: any;
       if (userPrompt) {
         response = await invoke('guided_write_stream', {
-          documentId,
-          userPrompt,
+          document_id: documentId,
+          user_prompt: userPrompt,
           settings: { ...useAIStore.getState().defaultWriteSettings, ...settings }
         });
       } else {
         response = await invoke('auto_write_stream', {
-          documentId,
-          cursorPosition,
+          document_id: documentId,
+          cursor_position: cursorPosition,
           settings: { ...useAIStore.getState().defaultWriteSettings, ...settings }
         });
       }

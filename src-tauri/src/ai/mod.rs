@@ -12,6 +12,8 @@ pub mod visualize;
 pub mod brainstorm;
 pub mod advanced_ai_manager;
 pub mod token_counter;
+pub mod cache;
+pub mod streaming_optimizer;
 
 // Re-export commonly used types
 pub use ai_history::{AIInteraction, AIHistoryManager, AIInteractionBuilder};

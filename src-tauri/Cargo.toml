@@ -50,6 +50,7 @@ log = "0.4"
 sha2 = "0.10"
 keyring = "2.3"
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 lru = "0.16.0"
 dashmap = "6.1.0"
 bcrypt = "0.17.0"

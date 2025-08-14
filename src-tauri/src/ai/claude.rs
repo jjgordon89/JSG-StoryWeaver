@@ -123,7 +123,7 @@ impl ClaudeProvider {
         }
     }
 
-    fn build_system_message(&self, context: &AIContext) -> String {
+    fn build_system_message(&self, _context: &AIContext) -> String {
         // Build a system message based on the context
         // This could include information about the document, user preferences, etc.
         "You are StoryWeaver, an AI writing assistant. Help the user write their story.".to_string()
@@ -422,7 +422,7 @@ impl AIProvider for ClaudeProvider {
         }
     }
 
-    async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>> {
+    async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>> {
         // Claude doesn't have a native embedding API, so we'll return an error
         Err(StoryWeaverError::AIProvider {
             provider: "claude".to_string(),

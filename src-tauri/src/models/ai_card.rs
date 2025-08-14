@@ -1,7 +1,8 @@
 //! AI Response Card models and database operations
 
 use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Sqlite};
+use sqlx::Row;
 use uuid::Uuid;
 use crate::error::{Result, StoryWeaverError};
 

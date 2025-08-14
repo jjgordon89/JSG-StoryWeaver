@@ -2,8 +2,9 @@
 //! Provides functions to interact with the streaming_sessions table
 
 use crate::error::{Result, StoryWeaverError};
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Sqlite};
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamingSession {
@@ -28,7 +29,9 @@ pub struct StreamingSession {
 impl super::StreamingSessionOps {
     /// Create a new streaming session
     pub async fn create(pool: &Pool<Sqlite>, session: &StreamingSession) -> Result<i64> {
-        let result = sqlx::query!(
+        let start = Instant::now();
+
+        let query = sqlx::query!(
             r#"
             INSERT INTO streaming_sessions (
                 session_id, project_id, model_used, prompt, status, generated_content,
@@ -47,12 +50,33 @@ impl super::StreamingSessionOps {
             session.error_message,
             session.metadata,
             session.started_at
-        )
-        .execute(&*pool)
-        .await
-        .map_err(|e| StoryWeaverError::database(format!("Failed to create streaming session: {}", e)))?;
+        );
 
-        Ok(result.last_insert_rowid())
+        let exec = query.execute(&*pool).await;
+        let duration_ms = start.elapsed().as_millis() as u64;
+
+        match exec {
+            Ok(result) => {
+                crate::logging::log_database_operation(
+                    "create_streaming_session",
+                    "streaming_sessions",
+                    duration_ms,
+                    true,
+                    None,
+                );
+                Ok(result.last_insert_rowid())
+            }
+            Err(e) => {
+                crate::logging::log_database_operation(
+                    "create_streaming_session",
+                    "streaming_sessions",
+                    duration_ms,
+                    false,
+                    Some(&format!("{}", e)),
+                );
+                Err(StoryWeaverError::database(format!("Failed to create streaming session: {}", e)))
+            }
+        }
     }
 
     /// Get a streaming session by ID

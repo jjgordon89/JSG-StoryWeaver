@@ -4,7 +4,6 @@
 use crate::background::{Task, TaskPriority, TaskStatus, TaskType};
 use crate::error::{Result, StoryWeaverError};
 use sqlx::{Pool, Sqlite, Row};
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 /// Background task database operations

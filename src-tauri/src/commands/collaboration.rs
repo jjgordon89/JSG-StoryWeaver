@@ -7,16 +7,13 @@ use crate::database::{
             CollaborationNotification, CollaborationSession, Comment, CommentRequest,
             CommentThread, CommentType, NotificationType, ShareSettings, ShareType, SharedDocument,
         },
-        Document,
     },
     operations::collaboration as collaboration_ops,
 };
 use crate::error::{Result, StoryWeaverError};
-use bcrypt::{hash, verify, DEFAULT_COST};
 use chrono::Utc;
 use std::str::FromStr;
 use crate::security::validation::{validate_security_input, validate_content_length};
-use crate::security::rate_limit::{rl_create, rl_update, rl_delete, rl_list, rl_search, validate_request_body_size};
 
 /// Create a shared document link
 #[tauri::command]
@@ -321,7 +318,7 @@ pub async fn leave_collaboration_session(session_token: String) -> Result<()> {
             .await
             .map_err(|e| StoryWeaverError::database(e.to_string()))?;
 
-    if let Some(sess) = session {
+    if let Some(_sess) = session {
         // Participant logic would be handled by a dedicated service
     }
 

@@ -2,7 +2,7 @@
 //! Provides functions to interact with the prose_modes table
 
 use crate::error::{Result, StoryWeaverError};
-use sqlx::{Pool, Sqlite, Row};
+use sqlx::{Pool, Sqlite};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

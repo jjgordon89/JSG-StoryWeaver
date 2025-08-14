@@ -1,6 +1,5 @@
 //! AI generation history command handlers
 
-use crate::commands::CommandResponse;
 use crate::database::{get_pool, models::*, operations::AIHistoryOps};
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
