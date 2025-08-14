@@ -13,7 +13,6 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use lazy_static::lazy_static;
 
-#[allow(clippy::unwrap_used)]
 lazy_static! {
     static ref PRIVACY_EMAIL_REGEX: Regex = Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
     static ref PRIVACY_NAME_REGEX: Regex = Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap();
