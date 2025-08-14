@@ -296,7 +296,7 @@ pub async fn clear_document_cache(document_id: Option<String>) -> Result<String>
 #[command]
 pub async fn get_streaming_details() -> Result<Vec<StreamInfo>> {
     match get_streaming_optimizer() {
-        Ok(optimizer) => {
+        Ok(_optimizer) => {
             // This would need to be implemented in the streaming optimizer
             // For now, return empty list
             Ok(vec![])

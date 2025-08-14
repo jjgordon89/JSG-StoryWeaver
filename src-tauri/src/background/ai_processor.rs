@@ -1,7 +1,7 @@
 //! AI Task Processor for StoryWeaver
 //! Handles background processing of AI generation tasks
 
-use crate::ai::{AIContext, AIProvider, AIProviderManager};
+use crate::ai::{AIContext, AIProviderManager};
 use crate::background::{Task, TaskProcessor, TaskStatus, TaskType};
 use crate::error::{Result, StoryWeaverError};
 use std::sync::Arc;

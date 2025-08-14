@@ -4,4 +4,3 @@
 pub mod performance_monitor;
 
 // Re-export for convenience
-pub use performance_monitor::*;

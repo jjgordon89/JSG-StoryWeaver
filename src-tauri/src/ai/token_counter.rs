@@ -32,7 +32,7 @@ pub struct TokenCountResult {
 
 /// Pricing information for different AI models
 #[derive(Debug, Clone)]
-struct ModelPricing {
+pub struct ModelPricing {
     pub input_cost_per_1k: f64,  // Cost per 1000 input tokens
     pub output_cost_per_1k: f64, // Cost per 1000 output tokens
 }

@@ -51,24 +51,27 @@ struct SafetySetting {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct GeminiResponse {
-    candidates: Vec<GeminiCandidate>,
-    #[serde(rename = "usageMetadata", skip_serializing_if = "Option::is_none")]
-    usage_metadata: Option<UsageMetadata>,
+struct GeminiCandidate {
+    content: GeminiContent,
+    #[serde(rename = "finishReason")]
+    #[allow(dead_code)]
+    finish_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct GeminiCandidate {
-    content: GeminiContent,
-    #[serde(rename = "finishReason", skip_serializing_if = "Option::is_none")]
-    finish_reason: Option<String>,
+struct GeminiResponse {
+    candidates: Vec<GeminiCandidate>,
+    #[serde(rename = "usageMetadata")]
+    usage_metadata: Option<UsageMetadata>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct UsageMetadata {
     #[serde(rename = "promptTokenCount")]
+    #[allow(dead_code)]
     prompt_token_count: u32,
     #[serde(rename = "candidatesTokenCount")]
+    #[allow(dead_code)]
     candidates_token_count: u32,
     #[serde(rename = "totalTokenCount")]
     total_token_count: u32,
@@ -81,7 +84,7 @@ pub struct GeminiProvider {
     pub rate_limiter: Arc<Mutex<RateLimiter>>,
 }
 
-struct RateLimiter {
+pub struct RateLimiter {
     request_count: u32,
     token_count: u32,
     last_reset: std::time::Instant,
@@ -111,7 +114,7 @@ impl RateLimiter {
             
             // Calculate time to wait until next minute
             let elapsed = now.duration_since(self.last_reset).as_millis() as u64;
-            let wait_time = if elapsed < 60000 { 60000 - elapsed } else { 0 };
+            let wait_time = 60000_u64.saturating_sub(elapsed);
             
             // Wait until rate limit resets
             if wait_time > 0 {

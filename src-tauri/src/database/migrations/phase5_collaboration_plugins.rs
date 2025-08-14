@@ -380,6 +380,7 @@ pub async fn up(pool: &Pool<Sqlite>) -> Result<()> {
 }
 
 /// Rollback Phase 5 collaboration and plugins migration
+#[allow(dead_code)]
 pub async fn down(pool: &Pool<Sqlite>) -> Result<()> {
     // Drop tables in reverse order to handle foreign key constraints
     let tables = vec![

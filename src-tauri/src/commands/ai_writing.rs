@@ -349,7 +349,7 @@ pub async fn auto_write_stream(
             Ok(stream) => {
                 // Real streaming implementation
                 let mut accumulated_content = String::new();
-                let mut token_count = 0;
+                let mut _token_count = 0;
                 
                 // Check if the provider supports real streaming
                 if stream.is_complete {
@@ -362,12 +362,12 @@ pub async fn auto_write_stream(
                             accumulated_content.push(' ');
                         }
                         
-                        token_count = accumulated_content.len() / 4; // Rough estimate
+                        _token_count = accumulated_content.len() / 4; // Rough estimate
                         
                         let chunk = StreamChunk {
                             content: accumulated_content.clone(),
                             is_complete: i == words.len() - 1,
-                            token_count,
+                            token_count: _token_count,
                             stream_id: stream_id_clone.clone(),
                         };
                         
@@ -442,7 +442,7 @@ pub async fn guided_write_stream(
             Ok(stream) => {
                 // Real streaming implementation
                 let mut accumulated_content = String::new();
-                let mut token_count = 0;
+                let mut _token_count = 0;
                 
                 // Check if the provider supports real streaming
                 if stream.is_complete {
@@ -455,12 +455,12 @@ pub async fn guided_write_stream(
                             accumulated_content.push(' ');
                         }
                         
-                        token_count = accumulated_content.len() / 4; // Rough estimate
+                        _token_count = accumulated_content.len() / 4; // Rough estimate
                         
                         let chunk = StreamChunk {
                             content: accumulated_content.clone(),
                             is_complete: i == words.len() - 1,
-                            token_count,
+                            token_count: _token_count,
                             stream_id: stream_id_clone.clone(),
                         };
                         

@@ -3,7 +3,7 @@
 
 use crate::error::{Result, StoryWeaverError};
 use sqlx::{sqlite::SqlitePool, Pool, Sqlite};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tauri::{AppHandle, Manager};
 
 pub type DbPool = Pool<Sqlite>;
@@ -15,7 +15,7 @@ pub mod optimization;
 pub mod backup;
 
 /// Database connection pool
-static mut DB_POOL: Option<Arc<DbPool>> = None;
+static DB_POOL: OnceLock<Arc<DbPool>> = OnceLock::new();
 
 /// Initialize the database
 pub async fn init(app_handle: &AppHandle) -> Result<()> {
@@ -50,20 +50,17 @@ pub async fn init(app_handle: &AppHandle) -> Result<()> {
     migrations::run_migrations(&pool).await?;
     
     // Store the pool globally
-    unsafe {
-        DB_POOL = Some(Arc::new(pool));
-    }
+    DB_POOL.set(Arc::new(pool))
+        .map_err(|_| StoryWeaverError::database("Database pool already initialized"))?;
     
     Ok(())
 }
 
 /// Get the database pool
 pub fn get_pool() -> Result<Arc<DbPool>> {
-    unsafe {
-        DB_POOL.as_ref().cloned().ok_or_else(|| {
-            StoryWeaverError::database("Database not initialized")
-        })
-    }
+    DB_POOL.get().cloned().ok_or_else(|| {
+        StoryWeaverError::database("Database not initialized")
+    })
 }
 
 /// Health check for the database
@@ -173,9 +170,8 @@ pub async fn init_test_db() -> Result<()> {
     migrations::run_migrations(&pool).await?;
 
     // Install pool into the global slot
-    unsafe {
-        DB_POOL = Some(Arc::new(pool));
-    }
+    DB_POOL.set(Arc::new(pool))
+        .map_err(|_| StoryWeaverError::database("Test database pool already initialized"))?;
 
     Ok(())
 }

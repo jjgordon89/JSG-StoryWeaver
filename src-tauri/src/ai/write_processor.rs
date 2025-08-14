@@ -2,11 +2,10 @@
 
 use super::{AIProvider, AIContext};
 use crate::database::DbPool;
-use crate::database::operations::{document_ops, DocumentOps, CharacterOps, LocationOps, WorldElementOps};
-use crate::database::models::{Character, Location, WorldElement, CharacterRole, VisibilityLevel};
+use crate::database::operations::{DocumentOps, CharacterOps, LocationOps, WorldElementOps};
+use crate::database::models::{Character, Location, WorldElement, CharacterRole};
 use crate::error::{Result, StoryWeaverError};
 use std::sync::Arc;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -200,6 +199,7 @@ pub struct ContextBuilder {
 /// Story Bible budget allocation for token management
 #[derive(Debug, Clone)]
 struct StoryBibleBudget {
+    #[allow(dead_code)]
     total_tokens: usize,
     characters_tokens: usize,
     locations_tokens: usize,

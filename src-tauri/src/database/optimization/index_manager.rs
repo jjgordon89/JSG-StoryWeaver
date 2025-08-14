@@ -403,6 +403,7 @@ impl IndexManager {
     }
     
     /// Calculate effectiveness score for an index
+    #[allow(dead_code)]
     fn calculate_effectiveness_score(&self, stats: &IndexUsageStats) -> f64 {
         let days_since_last_use = (chrono::Utc::now() - stats.last_used).num_days() as f64;
         let usage_frequency = stats.usage_count as f64;

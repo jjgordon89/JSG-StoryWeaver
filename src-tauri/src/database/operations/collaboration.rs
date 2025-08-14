@@ -6,7 +6,7 @@ use crate::database::models::collaboration::{
 };
 use crate::database::models::{Document, DocumentType};
 use chrono::Utc;
-use sqlx::{Row, SqlitePool};
+use sqlx::SqlitePool;
 use std::collections::HashMap;
 use uuid::Uuid;
 use std::str::FromStr;

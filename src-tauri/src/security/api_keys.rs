@@ -4,7 +4,7 @@
 //! using the operating system's secure storage (keychain/credential store).
 
 use crate::error::StoryWeaverError;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use serde::{Serialize, Deserialize};
 use tauri::AppHandle;
 use keyring::{Entry, Error as KeyringError};
@@ -24,13 +24,13 @@ pub enum ApiProvider {
 /// API key manager for secure storage and retrieval
 #[derive(Debug)]
 pub struct ApiKeyManager {
-    app_handle: AppHandle,
+    _app_handle: AppHandle,
 }
 
 impl ApiKeyManager {
     /// Create a new API key manager
     pub async fn new(app_handle: AppHandle) -> Result<Self, StoryWeaverError> {
-        Ok(Self { app_handle })
+        Ok(Self { _app_handle: app_handle })
     }
 
     /// Save an API key to secure storage
@@ -125,25 +125,21 @@ impl ApiKeyManager {
 }
 
 /// Global instance of the API key manager
-static mut API_KEY_MANAGER: Option<Arc<ApiKeyManager>> = None;
+static API_KEY_MANAGER: OnceLock<Arc<ApiKeyManager>> = OnceLock::new();
 
 /// Initialize the API key manager
 pub async fn init(app_handle: AppHandle) -> Result<(), StoryWeaverError> {
     let manager = ApiKeyManager::new(app_handle).await?;
     
-    unsafe {
-        API_KEY_MANAGER = Some(Arc::new(manager));
-    }
+    API_KEY_MANAGER.set(Arc::new(manager))
+        .map_err(|_| StoryWeaverError::SecurityError{ message: "API key manager already initialized".to_string() })?;
     
     Ok(())
 }
 
 /// Get the global API key manager instance
 pub fn get_api_key_manager() -> Result<Arc<ApiKeyManager>, StoryWeaverError> {
-    unsafe {
-        match &API_KEY_MANAGER {
-            Some(manager) => Ok(manager.clone()),
-            None => Err(StoryWeaverError::SecurityError{ message: "API key manager not initialized".to_string() }),
-        }
-    }
+    API_KEY_MANAGER.get().cloned().ok_or_else(|| {
+        StoryWeaverError::SecurityError{ message: "API key manager not initialized".to_string() }
+    })
 }

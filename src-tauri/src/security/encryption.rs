@@ -9,7 +9,7 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
 };
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use std::fs;
 use std::path::PathBuf;
@@ -121,27 +121,23 @@ fn load_or_create_key(key_path: &PathBuf) -> Result<Key<Aes256Gcm>, StoryWeaverE
 }
 
 /// Global instance of the encryption manager
-static mut ENCRYPTION_MANAGER: Option<Arc<EncryptionManager>> = None;
+static ENCRYPTION_MANAGER: OnceLock<Arc<EncryptionManager>> = OnceLock::new();
 
 /// Initialize the encryption manager
 pub async fn init(app_handle: &AppHandle) -> Result<(), StoryWeaverError> {
     let manager = EncryptionManager::new(app_handle).await?;
     
-    unsafe {
-        ENCRYPTION_MANAGER = Some(Arc::new(manager));
-    }
+    ENCRYPTION_MANAGER.set(Arc::new(manager))
+        .map_err(|_| StoryWeaverError::SecurityError{ message: "Encryption manager already initialized".to_string() })?;
     
     Ok(())
 }
 
 /// Get the global encryption manager instance
 pub fn get_encryption_manager() -> Result<Arc<EncryptionManager>, StoryWeaverError> {
-    unsafe {
-        match &ENCRYPTION_MANAGER {
-            Some(manager) => Ok(manager.clone()),
-            None => Err(StoryWeaverError::SecurityError{ message: "Encryption manager not initialized".to_string() }),
-        }
-    }
+    ENCRYPTION_MANAGER.get().cloned().ok_or_else(|| {
+        StoryWeaverError::SecurityError{ message: "Encryption manager not initialized".to_string() }
+    })
 }
 
 /// Helper function to encrypt a string

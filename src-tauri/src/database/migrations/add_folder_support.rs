@@ -41,6 +41,7 @@ pub async fn up(pool: &Pool<Sqlite>) -> Result<()> {
 }
 
 /// Rollback folder support migration
+#[allow(dead_code)]
 pub async fn down(pool: &Pool<Sqlite>) -> Result<()> {
     // SQLite doesn't support DROP COLUMN, so we would need to recreate tables
     // For now, we'll just drop the indexes

@@ -447,28 +447,28 @@ pub async fn get_location_hierarchy(location_id: String) -> CommandResponse<Loca
             };
             
             // Simple heuristic: if location type suggests hierarchy
-            if let (current_type, other_type) = (&location.location_type, &other_location.location_type) {
-                let current_type_lower = format!("{:?}", current_type).to_lowercase();
-                let other_type_lower = format!("{:?}", other_type).to_lowercase();
-                
-                // Parent relationships (larger contains smaller)
-                if (current_type_lower.contains("city") && other_type_lower.contains("country")) ||
-                   (current_type_lower.contains("building") && other_type_lower.contains("city")) ||
-                   (current_type_lower.contains("room") && other_type_lower.contains("building")) {
-                    parent_locations.push(summary);
-                }
-                // Child relationships (smaller contained in larger)
-                else if (other_type_lower.contains("city") && current_type_lower.contains("country")) ||
-                        (other_type_lower.contains("building") && current_type_lower.contains("city")) ||
-                        (other_type_lower.contains("room") && current_type_lower.contains("building")) {
-                    child_locations.push(summary);
-                }
-                // Nearby relationships (same level)
-                else if current_type_lower == other_type_lower {
-                    nearby_locations.push(summary);
-                }
-            } else {
-                // If no type information, consider as nearby
+            let (current_type, other_type) = (&location.location_type, &other_location.location_type);
+            let current_type_lower = format!("{:?}", current_type).to_lowercase();
+            let other_type_lower = format!("{:?}", other_type).to_lowercase();
+            
+            // Parent relationships (larger contains smaller)
+            if (current_type_lower.contains("city") && other_type_lower.contains("country")) ||
+               (current_type_lower.contains("building") && other_type_lower.contains("city")) ||
+               (current_type_lower.contains("room") && other_type_lower.contains("building")) {
+                parent_locations.push(summary);
+            }
+            // Child relationships (smaller contained in larger)
+            else if (other_type_lower.contains("city") && current_type_lower.contains("country")) ||
+                    (other_type_lower.contains("building") && current_type_lower.contains("city")) ||
+                    (other_type_lower.contains("room") && current_type_lower.contains("building")) {
+                child_locations.push(summary);
+            }
+            // Nearby relationships (same level)
+            else if current_type_lower == other_type_lower {
+                nearby_locations.push(summary);
+            }
+            else {
+                // If no clear relationship, consider as nearby
                 nearby_locations.push(summary);
             }
         }

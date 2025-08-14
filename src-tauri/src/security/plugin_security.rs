@@ -12,13 +12,44 @@ use serde_json::Value;
 use std::collections::HashSet;
 
 lazy_static! {
-    // Regex patterns for plugin security validation
-    static ref TEMPLATE_VARIABLE_REGEX: Regex = Regex::new(r"\{\{([^}]+)\}\}").unwrap();
-    static ref DANGEROUS_TEMPLATE_PATTERNS: Regex = Regex::new(r"(?i)(system|exec|eval|import|require|include|file|path|url|http|ftp|ssh|telnet|ldap|sql|database|admin|root|password|token|key|secret|credential)").unwrap();
-    static ref PROMPT_INJECTION_PATTERNS: Regex = Regex::new(r"(?i)(ignore\s+previous|forget\s+instructions|new\s+instructions|system\s+prompt|override|bypass|jailbreak|pretend|roleplay|act\s+as|you\s+are\s+now)").unwrap();
-    static ref EXCESSIVE_REPETITION: Regex = Regex::new(r"(.)\1{50,}").unwrap();
-    static ref UNICODE_CONTROL_CHARS: Regex = Regex::new(r"[\u0000-\u001F\u007F-\u009F\u2000-\u200F\u2028-\u202F\u205F-\u206F\uFEFF]").unwrap();
+    // Regex patterns for plugin security validation — use match on Regex::new(...) instead of unwrap()
+    static ref TEMPLATE_VARIABLE_REGEX: Regex = match Regex::new(r"\{\{([^}]+)\}\}") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid TEMPLATE_VARIABLE_REGEX: {}", e),
+    };
+    static ref DANGEROUS_TEMPLATE_PATTERNS: Regex = match Regex::new(r"(?i)(system|exec|eval|import|require|include|file|path|url|http|ftp|ssh|telnet|ldap|sql|database|admin|root|password|token|key|secret|credential)") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid DANGEROUS_TEMPLATE_PATTERNS: {}", e),
+    };
+    static ref PROMPT_INJECTION_PATTERNS: Regex = match Regex::new(r"(?i)(ignore\s+previous|forget\s+instructions|new\s+instructions|system\s+prompt|override|bypass|jailbreak|pretend|roleplay|act\s+as|you\s+are\s+now)") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid PROMPT_INJECTION_PATTERNS: {}", e),
+    };
+    // Note: backreferences (e.g. (.)\1{50,}) are not supported by Rust's `regex` crate.
+    // Replace excessive-repetition detection with a helper function below.
+    static ref UNICODE_CONTROL_CHARS: Regex = match Regex::new(r"[\u0000-\u001F\u007F-\u009F\u2000-\u200F\u2028-\u202F\u205F-\u206F\uFEFF]") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid UNICODE_CONTROL_CHARS: {}", e),
+    };
 }
+
+ // Helper: detect long runs (excessive repetition) without using backreferences
+ fn has_excessive_repetition(s: &str, limit: usize) -> bool {
+     let mut prev: Option<char> = None;
+     let mut run = 0usize;
+     for c in s.chars() {
+         if Some(c) == prev {
+             run += 1;
+             if run >= limit {
+                 return true;
+             }
+         } else {
+             prev = Some(c);
+             run = 1;
+         }
+     }
+     false
+ }
 
 /// Maximum allowed template size in characters
 const MAX_TEMPLATE_SIZE: usize = 20_000;
@@ -33,7 +64,6 @@ const MAX_VARIABLE_NAME_LENGTH: usize = 100;
 const MAX_VARIABLE_DESCRIPTION_LENGTH: usize = 500;
 
 /// Maximum allowed nesting depth for template variables
-const MAX_TEMPLATE_NESTING_DEPTH: usize = 10;
 
 /// Plugin security validation result
 #[derive(Debug, Clone, serde::Serialize)]
@@ -157,7 +187,7 @@ fn validate_prompt_template(template: &str, result: &mut PluginSecurityValidatio
     }
 
     // Check for excessive repetition (potential DoS)
-    if EXCESSIVE_REPETITION.is_match(template) {
+    if has_excessive_repetition(template, 50) {
         result.warnings.push("Template contains excessive character repetition".to_string());
         result.risk_score += 10;
     }

@@ -16,7 +16,6 @@ Successes:
 - C4 Canvas system is feature-complete with comprehensive functionality
 - Code cleanup reduced compiler warnings
 - Documentation updated to reflect current status
-- Build remains stable and functional
 
 Improvements_Identified_For_Consolidation:
 - Canvas system ready for production use with all core features implemented
@@ -94,7 +93,7 @@ Improvements_Identified_For_Consolidation:
 - Consider extending detection with fuzzy matching or leveraging AI/NLP for better detection and confidence scoring.
 ---
 
----
+--- 
 Date: 2025-08-14
 TaskRef: "C4 - Canvas/Visual Planning Implementation (Frontend & Integration)"
 
@@ -169,8 +168,9 @@ Improvements_Identified_For_Consolidation:
 - Add explicit checks to prevent Delete shortcut from firing while a text field inside an element has focus.
 - Continue with frontend export UI and undo/redo integration as next C4 tasks.
 
----
+--- 
 
+--- 
 Date: 2025-08-14
 TaskRef: "D1 - Performance Optimization: Compile & Command Consolidation"
 
@@ -195,7 +195,7 @@ Successes:
 
 Improvements_Identified_For_Consolidation:
 - Address the ~83 compiler warnings across the codebase as part of Milestone B (Task B1/B2). Start with unused imports and unused variables that are easiest to remediate.
-- Run `cargo fix --lib -p storyweaver` to automatically apply straightforward suggestions, then manually review remaining warnings.
+- Run `cargo fix --lib -p storyweaver` to automatically apply straightforward suggestions, then manually review remaining items.
 - Add unit/integration tests around the optimization command surface to prevent regressions if commands are refactored again.
 - Consider adding a CI gate that runs `cargo check` and fails if duplicate Tauri commands are introduced (prevent reintroduction of macro symbol collisions).
 
@@ -210,5 +210,113 @@ Next Steps:
 1. Proceed with Milestone B: run a focused pass to remove unused imports and fix unused variables (Task B1/B2).
 2. Run `cargo fix` and re-run `cargo check` to reduce warnings to under target threshold.
 3. Add tests for optimization command wrappers and monitoring endpoints.
+
+---
+
+--- 
+Date: 2025-08-14
+TaskRef: "D2 Code Quality - Unused Imports/Variables Pass"
+
+Learnings:
+- Performed a focused D2 pass addressing trivial unused imports, unused variables, and small style inconsistencies across the src-tauri backend.
+- Changes lowered the compiler warning count (progressively) and addressed noisy items that made it harder to focus on higher-priority work.
+- Specific patterns that helped: prefer removing unused `use` lines, prefix intentionally-unused local variables with an underscore (e.g., `_optimizer`, `_description`), and remove public re-exports that are not needed (`pub use ...`) to reduce exported symbol noise.
+- Not all warnings are equally safe to auto-fix; I prioritized clearly-trivial items (unused imports, obvious unused local variables, and harmless re-exports). I avoided touching dead-code that might be intentionally kept for serde compatibility.
+
+Difficulties:
+- Some remaining warnings require design decisions (private-interface warnings, static mutable references). These need careful refactors rather than blind fixes.
+- A few files with large structs used for serde derive still show "field never read" warnings; these are safe to keep but should be reviewed when doing deeper cleanup.
+
+Successes:
+- Files updated during this D2 session:
+  - src-tauri/src/database/optimization/mod.rs — removed unused imports.
+  - src-tauri/src/database/backup.rs — removed unused chrono `TimeZone` import.
+  - src-tauri/src/commands/projects.rs — validation fixes and prefixed intentionally-unused binding.
+  - src-tauri/src/database/operations/collaboration.rs — removed unused `Row` import.
+  - src-tauri/src/models/mod.rs — removed unused public re-exports (`ai_card`, `story_bible`).
+  - src-tauri/src/ai/write_processor.rs — removed unused imports and tightened usage.
+  - src-tauri/src/commands/performance_optimization.rs — prefixed unused streaming optimizer binding.
+- Current cargo check results: 42 warnings remain across src-tauri (no compilation errors).
+- These changes keep the code behavior unchanged while reducing compiler noise and improving signal-to-noise for future passes.
+
+Improvements_Identified_For_Consolidation:
+- Run `cargo fix --lib -p storyweaver` to auto-apply safe fixes and then do a manual review for remaining items.
+- Triage remaining warnings by category and ownership; assign the `static_mut_refs` and private-interface items to an engineer with deeper knowledge of lifetimes and visibility patterns.
+- Consider a CI job that enforces a warning budget and blocks merges that increase the warning count.
+
+Files Modified (D2 session):
+- src-tauri/src/database/optimization/mod.rs
+- src-tauri/src/database/backup.rs
+- src-tauri/src/commands/projects.rs
+- src-tauri/src/database/operations/collaboration.rs
+- src-tauri/src/models/mod.rs
+- src-tauri/src/ai/write_processor.rs
+- src-tauri/src/commands/performance_optimization.rs
+
+---
+
+--- 
+Date: 2025-08-14
+TaskRef: "D2 - Clippy & Minor Fixes (manual follow-up)"
+
+Learnings:
+- Ran `cargo clippy --fix --allow-dirty --lib -p storyweaver` and inspected results.
+- The auto-fixer applied many suggestions but left three compile errors caused by ambiguous integer literals used with `.saturating_sub(...)` in AI provider rate limiter code. These occurred in:
+  - `src-tauri/src/ai/openai.rs`
+  - `src-tauri/src/ai/claude.rs`
+  - `src-tauri/src/ai/gemini.rs`
+- Manually fixed those ambiguous literal issues by explicitly typing the literal as `60000_u64.saturating_sub(elapsed)` in each of the three provider files.
+- Addressed doc-comment blank-line warnings by converting a small top-level doc comment into a regular comment in `src-tauri/src/database/operations/series_consistency_ops.rs` (to avoid the empty doc-comment line that clippy flagged).
+- Re-ran `cargo clippy -p storyweaver` to validate the changes; the build completed successfully. Clippy still reports a large number of warnings (~714) across the crate; this is expected for a big codebase and will be addressed incrementally.
+- Made other small, safe edits as-needed to match clippy guidance where low-risk (e.g., replacing pattern that caused an immediate error vs. stylistic suggestions which were deferred).
+
+Difficulties:
+- Clippy's automatic fix can't apply every suggestion; when fixes interact with ambiguous numeric types the auto-fixer may leave incomplete edits that require manual intervention.
+- Many clippy warnings are stylistic or involve design decisions (e.g., static mutable references, API surface changes). These require human review and cannot be auto-fixed reliably.
+
+Successes:
+- Resolved the three compile errors introduced after the auto-fixer run (ambiguous numeric literal issues) so the crate compiles cleanly.
+- Removed at least one source of repeated doc-comment warnings.
+- Verified crate builds and completed a clippy run to confirm the changes.
+
+Improvements_Identified_For_Consolidation:
+- Next recommended steps (user-provided D2 plan):
+  1. Run `cargo fix --lib -p storyweaver` and review automated suggestions; commit safe fixes.
+  2. Audit dead-code fields and either remove them or annotate with `#[allow(dead_code)]` where used only by serde/debug (this requires code-owner review).
+  3. Run `cargo clippy` and address style/type suggestions in small, reviewed batches.
+  4. Final pass: aim to reduce warnings to <20 and close D2; optional target 0–10 warnings for a clean baseline.
+- I paused after the manual fixes per your instruction; no further edits will be made until you request them.
+
+Files Modified in this manual follow-up:
+- src-tauri/src/ai/claude.rs
+- src-tauri/src/ai/openai.rs
+- src-tauri/src/ai/gemini.rs
+- src-tauri/src/database/operations/series_consistency_ops.rs
+
+--- 
+Date: 2025-08-14
+TaskRef: "D2 - Session Summary & Pause"
+
+Learnings:
+- Manual fixes are sometimes required after `cargo clippy --fix` — especially for ambiguous literals and doc-comment formatting.
+- Large codebases accumulate stylistic warnings that should be triaged by category and owner; automated fixes help but human review is essential for semantic safety.
+- Keeping a running raw reflection log helps preserve the rationale for each change and next steps for future passes.
+
+Difficulties:
+- Many warnings remain; further work should be planned as small, reviewable tasks to avoid regressions.
+
+Successes:
+- Fixed three compile-blocking issues and reduced some warnings.
+- Recorded this session's learnings and next steps in the memory bank (this file).
+
+Improvements_Identified_For_Consolidation:
+- Proceed with the D2 recommended plan when ready; consider breaking it into checklist PRs to keep changes reviewable.
+
+Files Modified During This Session (quick reference):
+- src-tauri/src/ai/claude.rs
+- src-tauri/src/ai/openai.rs
+- src-tauri/src/ai/gemini.rs
+- src-tauri/src/database/operations/series_consistency_ops.rs
+- Additional D2 items previously updated as listed above.
 
 ---

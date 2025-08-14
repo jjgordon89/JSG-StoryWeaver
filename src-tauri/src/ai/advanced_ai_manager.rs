@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use std::str::FromStr;
 
 use super::{
     prose_modes::{ProseModelManager, ProseMode},
@@ -11,7 +10,6 @@ use super::{
     AIProvider, AIContext,
 };
 use crate::error::{Result, StoryWeaverError};
-use crate::database::models::ai::{BrainstormCategory, ImageResolution};
 use crate::database::{get_pool, operations::ai_card_ops::AICardOps};
 use crate::models::ai_card::CreateAICardRequest;
 

@@ -8,7 +8,7 @@ use crate::database::get_pool;
 use sqlx::{Pool, Sqlite};
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 /// Audit event severity levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,7 +186,7 @@ impl AuditLogger {
 }
 
 /// Global instance of the audit logger
-static mut AUDIT_LOGGER: Option<Arc<AuditLogger>> = None;
+static AUDIT_LOGGER: OnceLock<Arc<AuditLogger>> = OnceLock::new();
 
 /// Initialize the audit logger
 pub async fn init() -> Result<(), StoryWeaverError> {
@@ -224,21 +224,17 @@ pub async fn init() -> Result<(), StoryWeaverError> {
 
     let logger = AuditLogger::new(pool.clone());
     
-    unsafe {
-        AUDIT_LOGGER = Some(Arc::new(logger));
-    }
+    AUDIT_LOGGER.set(Arc::new(logger))
+        .map_err(|_| StoryWeaverError::SecurityError{ message: "Audit logger already initialized".to_string() })?;
     
     Ok(())
 }
 
 /// Get the global audit logger instance
 pub fn get_audit_logger() -> Result<Arc<AuditLogger>, StoryWeaverError> {
-    unsafe {
-        match &AUDIT_LOGGER {
-            Some(logger) => Ok(logger.clone()),
-            None => Err(StoryWeaverError::SecurityError{ message: "Audit logger not initialized".to_string() }),
-        }
-    }
+    AUDIT_LOGGER.get().cloned().ok_or_else(|| {
+        StoryWeaverError::SecurityError{ message: "Audit logger not initialized".to_string() }
+    })
 }
 
 /// Log an authentication event

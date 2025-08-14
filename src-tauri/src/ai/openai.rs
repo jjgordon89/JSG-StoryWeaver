@@ -31,11 +31,13 @@ struct ChatCompletionRequest {
 #[derive(Debug, Clone, Deserialize)]
 struct ChatCompletionChoice {
     message: ChatMessage,
+    #[allow(dead_code)]
     finish_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct ChatCompletionResponse {
+    #[allow(dead_code)]
     id: String,
     choices: Vec<ChatCompletionChoice>,
     usage: Option<TokenUsage>,
@@ -43,7 +45,9 @@ struct ChatCompletionResponse {
 
 #[derive(Debug, Clone, Deserialize)]
 struct TokenUsage {
+    #[allow(dead_code)]
     prompt_tokens: u32,
+    #[allow(dead_code)]
     completion_tokens: u32,
     total_tokens: u32,
 }
@@ -73,7 +77,7 @@ pub struct OpenAIProvider {
     pub rate_limiter: Arc<Mutex<RateLimiter>>,
 }
 
-struct RateLimiter {
+pub struct RateLimiter {
     request_count: u32,
     token_count: u32,
     last_reset: std::time::Instant,
@@ -103,7 +107,7 @@ impl RateLimiter {
             
             // Calculate time to wait until next minute
             let elapsed = now.duration_since(self.last_reset).as_millis() as u64;
-            let wait_time = if elapsed < 60000 { 60000 - elapsed } else { 0 };
+            let wait_time = 60000_u64.saturating_sub(elapsed);
             
             // Wait until rate limit resets
             if wait_time > 0 {

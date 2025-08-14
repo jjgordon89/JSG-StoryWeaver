@@ -41,10 +41,10 @@ pub async fn create_project(request: CreateProjectRequest) -> CommandResponse<Pr
         // Input validation
         validate_project_name(&request.name)?;
         
-        if let Some(ref description) = request.description {
-            validate_request_body_size(description, 5_000)?;
-            validate_content_length(description, 5000)?;
-            validate_security_input(description)?;
+        if let Some(ref _description) = request.description {
+            validate_request_body_size(_description, 5_000)?;
+            validate_content_length(_description, 5000)?;
+            validate_security_input(_description)?;
         }
         
         if let Some(ref genre) = request.genre {
@@ -121,7 +121,7 @@ pub async fn update_project(request: UpdateProjectRequest) -> CommandResponse<()
             validate_project_name(name)?;
         }
         
-        if let Some(ref description) = request.description {
+        if let Some(ref _description) = request.description {
             validate_optional_str("description", &request.description, 5000, true)?;
         }
         

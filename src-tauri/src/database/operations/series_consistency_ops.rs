@@ -4,7 +4,7 @@ use sqlx::{Pool, Sqlite};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Series consistency checking operations
+ // Series consistency checking operations
 // SeriesConsistencyOps struct is defined in mod.rs
 
 /// Consistency conflict types
@@ -51,19 +51,23 @@ pub struct SeriesConsistencyReport {
 /// Character consistency data for comparison
 #[derive(Debug, Clone)]
 struct CharacterConsistencyData {
+    #[allow(dead_code)]
     pub character_name: String,
     pub project_id: String,
     pub traits: Vec<CharacterTrait>,
+    #[allow(dead_code)]
     pub description: Option<String>,
 }
 
 /// World element consistency data for comparison
 #[derive(Debug, Clone)]
 struct WorldElementConsistencyData {
+    #[allow(dead_code)]
     pub element_name: String,
     pub project_id: String,
     pub element_type: String,
     pub description: String,
+    #[allow(dead_code)]
     pub details: Option<String>,
 }
 

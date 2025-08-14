@@ -4,7 +4,7 @@
 use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 use sha2::{Digest, Sha256};
 
@@ -247,22 +247,19 @@ pub struct CacheStats {
 }
 
 /// Global cache instance
-static mut AI_CACHE: Option<Arc<AIResponseCache>> = None;
+static AI_CACHE: OnceLock<Arc<AIResponseCache>> = OnceLock::new();
 
 /// Initialize the global AI cache
-pub fn init_ai_cache(max_size: usize, default_ttl_seconds: u64) {
-    unsafe {
-        AI_CACHE = Some(Arc::new(AIResponseCache::new(max_size, default_ttl_seconds)));
-    }
+pub fn init_ai_cache(max_size: usize, default_ttl_seconds: u64) -> Result<()> {
+    AI_CACHE.set(Arc::new(AIResponseCache::new(max_size, default_ttl_seconds)))
+        .map_err(|_| StoryWeaverError::ai_request("Cache", 500, "AI cache already initialized"))
 }
 
 /// Get the global AI cache instance
 pub fn get_ai_cache() -> Result<Arc<AIResponseCache>> {
-    unsafe {
-        AI_CACHE.as_ref().cloned().ok_or_else(|| {
-            StoryWeaverError::ai_request("Cache", 500, "AI cache not initialized")
-        })
-    }
+    AI_CACHE.get().cloned().ok_or_else(|| {
+        StoryWeaverError::ai_request("Cache", 500, "AI cache not initialized")
+    })
 }
 
 /// Helper function to create cache key from common parameters

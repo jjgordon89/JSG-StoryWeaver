@@ -292,28 +292,45 @@ Estimated remaining effort to finish D1: 0 hours — D1 is complete.
   - Ongoing work to reduce compiler warnings and tighten visibility/type issues
 
 Work completed in current session (D2-focused repairs)
-- Reduced compiler warnings from ~67 → 53 by addressing many low-hanging issues.
-- Representative fixes applied:
-  - src-tauri/src/commands/projects.rs
-    - Removed unused validator imports, removed unused trace import, fixed unused variable references.
-  - src-tauri/src/commands/documents.rs
-    - Removed unused imports, tightened validator usage, fixed unused variable patterns.
-  - src-tauri/src/commands/ai_writing.rs
-    - Removed unnecessary `mut` bindings, replaced unused variables with _-prefixed names, standardized validation usage, improved streaming skeleton handling.
-  - src-tauri/src/commands/advanced_ai_commands.rs
-    - Fixed identifier naming (snake_case) and unified stream id usage.
-  - src-tauri/src/commands/performance_optimization.rs
-    - Fixed unused variable references and corrected streaming optimizer usage.
-- Additional small edits across command modules to replace unused bindings, adjust pattern matching, and make names consistent with Rust style.
+- Reduced compiler warnings from ~67 → 18 by addressing a set of low-hanging issues and performing targeted refactors (notably replacing unsafe global statics with `OnceLock`-backed singletons).
+- Representative fixes applied (this session):
+  - src-tauri/src/database/mod.rs
+    - Replaced unsafe global `DB_POOL` with `OnceLock<Arc<DbPool>>` and updated init/get APIs to use the safe API.
+  - src-tauri/src/ai/cache.rs
+    - Replaced `static mut` AI cache with `OnceLock<Arc<AIResponseCache>>`; added safe init/get functions and tightened types.
+  - src-tauri/src/ai/streaming_optimizer.rs
+    - Replaced `STREAMING_OPTIMIZER` global with `OnceLock` and added safe init/get wrappers.
+  - src-tauri/src/documents/lazy_loading.rs
+    - Replaced `LAZY_LOADER` global with `OnceLock`, updated init/get, and fixed related API usages.
+  - src-tauri/src/security/api_keys.rs, src-tauri/src/security/encryption.rs, src-tauri/src/security/audit.rs, src-tauri/src/security/privacy.rs
+    - Converted multiple singleton `static mut` instances to `OnceLock`, fixed init/get patterns, and removed/renamed unused fields to silence warnings.
+  - Multiple command modules (examples)
+    - src-tauri/src/commands/ai_history.rs, folder_commands.rs, series_commands.rs, document_link_commands.rs, settings_commands.rs, performance_commands.rs, templates.rs, sync_commands.rs
+    - Removed unused imports, prefixed intentionally-unused bindings with `_`, and tightened validation call-sites.
+- Notes: Focused strictly on D2 tasks (code-quality/type-safety/static-global refactors). No unrelated feature changes were made.
 
 Current status and metrics
-- Latest cargo check (src-tauri): 53 warnings remain (report suggests `cargo fix` could apply some automatic suggestions).
-- Many remaining warnings are in the following categories:
-  - Unused imports/unused variables across many modules (safe to remove or prefix with underscore)
-  - Dead code / fields never read (some structs used for serde/deserialization can be left; others may be dead and require analysis)
-  - Private interface / visibility mismatches (types exposed publicly while dependent types are private)
-  - static_mut_refs warnings where code accesses global singletons; requires a careful migration strategy (or acceptance via explicit safe wrappers)
-  - Non-critical naming/style warnings (snake_case)
+- Latest cargo check (src-tauri): 18 warnings remain (run `cargo fix --lib -p storyweaver` to apply trivial suggestions).
+- Remaining warning categories:
+  - Dead code / fields never read (some struct fields exist primarily for serde/deserialization or debug)
+  - Non-critical naming/style warnings (addressable via `cargo clippy`)
+  - A small number of unused imports (one import in `privacy.rs` is currently unused after refactor)
+  - Migration helper functions flagged as unused (dead_code) — these are intentional for the migration registry
+  - A few remaining TODOs: audit and selectively remove/annotate dead fields, finalize small API surface hardening
+- What changed vs. previous status:
+  - Replaced multiple unsafe globals with `OnceLock`, eliminating the majority of `static_mut_refs` warnings.
+  - Consolidated singleton init/get patterns across security, AI, documents, and database subsystems.
+  - Lowered warning count from 42 → 18 in this session.
+
+Next steps to finish D2 (recommended)
+1. Run `cargo fix --lib -p storyweaver` and review automated suggestions; commit safe fixes. (30–60 minutes)
+2. Audit dead-code fields and either remove them or annotate with `#[allow(dead_code)]` where used only by serde/debug (1–2 hours).
+3. Run `cargo clippy` and address style/type suggestions (1–2 hours).
+4. Final pass: aim to reduce warnings to <20 and close D2. If desired, I can continue with these steps and target 0–10 remaining warnings.
+
+Notes
+- All changes in this session were constrained to D2 tasks per instructions. If you want me to proceed with the `cargo fix` and `cargo clippy` passes, confirm and I will continue.
+- I will now update the action plan metrics and save this file.
 
 Next steps to finish D2 (recommended)
 1. Continue removing trivial unused imports/variables across the codebase (automatable with a scoped `cargo fix` and manual review) — estimated 1–2 hours.
@@ -335,11 +352,44 @@ Notes
 - **Estimated Effort:** 8-10 hours
 - **Dependencies:** Milestone C
 
-- [ ] Expand unit test coverage for core functions
+- [🔄] Expand unit test coverage for core functions
+  - Progress: Added and adjusted Rust unit tests for token counting and cost-estimation logic in `src-tauri/src/ai/token_counter.rs` (tests for `count_tokens`, `estimate_cost`, and `analyze_usage`).
+  - Commands executed:
+    - `cd src-tauri && cargo test` — built test artifacts; full test run aborted with a runtime error (exit code 0xc0000139, STATUS_ENTRYPOINT_NOT_FOUND).
+    - `cd src-tauri && cargo test test_token_counting --lib` — attempted filtered run; the test binary exited with the same runtime entrypoint error.
+  - Observations:
+    - The new tests compile successfully. The runtime failure indicates a missing/incompatible native dependency or test-binary loader issue on Windows (likely a native crate or DLL used by Tauri/sqlx/plugins).
+    - Multiple unrelated test modules emit warnings (unused imports/variables) which do not block compilation but add noise.
+  - Next steps:
+    1. Diagnose the STATUS_ENTRYPOINT_NOT_FOUND failure:
+       - Run `cargo test --no-run` to produce the test binary, then execute it with `--nocapture` to capture loader errors.
+       - Inspect native dependencies (e.g., with Dependency Walker) to identify missing DLLs.
+       - If needed, create a small isolated test-only crate to run pure-library tests without Tauri/native features.
+    2. Apply `cargo fix --lib -p storyweaver --tests` to address trivial warnings and reduce noise before further test runs.
+    3. After runtime issue is resolved, expand unit tests to other core modules (AI helpers, tokenizers, streaming optimizer).
 - [ ] Add integration tests for AI operations
+  - Plan: Implement async integration tests (using `#[tokio::test]`) in `src-tauri/tests/integration_ai_tests.rs` with mocked providers to avoid external network calls. Blocked until runtime issue is resolved.
 - [ ] Enhance E2E test coverage for new features
+  - Plan: Add Playwright scenarios under `tests/e2e/` for Quick Tools, Canvas flows, and Story Bible. Use `npm run test:e2e` for execution. No frontend E2E changes were made in this session.
 - [ ] Add performance testing for large documents
+  - Plan: Add a Rust benchmark harness (Criterion) for lazy loading and streaming optimizer memory tests, plus Node scripts to simulate large-document front-end scenarios. Deferred until unit/integration tests are stable.
 - [ ] Implement automated testing in CI/CD
+  - Plan: Add GitHub Actions workflow to run `cargo test`, `npm test` (Vitest), and `playwright` tests on push/PR. Hold until the STATUS_ENTRYPOINT_NOT_FOUND runtime failure is diagnosed and resolved so CI won't fail on the same issue.
+
+Work completed so far for D3 (this session)
+- Added/modified unit tests in `src-tauri/src/ai/token_counter.rs` to increase coverage for token counting and cost estimation logic.
+- Attempted to run unit tests locally; observed runtime test-binary failure (STATUS_ENTRYPOINT_NOT_FOUND). Collected compiler warnings and test run behavior to inform next debugging steps.
+
+Estimated remaining effort to finish D3
+- Diagnose & fix runtime entrypoint issue: 1-2 hours
+- Expand unit tests across other core modules: 3-4 hours
+- Implement integration tests for AI operations (mocked providers): 2-4 hours
+- Add E2E Playwright tests (selected flows): 2-4 hours
+- Add CI workflow and stabilize: 2-3 hours
+
+Notes
+- Per your instruction I worked only on D3 tasks in this session (unit tests). No unrelated changes were made.
+- I can proceed with the diagnostic steps (build-only test binary, inspect loader errors) now if you approve, or I can continue adding isolated unit tests that avoid heavier native features while we investigate the runtime failure.
 
 #### Task D4: UI/UX Polish
 

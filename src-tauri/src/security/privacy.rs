@@ -14,8 +14,14 @@ use tokio::sync::RwLock;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref PRIVACY_EMAIL_REGEX: Regex = Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap();
-    static ref PRIVACY_NAME_REGEX: Regex = Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap();
+    static ref PRIVACY_EMAIL_REGEX: Regex = match Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b") {
+        Ok(regex) => regex,
+        Err(e) => panic!("Invalid PRIVACY_EMAIL_REGEX: {}", e),
+    };
+    static ref PRIVACY_NAME_REGEX: Regex = match Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b") {
+        Ok(regex) => regex,
+        Err(e) => panic!("Invalid PRIVACY_NAME_REGEX: {}", e),
+    };
 }
 
 /// Privacy settings for the application

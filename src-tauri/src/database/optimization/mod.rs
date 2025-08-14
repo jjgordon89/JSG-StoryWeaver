@@ -11,9 +11,6 @@ pub use ai_response_cache::*;
 
 use crate::error::Result;
 use tracing::info;
-use crate::database::get_pool;
-use crate::error::StoryWeaverError;
-use sqlx::SqlitePool;
 
 /// Initialize all optimization components
 pub async fn initialize_optimization_components() -> Result<OptimizationManager> {
@@ -65,7 +62,7 @@ impl OptimizationManager {
         self.index_manager.cleanup_unused_indexes(0.0).await?;
         
         // Clear memory caches if needed
-        self.memory_optimizer.clear_caches().await;
+        let _ = self.memory_optimizer.clear_caches().await;
         
         // Cleanup AI response cache
         // Note: The cache has its own internal cleanup, but we could trigger it here if needed

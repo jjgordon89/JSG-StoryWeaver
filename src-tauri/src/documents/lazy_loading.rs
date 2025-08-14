@@ -4,7 +4,7 @@
 use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 /// Document chunk for lazy loading
@@ -376,22 +376,19 @@ pub struct CacheStats {
 }
 
 /// Global lazy loader instance
-static mut LAZY_LOADER: Option<Arc<LazyDocumentLoader>> = None;
+static LAZY_LOADER: OnceLock<Arc<LazyDocumentLoader>> = OnceLock::new();
 
 /// Initialize the global lazy document loader
-pub fn init_lazy_loader(config: LazyLoadingConfig) {
-    unsafe {
-        LAZY_LOADER = Some(Arc::new(LazyDocumentLoader::new(config)));
-    }
+pub fn init_lazy_loader(config: LazyLoadingConfig) -> Result<()> {
+    LAZY_LOADER.set(Arc::new(LazyDocumentLoader::new(config)))
+        .map_err(|_| StoryWeaverError::validation("Lazy document loader already initialized"))
 }
 
 /// Get the global lazy document loader
 pub fn get_lazy_loader() -> Result<Arc<LazyDocumentLoader>> {
-    unsafe {
-        LAZY_LOADER.as_ref().cloned().ok_or_else(|| {
-            StoryWeaverError::validation("Lazy document loader not initialized")
-        })
-    }
+    LAZY_LOADER.get().cloned().ok_or_else(|| {
+        StoryWeaverError::validation("Lazy document loader not initialized")
+    })
 }
 
 /// Background task to periodically clean up expired chunks

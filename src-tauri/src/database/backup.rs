@@ -1,7 +1,7 @@
 use crate::error::{Result, StoryWeaverError};
 use sqlx;
 use std::path::{Path, PathBuf};
-use chrono::{Utc, DateTime, NaiveDateTime, TimeZone};
+use chrono::{Utc, DateTime, NaiveDateTime};
 use tokio::fs;
 use tauri::{AppHandle, Manager};
 use tauri::path::BaseDirectory;

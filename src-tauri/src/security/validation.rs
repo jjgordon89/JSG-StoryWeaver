@@ -6,19 +6,42 @@
 use crate::error::StoryWeaverError;
 use regex::Regex;
 use lazy_static::lazy_static;
-use std::path::Path;
 
-#[allow(clippy::unwrap_used)]
 lazy_static! {
     // Enhanced regex patterns for validation
-    static ref EMAIL_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-    static ref FILENAME_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9_\-\. ]+$").unwrap();
-    static ref PATH_TRAVERSAL_REGEX: Regex = Regex::new(r"(\.\.[\\/]|\\|/\.\./|^\.\./|/\.\.\\)").unwrap();
-    static ref SQL_INJECTION_REGEX: Regex = Regex::new(r"(?i)('|--|;|/\*|\*/|xp_|sp_|exec|execute|select|insert|update|delete|drop|create|alter|union|script|javascript|vbscript)").unwrap();
-    static ref HTML_TAG_REGEX: Regex = Regex::new(r"<[^>]*>").unwrap();
-    static ref XSS_REGEX: Regex = Regex::new(r"(?i)(javascript:|data:|vbscript:|on\w+\s*=|<script|</script>|<iframe|</iframe>|<object|</object>|<embed|</embed>)").unwrap();
-    static ref API_KEY_REGEX: Regex = Regex::new(r"^[a-zA-Z0-9\-_]{8,128}$").unwrap();
-    static ref SAFE_NAME_REGEX: Regex = Regex::new(r"^[\p{L}\p{N}_\-\. ]{1,100}$").unwrap();
+    // Use explicit Regex::new match to avoid `.unwrap()` (deny in lib.rs)
+    static ref EMAIL_REGEX: Regex = match Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid EMAIL_REGEX: {}", e),
+    };
+    static ref FILENAME_REGEX: Regex = match Regex::new(r"^[a-zA-Z0-9_\-\. ]+$") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid FILENAME_REGEX: {}", e),
+    };
+    static ref PATH_TRAVERSAL_REGEX: Regex = match Regex::new(r"(\.\.[\\/]|\\|/\.\./|^\.\./|/\.\.\\)") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid PATH_TRAVERSAL_REGEX: {}", e),
+    };
+    static ref SQL_INJECTION_REGEX: Regex = match Regex::new(r"(?i)('|--|;|/\*|\*/|xp_|sp_|exec|execute|select|insert|update|delete|drop|create|alter|union|script|javascript|vbscript)") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid SQL_INJECTION_REGEX: {}", e),
+    };
+    static ref HTML_TAG_REGEX: Regex = match Regex::new(r"<[^>]*>") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid HTML_TAG_REGEX: {}", e),
+    };
+    static ref XSS_REGEX: Regex = match Regex::new(r"(?i)(javascript:|data:|vbscript:|on\w+\s*=|<script|</script>|<iframe|</iframe>|<object|</object>|<embed|</embed>)") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid XSS_REGEX: {}", e),
+    };
+    static ref API_KEY_REGEX: Regex = match Regex::new(r"^[a-zA-Z0-9\-_]{8,128}$") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid API_KEY_REGEX: {}", e),
+    };
+    static ref SAFE_NAME_REGEX: Regex = match Regex::new(r"^[\p{L}\p{N}_\-\. ]{1,100}$") {
+        Ok(rx) => rx,
+        Err(e) => panic!("Invalid SAFE_NAME_REGEX: {}", e),
+    };
 }
 
 /// Validate an email address

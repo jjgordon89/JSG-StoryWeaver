@@ -4,7 +4,7 @@
 use crate::error::{Result, StoryWeaverError};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::{RwLock, Semaphore};
 use tokio::time::{Duration, Instant};
 
@@ -361,22 +361,19 @@ pub struct StreamInfo {
 }
 
 /// Global streaming optimizer instance
-static mut STREAMING_OPTIMIZER: Option<Arc<StreamingOptimizer>> = None;
+static STREAMING_OPTIMIZER: OnceLock<Arc<StreamingOptimizer>> = OnceLock::new();
 
 /// Initialize the global streaming optimizer
-pub fn init_streaming_optimizer(config: StreamingConfig) {
-    unsafe {
-        STREAMING_OPTIMIZER = Some(Arc::new(StreamingOptimizer::new(config)));
-    }
+pub fn init_streaming_optimizer(config: StreamingConfig) -> Result<()> {
+    STREAMING_OPTIMIZER.set(Arc::new(StreamingOptimizer::new(config)))
+        .map_err(|_| StoryWeaverError::system("Streaming optimizer already initialized"))
 }
 
 /// Get the global streaming optimizer
 pub fn get_streaming_optimizer() -> Result<Arc<StreamingOptimizer>> {
-    unsafe {
-        STREAMING_OPTIMIZER.as_ref().cloned().ok_or_else(|| {
-            StoryWeaverError::system("Streaming optimizer not initialized")
-        })
-    }
+    STREAMING_OPTIMIZER.get().cloned().ok_or_else(|| {
+        StoryWeaverError::system("Streaming optimizer not initialized")
+    })
 }
 
 /// Background task to periodically clean up streams

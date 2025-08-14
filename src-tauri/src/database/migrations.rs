@@ -7,7 +7,6 @@ use sqlx::{Pool, Sqlite};
 // Import migrations
 mod background_tasks;
 mod performance_metrics;
-mod _014_create_document_links_table;
 mod phase4_advanced_ai;
 mod fix_credit_usage_schema;
 mod phase5_collaboration_plugins;
@@ -130,9 +129,6 @@ async fn migration_013_character_series_support(pool: &Pool<Sqlite>) -> Result<(
     Ok(())
 }
 
-async fn migration_014_create_document_links_table(pool: &Pool<Sqlite>) -> Result<()> {
-    _014_create_document_links_table::up(&*pool).await.map_err(|e| StoryWeaverError::database(format!("Failed to apply 014_create_document_links_table migration: {}", e)))
-}
 
 /// Migration 010: Create AI response cards table
 async fn migration_010_ai_response_cards(pool: &Pool<Sqlite>) -> Result<()> {
