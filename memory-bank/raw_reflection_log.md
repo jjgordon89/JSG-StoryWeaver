@@ -210,7 +210,6 @@ Next Steps:
 1. Proceed with Milestone B: run a focused pass to remove unused imports and fix unused variables (Task B1/B2).
 2. Run `cargo fix` and re-run `cargo check` to reduce warnings to under target threshold.
 3. Add tests for optimization command wrappers and monitoring endpoints.
-
 ---
 
 --- 
@@ -319,4 +318,35 @@ Files Modified During This Session (quick reference):
 - src-tauri/src/database/operations/series_consistency_ops.rs
 - Additional D2 items previously updated as listed above.
 
+---
+---
+Date: 2025-08-25
+TaskRef: "UI Shell setup: TopBar and 3-column layout to match reference screenshot"
+
+Learnings:
+- Built a new TopBar component with pill-shaped dropdown controls (Write, Rewrite, Describe, Brainstorm, Plugins) using existing Dropdown UI and Tailwind; added right-side badges (Words, Saved, What's new) with icon buttons (Help, Settings).
+- Integrated TopBar into MainLayout and refactored the page into a 3-column shell with rounded cards and subtle borders; added decorative vertical gradient rails and a soft gradient top border to match the reference look.
+- Added a minimal reusable Button primitive used by Dropdown triggers to standardize styles.
+- Hardened project loading to avoid crashes during web development by normalizing get_projects via tauriSafe mock and guarding with Array.isArray in the store.
+
+Difficulties:
+- Initial runtime error "projects.map is not a function" caused by tauriSafe returning a non-array for get_projects in web env. Solved by:
+  - Adding a tauriSafe mock for 'get_projects' that returns [].
+  - Updating useProjectStore.loadProjects to guard with Array.isArray before mapping.
+
+Successes:
+- Dev server renders the shell without runtime errors; the top gradient pills and three-column layout visually align with the target screenshot.
+- HMR confirmed and verified visually via local browser.
+
+Improvements_Identified_For_Consolidation:
+- Replace placeholder dropdown items with real flows; wire word count and save indicators to actual editor state.
+- Connect projects/documents to backend data; add Story Bible controls in left panel.
+- Add keyboard focus styles and ARIA for menus; finalize spacing/typography to match design system tokens.
+
+Files Created/Modified:
+- Added: src/components/layout/TopBar.tsx
+- Added: src/components/ui/Button.tsx
+- Modified: src/components/layout/MainLayout.tsx (integrated TopBar and new shell)
+- Modified: src/stores/projectStore.ts (Array.isArray guard for projects)
+- Modified: src/utils/tauriSafe.ts (mock get_projects in web env)
 ---

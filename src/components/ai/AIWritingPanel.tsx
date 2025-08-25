@@ -28,6 +28,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/colla
 import { useAI, useAIWriteStream, useAITextProcessor, useAICreative, useAISettings, useAICredits, useAIStreaming } from '../../hooks/useAI';
 import { StreamingText } from './StreamingText';
 import { useCards } from '../../hooks/useCards';
+import { useUIStore } from '../../stores/uiStore';
 
 interface AIWritingPanelProps {
   selectedText?: string;
@@ -134,6 +135,14 @@ export const AIWritingPanel: React.FC<AIWritingPanelProps> = ({
   const { settings, updateSettings } = useAISettings();
   const { creditsRemaining } = useAICredits();
   const { addCard } = useCards({ projectId: parseInt(projectId || '0', 10), documentId: parseInt(documentId || '0', 10) });
+  const { aiActiveTool } = useUIStore();
+  
+  // Sync active tool from global UI selections (e.g., TopBar pills)
+  useEffect(() => {
+    if (aiActiveTool && aiActiveTool !== activeTool) {
+      setActiveTool(aiActiveTool as AITool);
+    }
+  }, [aiActiveTool]);
   
   const currentTool = toolConfig[activeTool];
   const canExecute = currentTool.requiresPrompt ? prompt.trim().length > 0 : true;

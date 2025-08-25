@@ -1,15 +1,5 @@
 {
   "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": ""
-      }
-    },
     "brave-search": {
       "command": "npx",
       "args": [
@@ -32,21 +22,10 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-sequential-thinking"
-      ]
-    },
-    "scrapegraph-mcp": {
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@smithery/cli@latest",
-        "run",
-        "@ScrapeGraphAI/scrapegraph-mcp",
-        "--key",
-        "504a33fa-acdb-4b18-af34-126c1d458934",
-        "--profile",
-        "pregnant-reindeer-aYSgUy"
+      ],
+      "disabled": false,
+      "alwaysAllow": [
+        "sequentialthinking"
       ]
     },
     "time": {

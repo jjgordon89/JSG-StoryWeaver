@@ -17,6 +17,7 @@ import { Button } from '../../ui/components/common';
 import { Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import '../../styles/focus-mode.css';
 import { emitSyncEvent, SyncEventType } from '../../utils/stateSynchronizer';
+import { useUIStore } from '../../stores/uiStore';
 
 interface DocumentEditorProps {
   documentId: number;
@@ -31,6 +32,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const [showFocusModeSettings, setShowFocusModeSettings] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const { aiPanelOpen, toggleAIPanel, setEditorStatus } = useUIStore();
   const [showQuickTools, setShowQuickTools] = useState(false);
   const [quickToolsPosition, setQuickToolsPosition] = useState({ x: 0, y: 0 });
   const [storyBibleDetectionEnabled, setStoryBibleDetectionEnabled] = useState(true);
@@ -138,10 +140,13 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   // Handle editor content changes
   const handleEditorChange = useCallback((value: string) => {
     setContent(value);
-    setWordCount(calculateWordCount(value));
+    const wc = calculateWordCount(value);
+    setWordCount(wc);
     
     // Update save status
     setSaveStatus('saving');
+    // Update global UI status for header
+    setEditorStatus({ wordCount: wc, saveStatus: 'saving' });
     
     // Debounced auto-save
     if (saveDebouncer.current) {
@@ -153,6 +158,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         setIsSaving(true);
         await saveDocument(documentId, value);
         setSaveStatus('saved');
+        // Reflect saved status globally
+        setEditorStatus({ saveStatus: 'saved' });
         console.log('Document saved successfully');
         
         // Create a version every 10 saves (or based on some other logic)
@@ -178,11 +185,12 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
       } catch (error) {
         console.error('Error saving document:', error);
         setSaveStatus('error');
+        setEditorStatus({ saveStatus: 'error' });
       } finally {
         setIsSaving(false);
       }
     }, 1500); // 1.5-second debounce
-  }, [documentId, saveDocument, calculateWordCount]);
+  }, [documentId, saveDocument, calculateWordCount, setEditorStatus]);
 
   // Handle text insertion from AI
   const handleInsertText = useCallback((text: string) => {
@@ -257,6 +265,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
     }
   }, []);
 
+  // Sync local AI panel visibility with global UI store
+  useEffect(() => {
+    setShowAIPanel(aiPanelOpen);
+  }, [aiPanelOpen]);
+
   // Initialize editor
   useEffect(() => {
     if (!containerRef.current) return;
@@ -288,7 +301,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
     storyBibleDetector.setEnabled(storyBibleDetectionEnabled);
 
     // Set initial word count
-    setWordCount(calculateWordCount(initialContent));
+    const initialWC = calculateWordCount(initialContent);
+    setWordCount(initialWC);
+    // Initialize header status
+    setEditorStatus({ wordCount: initialWC, saveStatus: 'saved' });
     
     // Set up change handler
     const changeDisposable = editor.onDidChangeModelContent(() => {
@@ -330,7 +346,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         clearTimeout(saveDebouncer.current);
       }
     };
-  }, [initialContent, handleEditorChange, calculateWordCount, handleSelectionChange]);
+  }, [initialContent, handleEditorChange, calculateWordCount, handleSelectionChange, setEditorStatus]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -455,7 +471,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
                 className={`text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 ${
                   storyBibleDetectionEnabled ? 'bg-blue-100 dark:bg-blue-900' : ''
                 }`}
-                title="Toggle Story Bible Detection"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -466,9 +481,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowAIPanel(!showAIPanel)}
+                onClick={() => toggleAIPanel()}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                title="Toggle AI Panel (Ctrl+Shift+A)"
               >
                 {showAIPanel ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
               </Button>
@@ -488,7 +502,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
                   }
                 }}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                title="AI Tools (Ctrl+Space)"
               >
                 <Wand2 size={18} />
               </Button>
@@ -515,12 +528,10 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
             {showAIPanel && (
               <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                 <AIWritingPanel
-                  isOpen={showAIPanel}
-                  onToggle={() => setShowAIPanel(!showAIPanel)}
+                  selectedText={selectedText}
+                  documentId={documentId.toString()}
                   onInsertText={handleInsertText}
                   onReplaceText={handleReplaceText}
-                  selectedText={selectedText}
-                  documentContext={content}
                 />
               </div>
             )}
@@ -535,24 +546,22 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
         
         {/* AI Selection Menu */}
         <AISelectionMenu
-          visible={aiMenuVisible}
-          position={aiMenuPosition}
+          isOpen={aiMenuVisible}
           onClose={() => setAIMenuVisible(false)}
-          onInsertText={handleInsertText}
-          onReplaceText={handleReplaceText}
           selectedText={selectedText}
-          documentContext={content}
+          documentId={documentId}
+          cursorPosition={0}
+          onTextInsert={handleInsertText}
+          onTextReplace={handleReplaceText}
         />
         
         {/* AI Quick Tools - Always available */}
         {!focusModeEnabled && (
           <div className="absolute bottom-4 right-4">
             <AIQuickTools
-              compact
               onInsertText={handleInsertText}
               onReplaceText={handleReplaceText}
               selectedText={selectedText}
-              documentContext={content}
             />
           </div>
         )}
@@ -573,7 +582,6 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
             >
               <AIQuickTools
                 selectedText={selectedText}
-                documentContext={content}
                 onInsertText={handleInsertText}
                 onReplaceText={handleReplaceText}
                 onClose={() => setShowQuickTools(false)}

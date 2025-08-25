@@ -94,6 +94,8 @@ export async function invoke<T = any>(cmd: string, args?: Record<string, any>): 
       
       case 'get_documents':
         return [] as T;
+      case 'get_projects':
+        return [] as T;
       
       case 'sync_settings':
       case 'set_setting':

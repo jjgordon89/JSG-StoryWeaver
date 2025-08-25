@@ -56,8 +56,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   loadProjects: async () => {
     set({ isLoading: true, error: null });
     try {
-      const projects = await invoke<Project[]>('get_projects');
-      set({ projects, isLoading: false });
+      const result = await invoke<Project[] | unknown>('get_projects');
+      const safeProjects = Array.isArray(result) ? (result as Project[]) : [];
+      set({ projects: safeProjects, isLoading: false });
     } catch (error) {
       set({ error: error as string, isLoading: false });
     }
