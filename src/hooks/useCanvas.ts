@@ -87,7 +87,10 @@ export const useCanvas = (projectId: string) => {
   };
 };
 
-export const useCanvasElements = (canvasId: number | null) => {
+export const useCanvasElements = (
+  canvasId: number | null,
+  setAnnouncement: (message: string) => void
+) => {
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,13 +128,14 @@ export const useCanvasElements = (canvasId: number | null) => {
     try {
       const newElement = await invoke<CanvasElement>('create_canvas_element', elementData);
       setElements(prev => [...prev, newElement]);
+      setAnnouncement(`${newElement.element_type} titled '${newElement.title}' created.`);
       return newElement;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create element';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
-  }, []);
+  }, [setAnnouncement]);
 
   const updateElement = useCallback(async (elementId: number, updates: {
     x?: number;
@@ -149,28 +153,40 @@ export const useCanvasElements = (canvasId: number | null) => {
         ...updates
       });
       
-      setElements(prev => prev.map(element => 
-        element.id === elementId 
-          ? { ...element, ...updates }
-          : element
-      ));
+      let updatedElementTitle = '';
+      setElements(prev => prev.map(element => {
+        if (element.id === elementId) {
+          const updatedElement = { ...element, ...updates };
+          updatedElementTitle = updatedElement.title;
+          return updatedElement;
+        }
+        return element;
+      }));
+      
+      if (updatedElementTitle) {
+        setAnnouncement(`Element titled '${updatedElementTitle}' updated.`);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update element';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
-  }, []);
+  }, [setAnnouncement]);
 
   const deleteElement = useCallback(async (elementId: number) => {
     try {
+      const elementToDelete = elements.find(el => el.id === elementId);
       await invoke('delete_canvas_element', { elementId });
       setElements(prev => prev.filter(element => element.id !== elementId));
+      if (elementToDelete) {
+        setAnnouncement(`${elementToDelete.element_type} titled '${elementToDelete.title}' deleted.`);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete element';
       setError(errorMessage);
       throw new Error(errorMessage);
     }
-  }, []);
+  }, [elements, setAnnouncement]);
 
   useEffect(() => {
     if (canvasId) {

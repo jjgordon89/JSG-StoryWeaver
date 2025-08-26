@@ -12,7 +12,6 @@ import { useStoryBible } from '../../hooks/useStoryBible';
 import type { StoryBibleProps } from '../../../../types/storyBible';
 
 export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) => {
-  const [activeTab, setActiveTab] = useState<'braindump' | 'characters' | 'worldbuilding' | 'outline' | 'scenes'>('braindump');
   const { isLoading, error, loadStoryBible, clearError } = useStoryBible();
 
   useEffect(() => {
@@ -71,9 +70,9 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="flex-1 flex flex-col">
+      <Tabs defaultValue="braindump" className="flex-1 flex flex-col overflow-hidden">
         <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-6" aria-label="Story Bible sections">
             <TabsTrigger value="braindump" className="flex items-center gap-2">
               <span>🧠</span>
               Braindump
@@ -100,23 +99,18 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
             </TabsTrigger>
           </TabsList>
         </div>
-
-        {/* Tab Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
           <TabsContent value="braindump" className="h-full m-0">
             <BraindumpEditor projectId={projectId} />
           </TabsContent>
-          
           <TabsContent value="style-examples" className="h-full m-0">
             <StyleExamplesManager projectId={projectId} />
           </TabsContent>
-          
           <TabsContent value="characters" className="h-full m-0">
             <CharactersManager projectId={projectId} seriesId={seriesId} />
           </TabsContent>
-          
           <TabsContent value="worldbuilding" className="h-full m-0">
-            <HierarchicalWorldbuilding 
+            <HierarchicalWorldbuilding
               projectId={projectId}
               categories={[]}
               elements={[]}
@@ -130,11 +124,9 @@ export const StoryBible: React.FC<StoryBibleProps> = ({ projectId, seriesId }) =
               onReorderElements={async () => {}}
             />
           </TabsContent>
-          
           <TabsContent value="outline" className="h-full m-0">
             <OutlineManager projectId={projectId} />
           </TabsContent>
-          
           <TabsContent value="scenes" className="h-full m-0">
             <ScenesManager projectId={projectId} seriesId={seriesId} />
           </TabsContent>

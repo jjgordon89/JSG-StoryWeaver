@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import React, { useState } from 'react';
+import React from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Canvas, CanvasElementType } from '../../types/canvas';
 import './CanvasToolbar.css';
 
@@ -31,7 +32,6 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onCancelCreate
 }) => {
   const { t } = useTranslation("ui");
-  const [showElementMenu, setShowElementMenu] = useState(false);
 
   const elementTypes: { type: CanvasElementType; label: string; icon: string }[] = [
     { type: 'text_box', label: 'Text Box', icon: '📄' },
@@ -49,11 +49,10 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
 
   const handleElementTypeSelect = (type: CanvasElementType) => {
     onCreateElement(type);
-    setShowElementMenu(false);
   };
 
   return (
-    <div className="canvas-toolbar">
+    <div className="canvas-toolbar" role="toolbar" aria-label="Canvas tools">
       <div className="toolbar-section">
         <h3 className="canvas-title">
           {canvas?.name || 'Canvas'}
@@ -104,28 +103,27 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             </div>
           ) : (
             <div className="element-controls">
-              <div className="dropdown-container">
-                <button 
-                  className="toolbar-btn add-element-btn"
-                  onClick={() => setShowElementMenu(!showElementMenu)}
-                >
-                  {t("add_element")}
-                </button>
-                {showElementMenu && (
-                  <div className="element-menu">
-                    {elementTypes.map(({ type, label, icon }) => (
-                      <button
-                        key={type}
-                        className="element-menu-item"
-                        onClick={() => handleElementTypeSelect(type)}
-                      >
-                        <span className="element-icon">{icon}</span>
-                        <span className="element-label">{label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      className="toolbar-btn add-element-btn"
+                    >
+                      {t("add_element")}
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content className="element-menu">
+                      {elementTypes.map(({ type, label, icon }) => (
+                        <DropdownMenu.Item
+                          key={type}
+                          className="element-menu-item"
+                          onSelect={() => handleElementTypeSelect(type)}
+                        >
+                          <span className="element-icon">{icon}</span>
+                          <span className="element-label">{label}</span>
+                        </DropdownMenu.Item>
+                      ))}
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
             </div>
           )}
         </div>

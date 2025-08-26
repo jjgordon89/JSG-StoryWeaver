@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '../../../../ui/components/common';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { Input } from '../../../../ui/components/common';
@@ -25,7 +25,9 @@ import {
   Settings,
   Search,
   Eye,
-  EyeOff
+  EyeOff,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 interface WorldElement {
@@ -115,7 +117,7 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
   // onUpdateElement,
   onDeleteElement,
   onMoveElement,
-  // onReorderElements
+  onReorderElements
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -129,6 +131,9 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
   const [filterVisibility, setFilterVisibility] = useState('');
   const [draggedElement, setDraggedElement] = useState<string | null>(null);
   const [view, setView] = useState<'tree' | 'grid' | 'list'>('tree');
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const [newCategory, setNewCategory] = useState<Partial<Category>>({
     name: '',
@@ -153,6 +158,12 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
     tags: [],
     relationships: []
   });
+  
+  useEffect(() => {
+    if (focusedId && itemRefs.current[focusedId]) {
+      itemRefs.current[focusedId]?.focus();
+    }
+  }, [focusedId]);
 
   // Build hierarchical structure
   const buildHierarchy = (items: Category[], parentId?: string): Category[] => {
@@ -291,6 +302,90 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
     return IconComponent;
   };
 
+  const handleReorderElement = async (elementId: string, categoryId: string, direction: 'up' | 'down') => {
+   const categoryElements = elements
+     .filter(el => el.category_id === categoryId)
+     .sort((a, b) => a.order_index - b.order_index);
+   
+   const elementIndex = categoryElements.findIndex(el => el.id === elementId);
+
+   if (elementIndex === -1) return;
+
+   const newOrderedElements = [...categoryElements];
+   const [movedElement] = newOrderedElements.splice(elementIndex, 1);
+
+   if (direction === 'up') {
+     newOrderedElements.splice(elementIndex - 1, 0, movedElement);
+   } else {
+     newOrderedElements.splice(elementIndex + 1, 0, movedElement);
+   }
+
+   const newElementIds = newOrderedElements.map(el => el.id);
+   
+   try {
+     if (onReorderElements) {
+       await onReorderElements(categoryId, newElementIds);
+     }
+   } catch (error) {
+     console.error('Failed to reorder element:', error);
+     alert('Failed to reorder element');
+   }
+ };
+
+  const handleKeyDown = (e: React.KeyboardEvent, item: Category | WorldElement, isCategory: boolean) => {
+    e.preventDefault();
+    const currentItem = item as any;
+    const allItems = Array.from(treeContainerRef.current?.querySelectorAll('[role="treeitem"]') || []) as HTMLElement[];
+    const currentIndex = allItems.findIndex(el => el.dataset.id === currentItem.id);
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < allItems.length) {
+          setFocusedId(allItems[nextIndex].dataset.id || null);
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        const prevIndex = currentIndex - 1;
+        if (prevIndex >= 0) {
+          setFocusedId(allItems[prevIndex].dataset.id || null);
+        }
+        break;
+      }
+      case 'ArrowRight': {
+        if (isCategory) {
+          const category = item as Category;
+          if (!expandedCategories.has(category.id)) {
+            toggleCategory(category.id);
+          } else {
+            const firstChild = allItems.find(el => el.dataset.parentId === category.id);
+            if (firstChild) {
+              setFocusedId(firstChild.dataset.id || null);
+            }
+          }
+        }
+        break;
+      }
+      case 'ArrowLeft': {
+        if (isCategory) {
+          const category = item as Category;
+          if (expandedCategories.has(category.id)) {
+            toggleCategory(category.id);
+          } else if (category.parent_id) {
+            setFocusedId(category.parent_id);
+          }
+        } else {
+          const element = item as WorldElement;
+          if (element.category_id) {
+            setFocusedId(element.category_id);
+          }
+        }
+        break;
+      }
+    }
+  };
+
   const renderCategoryTree = (category: Category, depth: number = 0) => {
     const isExpanded = expandedCategories.has(category.id);
     const hasChildren = category.subcategories.length > 0 || category.elements.length > 0;
@@ -299,10 +394,18 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
     return (
       <div key={category.id} className="select-none">
         <div
-          className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 ${
+          ref={el => (itemRefs.current[category.id] = el)}
+          role="treeitem"
+          aria-expanded={isExpanded}
+          aria-selected={isSelected}
+          tabIndex={focusedId === category.id || (!focusedId && depth === 0) ? 0 : -1}
+          data-id={category.id}
+          data-parent-id={category.parent_id}
+          className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             isSelected ? 'bg-blue-100 border border-blue-300' : ''
           }`}
           style={{ paddingLeft: `${depth * 20 + 8}px` }}
+          onKeyDown={(e) => handleKeyDown(e, category, true)}
           onClick={() => {
             setSelectedCategory(category.id);
             if (hasChildren) {
@@ -335,19 +438,17 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
           </Badge>
           
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              className="p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
                 e?.stopPropagation();
                 // setEditingCategory(category);
               }}
             >
               <Edit className="h-3 w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
+            </button>
+            <button
+              className="p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
                 e?.stopPropagation();
                 if (confirm('Are you sure you want to delete this category?')) {
@@ -356,7 +457,7 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
               }}
             >
               <Trash2 className="h-3 w-3" />
-            </Button>
+            </button>
           </div>
         </div>
         
@@ -368,19 +469,28 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
             )}
             
             {/* Elements */}
-            {category.elements.map(element => {
+            {category.elements.map((element, index) => {
               const ElementIcon = getElementIcon(element.element_type);
+              const isFirst = index === 0;
+              const isLast = index === category.elements.length - 1;
               return (
                 <div
                   key={element.id}
-                  draggable
-                  onDragStart={() => handleDragStart(element.id)}
-                  className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-50 ${
-                    selectedElement?.id === element.id ? 'bg-blue-50 border border-blue-200' : ''
-                  }`}
-                  style={{ paddingLeft: `${(depth + 1) * 20 + 8}px` }}
-                  onClick={() => setSelectedElement(element)}
-                >
+                 ref={el => (itemRefs.current[element.id] = el)}
+                 role="treeitem"
+                 aria-selected={selectedElement?.id === element.id}
+                 tabIndex={focusedId === element.id ? 0 : -1}
+                 data-id={element.id}
+                 data-parent-id={element.category_id}
+                 draggable
+                 onDragStart={() => handleDragStart(element.id)}
+                 className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                   selectedElement?.id === element.id ? 'bg-blue-50 border border-blue-200' : ''
+                 }`}
+                 style={{ paddingLeft: `${(depth + 1) * 20 + 8}px` }}
+                 onKeyDown={(e) => handleKeyDown(e, element, false)}
+                 onClick={() => setSelectedElement(element)}
+               >
                   <div className="w-4" />
                   <ElementIcon className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-800">{element.name}</span>
@@ -395,28 +505,48 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
                       </Badge>
                     )}
                     
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
-                        e?.stopPropagation();
-                        // setEditingElement(element);
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
-                        e?.stopPropagation();
-                        if (confirm('Are you sure you want to delete this element?')) {
-                          onDeleteElement(element.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    <button
+                     className="p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       handleReorderElement(element.id, category.id, 'up');
+                     }}
+                     disabled={isFirst}
+                     aria-label="Move Up"
+                   >
+                     <ArrowUp className="h-3 w-3" />
+                   </button>
+                   <button
+                     className="p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       handleReorderElement(element.id, category.id, 'down');
+                     }}
+                     disabled={isLast}
+                     aria-label="Move Down"
+                   >
+                     <ArrowDown className="h-3 w-3" />
+                   </button>
+                   <button
+                     className="p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
+                       e?.stopPropagation();
+                       // setEditingElement(element);
+                     }}
+                   >
+                     <Edit className="h-3 w-3" />
+                   </button>
+                   <button
+                     className="p-1 rounded hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     onClick={(e?: React.MouseEvent<HTMLButtonElement>) => {
+                       e?.stopPropagation();
+                       if (confirm('Are you sure you want to delete this element?')) {
+                         onDeleteElement(element.id);
+                       }
+                     }}
+                   >
+                     <Trash2 className="h-3 w-3" />
+                   </button>
                   </div>
                 </div>
               );
@@ -743,9 +873,9 @@ const HierarchicalWorldbuilding: React.FC<HierarchicalWorldbuildingProps> = ({
             </CardHeader>
             <CardContent>
               {view === 'tree' && (
-                <div className="space-y-1">
-                  {hierarchicalCategories.length === 0 ? (
-                    <div className="text-center py-8">
+               <div className="space-y-1" ref={treeContainerRef}>
+                 {hierarchicalCategories.length === 0 ? (
+                   <div className="text-center py-8">
                       <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">
                         No Categories

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ScreenReaderAnnouncer from '../../../../components/accessibility/ScreenReaderAnnouncer';
 import { Button } from '../../../../ui/components/common';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { Textarea } from '../../../../ui/components/common';
@@ -40,6 +41,9 @@ const VISIBILITY_OPTIONS = [
 const CharactersManager: React.FC<CharactersManagerProps> = ({ 
   projectId
 }) => {
+  const [announcement, setAnnouncement] = useState('');
+  const [selectedCharacter, setSelectedCharacter] = useState<string>('');
+
   const { 
     characters,
     characterTraits, 
@@ -54,9 +58,8 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     setSelectedCharacterId,
     setCharacterTraitFilter,
     generateCharacterTraits
-  } = useStoryBible();
+  } = useStoryBible(setAnnouncement);
 
-  const [selectedCharacter, setSelectedCharacter] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 // Removed unused state variable editingTrait
@@ -172,7 +175,9 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
       
       closeModals();
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error('Failed to create character trait:', err);
+      setAnnouncement(`Error creating trait: ${errorMessage}`);
     }
   };
 
@@ -191,7 +196,9 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
       
       closeModals();
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
       console.error('Failed to update character trait:', err);
+      setAnnouncement(`Error updating trait: ${errorMessage}`);
     }
   };
 
@@ -200,13 +207,17 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
       try {
         await deleteCharacterTrait(id);
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
         console.error('Failed to delete character trait:', err);
+        setAnnouncement(`Error deleting trait: ${errorMessage}`);
       }
     }
   };
 
   const handleCharacterSelect = (characterId: string) => {
+    const characterName = characters.find(c => c.id === characterId)?.name || 'Unknown';
     setSelectedCharacter(characterId);
+    setAnnouncement(`Selected character: ${characterName}. Loading traits.`);
   };
 
   const handleEditTrait = (trait: CharacterTrait) => {
@@ -306,6 +317,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
     };
     
     setRelationships(prev => [...prev, newRelationship]);
+    setAnnouncement(`Relationship created between ${getCharacterName(newRelationship.fromCharacterId)} and ${getCharacterName(newRelationship.toCharacterId)}.`);
     setShowCreateRelationshipModal(false);
     setCreateRelationshipForm({
       fromCharacterId: '',
@@ -318,6 +330,10 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
   };
 
   const handleDeleteRelationship = (relationshipId: string) => {
+    const deletedRelationship = relationships.find(r => r.id === relationshipId);
+    if (deletedRelationship) {
+        setAnnouncement(`Relationship between ${getCharacterName(deletedRelationship.fromCharacterId)} and ${getCharacterName(deletedRelationship.toCharacterId)} deleted.`);
+    }
     setRelationships(prev => prev.filter(r => r.id !== relationshipId));
   };
 
@@ -368,6 +384,7 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
 
   return (
     <div className="space-y-6">
+      <ScreenReaderAnnouncer message={announcement} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Characters Manager</h2>
@@ -546,21 +563,21 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                           {getTraitTypeLabel(trait.trait_name)}
                         </CardTitle>
                           <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
+                            <button
+                              type="button"
                               onClick={() => handleEditTrait(trait)}
+                              aria-label={`Edit ${getTraitTypeLabel(trait.trait_name)} trait`}
                             >
                               Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleDeleteTrait(trait.id)}
                               className="text-red-600 hover:text-red-700"
+                              aria-label={`Delete ${getTraitTypeLabel(trait.trait_name)} trait`}
                             >
                               Delete
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       </CardHeader>
@@ -640,14 +657,14 @@ const CharactersManager: React.FC<CharactersManagerProps> = ({
                                     </p>
                                   )}
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
+                                <button
+                                  type="button"
                                   onClick={() => handleDeleteRelationship(relationship.id)}
                                   className="text-red-600 hover:text-red-700"
+                                  aria-label="Delete relationship"
                                 >
                                   <Trash2 className="h-4 w-4" />
-                                </Button>
+                                </button>
                               </div>
                             </CardContent>
                           </Card>

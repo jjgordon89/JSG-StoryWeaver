@@ -4,6 +4,7 @@ import { Canvas as CanvasModel } from '../../types/canvas';
 import { Canvas } from './Canvas';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import ErrorMessage from '../ui/ErrorMessage';
+import ScreenReaderAnnouncer from '../accessibility/ScreenReaderAnnouncer';
 import './CanvasManager.css';
 
 interface CanvasManagerProps {
@@ -18,10 +19,17 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ projectId }) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCanvasName, setNewCanvasName] = useState('');
   const [newCanvasDescription, setNewCanvasDescription] = useState('');
+  const [announcement, setAnnouncement] = useState('');
 
   useEffect(() => {
     loadCanvases();
   }, [projectId]);
+
+  useEffect(() => {
+    if (selectedCanvas) {
+      setAnnouncement(`Canvas '${selectedCanvas.name}' selected.`);
+    }
+  }, [selectedCanvas]);
 
   const loadCanvases = async () => {
     try {
@@ -51,15 +59,17 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ projectId }) => {
       return;
     }
 
+    const canvasName = newCanvasName.trim();
     try {
       const newCanvas = await invoke<CanvasModel>('create_canvas', {
         projectId,
-        name: newCanvasName.trim(),
+        name: canvasName,
         description: newCanvasDescription.trim() || undefined
       });
 
       setCanvases(prev => [newCanvas, ...prev]);
       setSelectedCanvas(newCanvas);
+      setAnnouncement(`Canvas '${canvasName}' created.`);
       setShowCreateDialog(false);
       setNewCanvasName('');
       setNewCanvasDescription('');
@@ -74,6 +84,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ projectId }) => {
     }
 
     try {
+      const canvasToDelete = canvases.find(c => c.id === canvasId);
       await invoke('delete_canvas', { canvasId });
       
       setCanvases(prev => prev.filter(c => c.id !== canvasId));
@@ -81,6 +92,10 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ projectId }) => {
       if (selectedCanvas?.id === canvasId) {
         const remainingCanvases = canvases.filter(c => c.id !== canvasId);
         setSelectedCanvas(remainingCanvases.length > 0 ? remainingCanvases[0] : null);
+      }
+
+      if (canvasToDelete) {
+        setAnnouncement(`Canvas '${canvasToDelete.name}' deleted.`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete canvas');
@@ -97,6 +112,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ projectId }) => {
 
   return (
     <div className="canvas-manager">
+      <ScreenReaderAnnouncer message={announcement} />
       {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
       
       <div className="canvas-sidebar">
@@ -166,6 +182,7 @@ export const CanvasManager: React.FC<CanvasManagerProps> = ({ projectId }) => {
             projectId={projectId}
             canvasId={selectedCanvas.id}
             onCanvasChange={handleCanvasChange}
+            setAnnouncement={setAnnouncement}
           />
         ) : (
           <div className="no-canvas-selected">

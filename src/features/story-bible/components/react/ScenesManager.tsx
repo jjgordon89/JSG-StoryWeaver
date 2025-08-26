@@ -520,34 +520,34 @@ export const ScenesManager: React.FC<ScenesManagerProps> = ({ projectId, seriesI
                       </div>
                       
                       <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
+                        <button
+                          aria-label="Validate Scene"
+                          className="p-2 hover:bg-accent rounded-md"
                           onClick={() => handleValidateScene(scene.id)}
                         >
                           <Check className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
+                        </button>
+                        <button
+                          aria-label="View Scene Details"
+                          className="p-2 hover:bg-accent rounded-md"
                           onClick={() => openDetailModal(scene)}
                         >
                           <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
+                        </button>
+                        <button
+                          aria-label="Edit Scene"
+                          className="p-2 hover:bg-accent rounded-md"
                           onClick={() => openEditModal(scene)}
                         >
                           <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
+                        </button>
+                        <button
+                          aria-label="Delete Scene"
+                          className="p-2 hover:bg-accent rounded-md"
                           onClick={() => handleDeleteScene(scene.id)}
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </button>
                       </div>
                     </div>
                     

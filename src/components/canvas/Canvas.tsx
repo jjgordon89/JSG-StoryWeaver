@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
+import { useCanvasElements } from '../../hooks/useCanvas';
 import { Canvas as CanvasModel, CanvasElement, CanvasElementType, OutlineTemplate } from '../../types/canvas';
 import { CanvasElement as CanvasElementComponent } from './CanvasElement';
 import { CanvasToolbar } from './CanvasToolbar';
@@ -15,11 +16,20 @@ interface CanvasProps {
   projectId: string;
   canvasId?: number;
   onCanvasChange?: (canvas: CanvasModel) => void;
+  setAnnouncement: (message: string) => void;
 }
 
-export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasChange }) => {
+export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasChange, setAnnouncement }) => {
   const [canvas, setCanvas] = useState<CanvasModel | null>(null);
-  const [elements, setElements] = useState<CanvasElement[]>([]);
+  const {
+    elements,
+    loading: elementsLoading,
+    error: elementsError,
+    createElement,
+    updateElement,
+    deleteElement,
+    loadElements,
+  } = useCanvasElements(canvasId ?? null, setAnnouncement);
   const [selectedElement, setSelectedElement] = useState<CanvasElement | null>(null);
   const [isCreatingElement, setIsCreatingElement] = useState(false);
   const [elementTypeToCreate, setElementTypeToCreate] = useState<CanvasElementType>('text_box');
@@ -45,6 +55,12 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
     }
   }, [canvasId]);
 
+  useEffect(() => {
+    if (elementsError) {
+      setError(elementsError);
+    }
+  }, [elementsError]);
+
   const loadCanvas = async () => {
     try {
       setLoading(true);
@@ -57,8 +73,7 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
           setZoom(canvasData.zoom_level);
           setViewport({ x: canvasData.viewport_x, y: canvasData.viewport_y });
           
-          const elementsData = await invoke<CanvasElement[]>('get_canvas_elements', { canvasId });
-          setElements(elementsData);
+          loadElements();
           
           onCanvasChange?.(canvasData);
         }
@@ -82,7 +97,7 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
       });
 
       setCanvas(newCanvas);
-      setElements([]);
+      loadElements();
       onCanvasChange?.(newCanvas);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create canvas');
@@ -91,11 +106,11 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
     }
   };
 
-  const createElement = async (x: number, y: number) => {
+  const handleCreateElement = async (x: number, y: number) => {
     if (!canvas) return;
 
     try {
-      const newElement = await invoke<CanvasElement>('create_canvas_element', {
+      const newElement = await createElement({
         canvasId: canvas.id,
         elementType: elementTypeToCreate,
         title: `New ${elementTypeToCreate.replace('_', ' ')}`,
@@ -110,45 +125,10 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
         orderIndex: elements.length
       });
 
-      setElements(prev => [...prev, newElement]);
       setSelectedElement(newElement);
       setIsCreatingElement(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create element');
-    }
-  };
-
-  const updateElement = async (elementId: number, updates: Partial<CanvasElement>) => {
-    try {
-      await invoke('update_canvas_element', {
-        elementId,
-        x: updates.position_x,
-        y: updates.position_y,
-        width: updates.width,
-        height: updates.height,
-        content: updates.content,
-        color: updates.color,
-        title: updates.title,
-        orderIndex: updates.order_index
-      });
-
-      setElements(prev => prev.map(el => 
-        el.id === elementId ? { ...el, ...updates } : el
-      ));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update element');
-    }
-  };
-
-  const deleteElement = async (elementId: number) => {
-    try {
-      await invoke('delete_canvas_element', { elementId });
-      setElements(prev => prev.filter(el => el.id !== elementId));
-      if (selectedElement?.id === elementId) {
-        setSelectedElement(null);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete element');
     }
   };
 
@@ -164,7 +144,7 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
     const x = (e.clientX - rect.left - viewport.x) / zoom;
     const y = (e.clientY - rect.top - viewport.y) / zoom;
 
-    createElement(x, y);
+    handleCreateElement(x, y);
   };
 
   const handleElementSelect = (element: CanvasElement) => {
@@ -172,7 +152,16 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
   };
 
   const handleElementUpdate = (elementId: number, updates: Partial<CanvasElement>) => {
-    updateElement(elementId, updates);
+    updateElement(elementId, {
+      title: updates.title,
+      content: updates.content,
+      color: updates.color,
+      x: updates.position_x,
+      y: updates.position_y,
+      width: updates.width,
+      height: updates.height,
+      orderIndex: updates.order_index
+    });
   };
 
   const handleElementDelete = (elementId: number) => {
@@ -242,14 +231,13 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
       
       // Clear existing elements
       for (const element of elements) {
-        await invoke('delete_canvas_element', { elementId: element.id });
+        await deleteElement(element.id);
       }
 
       // Create new elements from template
-      const newElements: CanvasElement[] = [];
       for (let i = 0; i < structure.elements.length; i++) {
         const templateElement = structure.elements[i];
-        const element = await invoke<CanvasElement>('create_canvas_element', {
+        await createElement({
           canvasId: canvas.id,
           elementType: templateElement.type,
           title: templateElement.title,
@@ -263,10 +251,9 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
           connections: JSON.stringify(templateElement.connections || []),
           orderIndex: i
         });
-        newElements.push(element);
       }
 
-      setElements(newElements);
+      loadElements();
       setShowTemplateSelector(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to apply template');
@@ -293,7 +280,7 @@ export const Canvas: React.FC<CanvasProps> = ({ projectId, canvasId, onCanvasCha
   }
 
   return (
-    <div className="canvas-container" ref={containerRef}>
+    <div className="canvas-container" ref={containerRef} role="region" aria-label="Canvas">
       {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
       
       <CanvasToolbar

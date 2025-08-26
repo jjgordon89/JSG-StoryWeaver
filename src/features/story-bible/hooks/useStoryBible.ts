@@ -162,7 +162,7 @@ const initialState: StoryBibleState = {
  * - Optimistic UI updates
  * - Memoized filtered data for performance
  */
-export const useStoryBible = (): UseStoryBibleReturn => {
+export const useStoryBible = (setAnnouncement?: (message: string) => void): UseStoryBibleReturn => {
   const [state, setState] = useState<StoryBibleState>(initialState);
 
   /**
@@ -305,20 +305,26 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     try {
       const response = await invoke<TauriResponse<CharacterTrait>>('create_character_trait', { request });
       
-      if (response.success) {
+      if (response.success && response.data) {
+        const newTrait = response.data;
         setState(prevState => ({
           ...prevState,
-          characterTraits: [...prevState.characterTraits, response.data as CharacterTrait],
+          characterTraits: [...prevState.characterTraits, newTrait],
           isLoadingTraits: false,
           traitsError: null
         }));
+        setAnnouncement?.(`Trait '${request.trait_name}' created.`);
       } else {
-        handleError(response.error, 'traitsError');
+        const errorMessage = response.error || 'Unknown error creating trait';
+        handleError(errorMessage, 'traitsError');
+        setAnnouncement?.(`Error creating trait: ${errorMessage}`);
       }
     } catch (error) {
-      handleError(error, 'traitsError');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      handleError(errorMessage, 'traitsError');
+      setAnnouncement?.(`Error creating trait: ${errorMessage}`);
     }
-  }, [handleError]);
+  }, [handleError, setAnnouncement]);
 
   const updateCharacterTrait = useCallback(async (request: UpdateCharacterTraitRequest): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
@@ -326,26 +332,33 @@ export const useStoryBible = (): UseStoryBibleReturn => {
     try {
       const response = await invoke<TauriResponse<CharacterTrait>>('update_character_trait', { request });
       
-      if (response.success) {
+      if (response.success && response.data) {
+        const updatedTrait = response.data;
         setState(prevState => ({
           ...prevState,
-          characterTraits: prevState.characterTraits.map(trait => 
-            trait.id === request.id ? (response.data as CharacterTrait) : trait
+          characterTraits: prevState.characterTraits.map(trait =>
+            trait.id === request.id ? updatedTrait : trait
           ),
           isLoadingTraits: false,
           traitsError: null
         }));
+        setAnnouncement?.(`Trait '${request.trait_name}' updated.`);
       } else {
-        handleError(response.error, 'traitsError');
+        const errorMessage = response.error || 'Unknown error updating trait';
+        handleError(errorMessage, 'traitsError');
+        setAnnouncement?.(`Error updating trait: ${errorMessage}`);
       }
     } catch (error) {
-      handleError(error, 'traitsError');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      handleError(errorMessage, 'traitsError');
+      setAnnouncement?.(`Error updating trait: ${errorMessage}`);
     }
-  }, [handleError]);
+  }, [handleError, setAnnouncement]);
 
   const deleteCharacterTrait = useCallback(async (id: string): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));
-    
+    const traitName = state.characterTraits.find(t => t.id === id)?.trait_name || 'trait';
+
     try {
       const response = await invoke<TauriResponse<void>>('delete_character_trait', { id });
       
@@ -356,13 +369,18 @@ export const useStoryBible = (): UseStoryBibleReturn => {
           isLoadingTraits: false,
           traitsError: null
         }));
+        setAnnouncement?.(`Trait '${traitName}' deleted.`);
       } else {
-        handleError(response.error, 'traitsError');
+        const errorMessage = response.error || 'Unknown error deleting trait';
+        handleError(errorMessage, 'traitsError');
+        setAnnouncement?.(`Error deleting trait: ${errorMessage}`);
       }
     } catch (error) {
-      handleError(error, 'traitsError');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      handleError(errorMessage, 'traitsError');
+      setAnnouncement?.(`Error deleting trait: ${errorMessage}`);
     }
-  }, [handleError]);
+  }, [handleError, setAnnouncement, state.characterTraits]);
 
   const loadCharacterTraits = useCallback(async (characterId: string): Promise<void> => {
     setState(prevState => ({ ...prevState, isLoadingTraits: true, traitsError: null }));

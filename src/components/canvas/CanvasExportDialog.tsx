@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
+import * as RadioGroup from '@radix-ui/react-radio-group';
 import { Canvas, ExportFormat, CanvasExportResult } from '../../types/canvas';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import ErrorMessage from '../ui/ErrorMessage';
@@ -20,45 +21,45 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
   const [exportResult, setExportResult] = useState<CanvasExportResult | null>(null);
 
   const exportFormats: { format: ExportFormat; label: string; description: string; icon: string }[] = [
-    { 
-      format: 'markdown', 
-      label: 'Markdown', 
+    {
+      format: 'markdown',
+      label: 'Markdown',
       description: 'Export as structured markdown document',
       icon: '📝'
     },
-    { 
-      format: 'story_bible', 
-      label: 'Story Bible', 
+    {
+      format: 'story_bible',
+      label: 'Story Bible',
       description: 'Export as comprehensive story bible format',
       icon: '📚'
     },
-    { 
-      format: 'outline', 
-      label: 'Outline', 
+    {
+      format: 'outline',
+      label: 'Outline',
       description: 'Export as structured story outline',
       icon: '📋'
     },
-    { 
-      format: 'json', 
-      label: 'JSON', 
+    {
+      format: 'json',
+      label: 'JSON',
       description: 'Export raw canvas data as JSON',
       icon: '🔧'
     },
-    { 
-      format: 'png', 
-      label: 'PNG Image', 
+    {
+      format: 'png',
+      label: 'PNG Image',
       description: 'Export visual representation as PNG image',
       icon: '🖼️'
     },
-    { 
-      format: 'svg', 
-      label: 'SVG Vector', 
+    {
+      format: 'svg',
+      label: 'SVG Vector',
       description: 'Export as scalable vector graphics',
       icon: '🎨'
     },
-    { 
-      format: 'pdf', 
-      label: 'PDF Document', 
+    {
+      format: 'pdf',
+      label: 'PDF Document',
       description: 'Export as PDF document',
       icon: '📄'
     }
@@ -76,10 +77,9 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
 
       setExportResult(result);
       
-      // For text-based formats, create a downloadable blob
       if (['markdown', 'story_bible', 'outline', 'json'].includes(selectedFormat)) {
-        const blob = new Blob([result.data], { 
-          type: getContentType(selectedFormat) 
+        const blob = new Blob([result.data], {
+          type: getContentType(selectedFormat)
         });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -91,7 +91,6 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
         URL.revokeObjectURL(url);
       }
       
-      // For image formats, handle base64 data
       if (['png', 'svg', 'pdf'].includes(selectedFormat)) {
         const a = document.createElement('a');
         a.href = `data:${getContentType(selectedFormat)};base64,${result.data}`;
@@ -147,7 +146,7 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
       <div className="canvas-export-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="export-dialog-header">
           <h3>Export Canvas: {canvas.name}</h3>
-          <button 
+          <button
             className="close-btn"
             onClick={onClose}
             aria-label="Close export dialog"
@@ -157,21 +156,25 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
         </div>
 
         {error && (
-          <ErrorMessage 
-            message={error} 
-            onDismiss={() => setError(null)} 
+          <ErrorMessage
+            message={error}
+            onDismiss={() => setError(null)}
           />
         )}
 
         <div className="export-dialog-content">
           <div className="format-selection">
             <h4>Select Export Format</h4>
-            <div className="format-grid">
+            <RadioGroup.Root
+              className="format-grid"
+              value={selectedFormat}
+              onValueChange={(value) => setSelectedFormat(value as ExportFormat)}
+              aria-label="Export format"
+            >
               {exportFormats.map(({ format, label, description, icon }) => (
-                <div
+                <label
                   key={format}
                   className={`format-option ${selectedFormat === format ? 'selected' : ''}`}
-                  onClick={() => setSelectedFormat(format)}
                 >
                   <div className="format-icon">{icon}</div>
                   <div className="format-info">
@@ -179,18 +182,17 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
                     <div className="format-description">{description}</div>
                   </div>
                   <div className="format-radio">
-                    <input
-                      type="radio"
-                      name="exportFormat"
+                    <RadioGroup.Item
                       value={format}
-                      checked={selectedFormat === format}
-                      onChange={() => setSelectedFormat(format)}
-                      aria-label={`Export as ${label}`}
-                    />
+                      className="radio-group-item"
+                      id={`format-${format}`}
+                    >
+                      <RadioGroup.Indicator className="radio-group-indicator" />
+                    </RadioGroup.Item>
                   </div>
-                </div>
+                </label>
               ))}
-            </div>
+            </RadioGroup.Root>
           </div>
 
           {exportResult && (
@@ -238,14 +240,14 @@ export const CanvasExportDialog: React.FC<CanvasExportDialogProps> = ({
         </div>
 
         <div className="export-dialog-actions">
-          <button 
+          <button
             className="btn btn-secondary"
             onClick={onClose}
             disabled={isExporting}
           >
             Cancel
           </button>
-          <button 
+          <button
             className="btn btn-primary export-btn"
             onClick={handleExport}
             disabled={isExporting}

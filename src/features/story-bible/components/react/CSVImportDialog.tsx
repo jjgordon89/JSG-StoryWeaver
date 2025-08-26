@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import * as Checkbox from '@radix-ui/react-checkbox';
 import { Button } from '../../../../ui/components/common';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/components/common';
 import { Input } from '../../../../ui/components/common';
 import { Textarea } from '../../../../ui/components/common';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/components/common';
-import { Upload, Download, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, Download, AlertCircle, CheckCircle, X, Check } from 'lucide-react';
 
 interface CSVImportDialogProps {
   isOpen: boolean;
@@ -36,7 +37,17 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'complete'>('upload');
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+
+
+  useEffect(() => {
+    if (step === 'preview') {
+      const allRowIndices = new Set(parsedData.map((_, index) => index));
+      setSelectedRows(allRowIndices);
+    }
+  }, [parsedData, step]);
 
   // Character CSV template
   const characterTemplate = [
@@ -68,8 +79,7 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
     document.body.removeChild(link);
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFile = (file: File) => {
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -84,6 +94,32 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
       parseCSV(content);
     };
     reader.readAsText(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+      e.dataTransfer.clearData();
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFile(file);
+    }
   };
 
   const parseCSV = (content: string) => {
@@ -189,6 +225,25 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
     return result;
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allRowIndices = new Set(parsedData.map((_, index) => index));
+      setSelectedRows(allRowIndices);
+    } else {
+      setSelectedRows(new Set());
+    }
+  };
+
+  const handleSelectRow = (index: number, checked: boolean) => {
+    const newSelectedRows = new Set(selectedRows);
+    if (checked) {
+      newSelectedRows.add(index);
+    } else {
+      newSelectedRows.delete(index);
+    }
+    setSelectedRows(newSelectedRows);
+  };
+
   const handleImport = async () => {
     if (validationErrors.length > 0) {
       const proceed = confirm(
@@ -199,10 +254,12 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
 
     setIsProcessing(true);
     try {
-      // Filter out rows with errors
+      // Filter out rows with errors and unselected rows
       const validRows = parsedData.filter((_, index) => {
         const rowNumber = index + 2; // +2 because index is 0-based and we skip header
-        return !validationErrors.some(error => error.row === rowNumber);
+        const isSelected = selectedRows.has(index);
+        const hasError = validationErrors.some(error => error.row === rowNumber);
+        return isSelected && !hasError;
       });
 
       // Transform data based on import type
@@ -256,6 +313,7 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
     setParsedData([]);
     setValidationErrors([]);
     setStep('upload');
+    setSelectedRows(new Set());
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -283,26 +341,42 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {step === 'upload' && (
             <div className="space-y-6">
-              <div className="text-center">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
-                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Upload CSV File
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Select a CSV file to import {importType === 'characters' ? 'characters' : 'worldbuilding elements'}
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button onClick={() => fileInputRef.current?.click()}>
-                    Choose File
-                  </Button>
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Drag and drop your CSV file here
+                </h3>
+                <p className="text-sm text-gray-500">
+                  to import {importType === 'characters' ? 'characters' : 'worldbuilding elements'}
+                </p>
+              </div>
+
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-300" />
                 </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-2 text-sm text-gray-500">OR</span>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Select File From Your Computer
+                </Button>
               </div>
 
               <div className="text-center">
@@ -347,7 +421,7 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
                 </h3>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">
-                    {parsedData.length} rows to import
+                    {selectedRows.size} of {parsedData.length} rows selected
                   </span>
                   {validationErrors.length > 0 && (
                     <span className="text-sm text-red-600">
@@ -382,6 +456,21 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
+                        <th className="px-3 py-2 text-left font-medium text-gray-900">
+                          <label htmlFor="selectAll" className="flex items-center space-x-2">
+                            <Checkbox.Root
+                              id="selectAll"
+                              checked={selectedRows.size === parsedData.length && parsedData.length > 0}
+                              onCheckedChange={(checked: boolean) => handleSelectAll(checked)}
+                              className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 focus:ring-2 focus:ring-blue-500"
+                            >
+                              <Checkbox.Indicator>
+                                <Check className="h-3 w-3 text-blue-600" />
+                              </Checkbox.Indicator>
+                            </Checkbox.Root>
+                            <span className="sr-only">Select all rows</span>
+                          </label>
+                        </th>
                         {parsedData.length > 0 && Object.keys(parsedData[0]).map(header => (
                           <th key={header} className="px-3 py-2 text-left font-medium text-gray-900">
                             {header}
@@ -393,8 +482,26 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
                       {parsedData.slice(0, 10).map((row, index) => {
                         const rowNumber = index + 2;
                         const hasError = validationErrors.some(error => error.row === rowNumber);
+                        const isSelected = selectedRows.has(index);
+
                         return (
-                          <tr key={index} className={hasError ? 'bg-red-50' : 'hover:bg-gray-50'}>
+                          <tr key={index} className={`${hasError ? 'bg-red-50' : ''} ${isSelected ? '' : 'bg-gray-100 opacity-60'}`}>
+                             <td className="px-3 py-2 border-t">
+                              <label htmlFor={`select-row-${index}`} className="flex items-center space-x-2">
+                                <Checkbox.Root
+                                 id={`select-row-${index}`}
+                                 checked={isSelected}
+                                 onCheckedChange={(checked: boolean) => handleSelectRow(index, checked)}
+                                 disabled={hasError}
+                                 className="flex h-4 w-4 items-center justify-center rounded border border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                               >
+                                 <Checkbox.Indicator>
+                                   <Check className="h-3 w-3 text-blue-600" />
+                                 </Checkbox.Indicator>
+                               </Checkbox.Root>
+                               <span className="sr-only">Select row {index + 1}</span>
+                              </label>
+                            </td>
                             {Object.values(row).map((value, cellIndex) => (
                               <td key={cellIndex} className="px-3 py-2 border-t">
                                 {value}
@@ -421,7 +528,7 @@ const CSVImportDialog: React.FC<CSVImportDialogProps> = ({
                   onClick={handleImport}
                   disabled={isProcessing || parsedData.length === 0}
                 >
-                  {isProcessing ? 'Importing...' : `Import ${parsedData.length} Items`}
+                  {isProcessing ? 'Importing...' : `Import ${selectedRows.size} Items`}
                 </Button>
               </div>
             </div>

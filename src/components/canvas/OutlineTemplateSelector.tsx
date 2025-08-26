@@ -129,7 +129,16 @@ export const OutlineTemplateSelector: React.FC<OutlineTemplateSelectorProps> = (
 
         <div className="templates-grid">
           {filteredTemplates.map((template) => (
-            <div key={template.id} className="template-card">
+            <div
+              key={template.id}
+              className="template-card"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleTemplateSelect(template);
+                }
+              }}
+            >
               <div className="template-header">
                 <h4 className="template-name">{template.name}</h4>
                 {template.is_builtin && (
@@ -151,12 +160,22 @@ export const OutlineTemplateSelector: React.FC<OutlineTemplateSelectorProps> = (
                 <button
                   className="btn btn-secondary preview-btn"
                   onClick={() => handlePreview(template)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handlePreview(template);
+                    }
+                  }}
                 >
                   Preview
                 </button>
                 <button
                   className="btn btn-primary select-btn"
                   onClick={() => handleTemplateSelect(template)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleTemplateSelect(template);
+                    }
+                  }}
                 >
                   Use Template
                 </button>

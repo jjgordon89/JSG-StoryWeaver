@@ -180,6 +180,7 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
       tabIndex={0}
+      role="button"
     >
       <div className="element-header">
         <span className="element-icon">{getElementIcon(element.element_type)}</span>
@@ -240,10 +241,10 @@ export const CanvasElement: React.FC<CanvasElementProps> = ({
       {isSelected && (
         <>
           <div className="selection-handles">
-            <div className="handle top-left"></div>
-            <div className="handle top-right"></div>
-            <div className="handle bottom-left"></div>
-            <div className="handle bottom-right resize-handle"></div>
+            <button className="handle top-left" aria-label="Resize element from top left"></button>
+            <button className="handle top-right" aria-label="Resize element from top right"></button>
+            <button className="handle bottom-left" aria-label="Resize element from bottom left"></button>
+            <button className="handle bottom-right resize-handle" aria-label="Resize element from bottom right"></button>
           </div>
           <div className="element-info">
             <span className="element-type-label">{getElementTypeLabel(element.element_type)}</span>
