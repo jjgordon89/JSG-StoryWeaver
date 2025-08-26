@@ -5,6 +5,7 @@ export { default as AIWritingPanel } from './AIWritingPanel';
 export { default as AIQuickTools } from './AIQuickTools';
 export { default as AICreditManager } from './AICreditManager';
 export { default as AISettingsPanel } from './AISettingsPanel';
+export { GuidedSuggestions } from './GuidedSuggestions';
 
 // Re-export types if needed
 export type {

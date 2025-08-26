@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { invoke } from '../utils/tauriSafe';
-import { AISettings } from '../types/ai';
+import { AISettings, StreamingEnvelope } from '../types/ai';
 
 // Types for AI writing functionality
 export interface WriteSettings {
@@ -50,6 +50,8 @@ export interface StreamingState {
   isPaused: boolean;
 }
 
+export type { StreamingEnvelope };
+
 interface AIState {
   // Current operation state
   isLoading: boolean;
@@ -95,6 +97,7 @@ interface AIState {
   
   // Related words
   getRelatedWords: (word: string, context?: string) => Promise<string[]>;
+  getGuidedSuggestions: (prompt: string) => Promise<string[]>;
   
   // Streaming controls
   startStreaming: (streamId: string) => void;
@@ -454,6 +457,20 @@ export const useAIStore = create<AIState>((set, get) => ({
       );
       
       return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: errorMessage });
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  getGuidedSuggestions: async (prompt: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      const suggestions = await invoke<string[]>('get_guided_suggestions', { prompt });
+      return suggestions;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       set({ error: errorMessage });

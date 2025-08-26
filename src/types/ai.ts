@@ -60,6 +60,10 @@ export interface StreamingOptions {
   delayBetweenChunks?: number;
   showProgress?: boolean;
 }
+export interface StreamingEnvelope {
+  type: 'chunk' | 'info' | 'error' | 'complete';
+  payload: any;
+}
 
 // Credit Management Types
 export interface CreditUsage {

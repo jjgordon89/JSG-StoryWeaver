@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React from "react";
 import { Dropdown } from "../ui/Dropdown";
 import { Home, ChevronDown, HelpCircle, Cog, Sparkles } from "lucide-react";
@@ -40,6 +41,7 @@ const Pill: React.FC<{
 
 const TopBar: React.FC = () => {
   const { wordCount, saveStatus, openAIPanel, setAIActiveTool } = useUIStore();
+  const { t } = useTranslation("ui");
 
   const openTool = (tool: any) => {
     setAIActiveTool(tool);
@@ -138,7 +140,7 @@ const TopBar: React.FC = () => {
               {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'error' ? 'Error' : 'Saved ✓'}
             </span>
             <button className="px-2 py-1 rounded-full bg-white/70 border border-slate-200/70 shadow-sm hover:bg-white dark:bg-slate-800/80 dark:border-slate-700">
-              What's new
+              {t("whats_new")}
             </button>
             <button
               aria-label="Help"

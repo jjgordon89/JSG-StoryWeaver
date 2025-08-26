@@ -122,21 +122,11 @@ The following items have been intentionally deferred to Phase 2:
 - ⏳ Build the Intelligent Selection Menu for context-aware tool selection
 - ⏳ Create purple text highlighting for AI-generated content
 
-## Next Steps Before Moving to Phase 2
-1. **Complete Final Phase 1 Integration Tasks**
-   - ✅ Implement project preview functionality
-   - ✅ Create UI components for backup, trash, and version history management
-   - ✅ E2E test infrastructure stabilized and working
-   - Expand e2e test coverage for core user flows
-
-2. **Continue Phase 2 Implementation**
-   - Complete AI Provider Integration
-   - Implement Core Writing Tools
-   - Build Intelligent Selection Menu
-   - Develop Saliency Engine
-   - Implement Quick Tools
-   - Connect Card System to Backend
-   - Add Collaboration Features
+## Next Steps
+1.  **Execute the 1-2 Week Implementation Plan**:
+    *   **i18n Implementation**: Adopt `react-i18next` and externalize strings.
+    *   **Playwright E2E Stabilization**: Stabilize test suite and add smoke tests.
+    *   **AI Provider Parity**: Unify streaming and implement guided suggestions.
 
 ## Known Issues
 - Need to test the integration between UI components and backend commands to ensure proper functionality

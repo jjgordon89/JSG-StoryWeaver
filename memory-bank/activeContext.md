@@ -1,9 +1,12 @@
 # Active Context: StoryWeaver
 
 ## Current Work Focus
-We've made significant progress on Phase 1 of the StoryWeaver project, establishing the foundation for the application. Phase 1 is approximately 99% complete, with only two remaining tasks that need to be completed before we can officially move on to Phase 2: implementing project preview functionality and performing end-to-end testing of the backend-UI integration.
+The current focus is on executing a two-week plan that encompasses three key initiatives:
+1.  **i18n Implementation**: Introducing `react-i18next` to support multiple languages.
+2.  **Playwright E2E Stabilization**: Hardening the existing E2E test suite for reliability and expanded coverage.
+3.  **AI Provider Parity**: Unifying the streaming and guided suggestion features for a consistent UX.
 
-While completing the final Phase 1 tasks, we've also begun initial work on Phase 2 (Core Writing Features). We've implemented the foundation of the AI provider system with support for OpenAI, Claude, and Gemini, created a basic WriteProcessor with multiple writing modes, and developed the frontend Card System UI for displaying AI responses. An updated Phase 2 plan has been created to reflect the current progress and remaining tasks.
+This work will move the project closer to a feature-complete and stable Phase 2.
 
 ## Recent Events (Last 10)
 - **2025-01-27:** **Streaming Write Functionality COMPLETED:** Implemented complete streaming write functionality in AIWritingPanel with pause/resume/stop controls; wired useAIStreaming hook to StreamingText component with proper control handlers; streaming branch in 'write' case now fully functional with real-time content generation and UI controls.
@@ -38,35 +41,17 @@ While completing the final Phase 1 tasks, we've also begun initial work on Phase
 - **2025-08-05:** Initialized Memory Bank by creating the `memory-bank/` directory and core documentation files.
 
 ## Next Steps
-1. **Complete Final Phase 1 Integration Tasks:**
-   - ✅ Implement project preview functionality: Complete with ProjectPreview component, backend commands, and e2e tests
-   - ✅ Create UI components for backup, trash, and version history management
-   - ✅ E2E test infrastructure: All tests now pass reliably across browsers; foundation is stable
-   - Continue expanding e2e test coverage for core user flows
+1.  **Execute the 1-2 Week Plan**:
+    *   **Week 1**:
+        *   Implement i18n scaffolding and externalize strings in high-visibility components.
+        *   Stabilize Playwright configuration and add smoke tests for all canonical routes.
+    *   **Week 2**:
+        *   Implement AI streaming parity and a new guided suggestions endpoint.
+        *   Expand E2E coverage for critical user flows and harden the CI pipeline.
 
-2. **Continue Phase 2 Implementation:**
-   - Complete AI Provider Integration:
-     - ✓ Implement proper streaming support for OpenAI and Claude providers
-     - Connect AI providers to the frontend
-   - Implement Core Writing Tools:
-     - Complete the Write feature with frontend integration
-     - Implement Rewrite, Expand, and Describe features
-     - Add Brainstorm and Visualize tools
-   - Build Intelligent Selection Menu
-   - Develop Saliency Engine
-   - Implement Quick Tools
-   - Connect Card System to Backend
-   - Add Collaboration Features
-
-3. **Stabilization and Security:**
-   - Standardize backend error handling (replace unwrap/expect, adopt StoryWeaverError consistently)
-   - Expand unit and integration tests for command validation paths and rate limiting behavior
-   - Evaluate rate limit coverage expansion and sensible defaults
-
-4. **Update Documentation:**
-   - Keep the Phase 2 plan updated as implementation progresses
-   - Document new AI features and their usage
-   - Reflect completed input validation coverage in security documentation and onboarding notes
+2.  **Update Documentation**:
+    *   Update the Memory Bank with the new architectural patterns for i18n and AI streaming.
+    *   Document the new E2E testing strategy and CI workflow.
 
 ## Active Decisions & Considerations
 - We've implemented a modular AI Provider system with a trait-based abstraction layer, allowing easy integration of different AI services.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useAIStore, WriteSettings, BrainstormSettings, WriteResult, useAIStreaming } from '../stores/aiStore';
+import { useAIStore, WriteSettings, BrainstormSettings, WriteResult, useAIStreaming, StreamingEnvelope } from '../stores/aiStore';
 import { useCardStore } from '../stores/cardStore';
 import { AICard } from '../components/cards/CardSystem';
 import { invoke, listen } from '../utils/tauriSafe';
@@ -209,17 +209,25 @@ export const useAIWriteStream = () => {
     
     try {
       // Set up event listeners for streaming
-      const unlistenChunk = await listen('ai_stream_chunk', (event: any) => {
-        const chunk = event.payload;
-        if (chunk.stream_id === streamId) {
-          updateStreamingText(chunk.content);
-          setStreamedContent(chunk.content);
-          
-          if (chunk.is_complete) {
-            stopStreaming();
-          }
-        }
-      });
+            const unlistenChunk = await listen('ai_stream_chunk', (event: { payload: StreamingEnvelope }) => {
+              const { type, payload } = event.payload;
+      
+              if (payload.stream_id !== streamId) return;
+      
+              switch (type) {
+                case 'chunk':
+                  updateStreamingText(payload.content);
+                  setStreamedContent(prev => prev + payload.content);
+                  break;
+                case 'complete':
+                  stopStreaming();
+                  break;
+                case 'error':
+                  console.error('Streaming error:', payload);
+                  stopStreaming();
+                  break;
+              }
+            });
       
       const unlistenError = await listen('ai_stream_error', (event: any) => {
         console.error('Streaming error:', event.payload);

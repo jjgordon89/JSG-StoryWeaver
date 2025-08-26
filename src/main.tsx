@@ -3,10 +3,14 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/focus-mode.css";
 import StateSynchronizer from "./components/common/StateSynchronizer";
+import { I18nextProvider } from "react-i18next";
+import i18n from "./i18n";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <StateSynchronizer />
-    <App />
-  </React.StrictMode>,
+    <I18nextProvider i18n={i18n}>
+      <StateSynchronizer />
+      <App />
+    </I18nextProvider>
+  </React.StrictMode>
 );

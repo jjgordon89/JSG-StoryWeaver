@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState } from 'react';
 import { Canvas, CanvasElementType } from '../../types/canvas';
 import './CanvasToolbar.css';
@@ -29,6 +30,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   isCreatingElement,
   onCancelCreate
 }) => {
+  const { t } = useTranslation("ui");
   const [showElementMenu, setShowElementMenu] = useState(false);
 
   const elementTypes: { type: CanvasElementType; label: string; icon: string }[] = [
@@ -107,7 +109,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
                   className="toolbar-btn add-element-btn"
                   onClick={() => setShowElementMenu(!showElementMenu)}
                 >
-                  ➕ Add Element
+                  {t("add_element")}
                 </button>
                 {showElementMenu && (
                   <div className="element-menu">

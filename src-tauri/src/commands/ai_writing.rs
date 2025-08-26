@@ -1,7 +1,7 @@
 //! AI Writing Commands for StoryWeaver
 
 use crate::error::{StoryWeaverError, Result};
-use crate::ai::{AIProviderManager, AIContext, TextStream};
+use crate::ai::{AIProviderManager, AIContext, TextStream, streaming::StreamingEnvelope};
 use crate::security::rate_limit::{rl_create, rl_update, rl_list};
 use crate::security::validators::{validate_non_empty_str, validate_body_limits, validate_optional_str};
 use serde::{Deserialize, Serialize};
@@ -255,13 +255,6 @@ pub struct WriteResult {
     pub word_count: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct StreamChunk {
-    pub content: String,
-    pub is_complete: bool,
-    pub token_count: usize,
-    pub stream_id: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StreamStartResponse {
@@ -364,10 +357,10 @@ pub async fn auto_write_stream(
                         
                         _token_count = accumulated_content.len() / 4; // Rough estimate
                         
-                        let chunk = StreamChunk {
+                        let chunk = StreamingEnvelope {
                             content: accumulated_content.clone(),
                             is_complete: i == words.len() - 1,
-                            token_count: _token_count,
+                            token_count: _token_count as u32,
                             stream_id: stream_id_clone.clone(),
                         };
                         
@@ -383,10 +376,10 @@ pub async fn auto_write_stream(
                 } else {
                     // Real streaming - emit content as it arrives
                     // This would be implemented when providers support true streaming
-                    let chunk = StreamChunk {
+                    let chunk = StreamingEnvelope {
                         content: stream.content.clone(),
                         is_complete: true,
-                        token_count: stream.token_count,
+                        token_count: stream.token_count as u32,
                         stream_id: stream_id_clone.clone(),
                     };
                     
@@ -457,10 +450,10 @@ pub async fn guided_write_stream(
                         
                         _token_count = accumulated_content.len() / 4; // Rough estimate
                         
-                        let chunk = StreamChunk {
+                        let chunk = StreamingEnvelope {
                             content: accumulated_content.clone(),
                             is_complete: i == words.len() - 1,
-                            token_count: _token_count,
+                            token_count: _token_count as u32,
                             stream_id: stream_id_clone.clone(),
                         };
                         
@@ -476,10 +469,10 @@ pub async fn guided_write_stream(
                 } else {
                     // Real streaming - emit content as it arrives
                     // This would be implemented when providers support true streaming
-                    let chunk = StreamChunk {
+                    let chunk = StreamingEnvelope {
                         content: stream.content.clone(),
                         is_complete: true,
-                        token_count: stream.token_count,
+                        token_count: stream.token_count as u32,
                         stream_id: stream_id_clone.clone(),
                     };
                     

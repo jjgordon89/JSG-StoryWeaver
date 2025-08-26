@@ -211,6 +211,7 @@ pub fn run() {
             commands::ai_cards::get_ai_response_cards_by_provider,
             commands::ai_cards::get_ai_response_cards_by_model,
             commands::ai_cards::get_ai_response_cards_by_cost_range,
+            commands::guided_suggestions::get_guided_suggestions,
             
             // Story Bible commands
             commands::story_bible::create_or_update_story_bible,

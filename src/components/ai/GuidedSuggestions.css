@@ -1,0 +1,36 @@
+.guided-suggestions {
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.guided-suggestions h3 {
+  margin-top: 0;
+}
+
+.guided-suggestions textarea {
+  width: 100%;
+  min-height: 80px;
+  margin-bottom: 0.5rem;
+}
+
+.guided-suggestions button {
+  margin-bottom: 1rem;
+}
+
+.guided-suggestions .error {
+  color: red;
+}
+
+.guided-suggestions ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.guided-suggestions li {
+  background-color: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}

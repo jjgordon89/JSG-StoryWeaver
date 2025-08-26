@@ -349,3 +349,5 @@ impl AIProvider for AIProviderManager {
         }
     }
 }
+
+pub mod streaming;

@@ -18,6 +18,7 @@
     - Radix UI (Headless components for accessibility)
     - Tailwind CSS (Styling)
 - **Editor:** Monaco Editor
+- **Internationalization**: `react-i18next`, `i18next`
 
 ## Development Environment
 - **Package Manager:** Cargo (Rust), pnpm/npm/yarn (Node.js)

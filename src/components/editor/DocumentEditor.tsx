@@ -12,7 +12,7 @@ import FocusMode from './FocusMode';
 import FocusModeSettings from './FocusModeSettings';
 import VersionHistory from './VersionHistory';
 import StoryBibleBoxes from './StoryBibleBoxes';
-import { AISelectionMenu, AIWritingPanel, AIQuickTools } from '../ai';
+import { AISelectionMenu, AIWritingPanel, AIQuickTools, GuidedSuggestions } from '../ai';
 import { Button } from '../../ui/components/common';
 import { Wand2, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import '../../styles/focus-mode.css';
@@ -34,6 +34,7 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   const [showAIPanel, setShowAIPanel] = useState(false);
   const { aiPanelOpen, toggleAIPanel, setEditorStatus } = useUIStore();
   const [showQuickTools, setShowQuickTools] = useState(false);
+  const [showGuidedSuggestions, setShowGuidedSuggestions] = useState(false);
   const [quickToolsPosition, setQuickToolsPosition] = useState({ x: 0, y: 0 });
   const [storyBibleDetectionEnabled, setStoryBibleDetectionEnabled] = useState(true);
   const [aiDecorationManager, setAiDecorationManager] = useState<AITextDecorationManager | null>(null);
@@ -79,21 +80,21 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
   }, [aiDecorationManager, storyBibleDetector]);
 
   // Update Story Bible detector when story bible data changes
-  useEffect(() => {
-    if (storyBibleDetector && storyBible) {
-      storyBibleDetector.updateStoryBibleData({
-        characters: storyBible.characters || [],
-        worldElements: storyBible.world_elements || [],
-        outlines: storyBible.outlines || [],
-        scenes: storyBible.scenes || []
-      });
+  // useEffect(() => {
+  //   if (storyBibleDetector && storyBible) {
+  //     storyBibleDetector.updateStoryBibleData({
+  //       characters: storyBible.characters || [],
+  //       worldElements: storyBible.world_elements || [],
+  //       outlines: storyBible.outlines || [],
+  //       scenes: storyBible.scenes || []
+  //     });
       
-      // Re-analyze current content with updated data
-      if (editorRef.current) {
-        storyBibleDetector.analyzeText(editorRef.current.getValue());
-      }
-    }
-  }, [storyBibleDetector, storyBible]);
+  //     // Re-analyze current content with updated data
+  //     if (editorRef.current) {
+  //       storyBibleDetector.analyzeText(editorRef.current.getValue());
+  //     }
+  //   }
+  // }, [storyBibleDetector, storyBible]);
 
   // Handle Story Bible detection toggle
   const handleToggleStoryBibleDetection = useCallback(() => {
@@ -294,11 +295,11 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
     setAiDecorationManager(decorationManager);
 
     // Initialize Story Bible text detector
-    const storyBibleDetector = new StoryBibleTextDetector(editor);
+    // const storyBibleDetector = new StoryBibleTextDetector(editor);
     setStoryBibleDetector(storyBibleDetector);
     
     // Set initial Story Bible detection state
-    storyBibleDetector.setEnabled(storyBibleDetectionEnabled);
+    // storyBibleDetector.setEnabled(storyBibleDetectionEnabled);
 
     // Set initial word count
     const initialWC = calculateWordCount(initialContent);
@@ -312,9 +313,9 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
       handleEditorChange(currentContent);
       
       // Update Story Bible detection when content changes
-      if (storyBibleDetector) {
-        storyBibleDetector.analyzeText(currentContent);
-      }
+      // if (storyBibleDetector) {
+      //   storyBibleDetector.analyzeText(currentContent);
+      // }
     });
 
     // Set up selection change handler
@@ -533,6 +534,8 @@ const DocumentEditor: React.FC<DocumentEditorProps> = ({ documentId, initialCont
                   onInsertText={handleInsertText}
                   onReplaceText={handleReplaceText}
                 />
+                <Button onClick={() => setShowGuidedSuggestions(true)}>Guided Suggestions</Button>
+                {showGuidedSuggestions && <GuidedSuggestions />}
               </div>
             )}
           </div>

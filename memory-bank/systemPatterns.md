@@ -17,6 +17,8 @@ StoryWeaver uses a hybrid desktop application architecture powered by **Tauri 2.
     - **SQLx:** Provides compile-time checked queries and an async interface to the database.
     - **Connection Pooling:** A database connection pool is used to manage concurrent database access efficiently.
 - **AI Abstraction:** An AI provider abstraction layer (trait/interface) is planned. This will allow for swapping out different AI models or services (e.g., OpenAI, Anthropic) with minimal changes to the core application logic.
+- **Unified Streaming Envelope**: A standardized streaming envelope will be implemented in `src-tauri/src/ai/streaming.rs` to ensure a consistent data format for real-time events across all AI providers.
+- **Internationalization (i18n)**: The application will use `react-i18next` for internationalization. Strings will be externalized to JSON files in `public/locales`, and the React application will be wrapped in an `I18nextProvider`.
 - **Project Management:** The project management interface is implemented with a three-column layout, allowing writers to organize their projects with ease.
 
 ## AdvancedAI Style Manager Patterns
